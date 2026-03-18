@@ -130,14 +130,14 @@ void RequestInterceptor::loadBlockList()
             const QStringList parts = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
             m_blockedHosts.insert(parts.size() >= 2 ? parts.at(1) : parts.at(0));
         }
-        qDebug() << "RequestInterceptor: loaded" << m_blockedHosts.size()
-                 << "blocked hosts from" << userList;
+        qInfo() << "RequestInterceptor: loaded" << m_blockedHosts.size()
+                << "blocked hosts from" << userList;
         return;
     }
 
     for (const QString &host : s_builtinBlockList)
         m_blockedHosts.insert(host);
 
-    qDebug() << "RequestInterceptor: using built-in block list ("
-             << m_blockedHosts.size() << "entries)";
+    qInfo() << "RequestInterceptor: using built-in block list ("
+            << m_blockedHosts.size() << "entries)";
 }

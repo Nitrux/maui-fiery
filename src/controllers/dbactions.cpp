@@ -65,7 +65,6 @@ DBActions::DBActions(QObject *parent) : DB(parent)
 {
     connect(qApp, &QCoreApplication::aboutToQuit, []()
     {
-        qDebug() << "Lets remove Tagging singleton instance";
         delete m_instance;
         m_instance = nullptr;
     });
@@ -101,7 +100,7 @@ const QVariantList DBActions::get(const QString &queryTxt, std::function<bool(QV
 
     } else
     {
-        qDebug() << query.lastError() << query.lastQuery();
+        qWarning() << "DBActions query failed:" << query.lastError() << query.lastQuery();
     }
 
     return mapList;

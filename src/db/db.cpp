@@ -42,7 +42,7 @@ DB::DB(QObject *parent) : QObject(parent)
     this->name = QUuid::createUuid().toString();
     if (!FMH::fileExists(QUrl::fromLocalFile(DB_Path))) {
         this->openDB(this->name);
-        qDebug() << "Collection doesn't exists, trying to create it" << DB_Path;
+        qInfo() << "Database not found, creating it at" << DB_Path;
         this->prepareCollectionDB();
     } else
         this->openDB(this->name);
@@ -50,7 +50,6 @@ DB::DB(QObject *parent) : QObject(parent)
 
 DB::~DB()
 {
-    qDebug() << "CLOSING THE TAGGING DATA BASE";
     this->m_db.close();
 }
 
@@ -63,9 +62,9 @@ void DB::openDB(const QString &name)
 
     if (!this->m_db.isOpen()) {
         if (!this->m_db.open())
-            qDebug() << "ERROR OPENING DB" << this->m_db.lastError().text() << m_db.connectionName();
+            qCritical() << "Failed to open database:" << this->m_db.lastError().text() << m_db.connectionName();
     }
-    auto query = this->getQuery("PRAGMA synchronous=OFF");
+    auto query = this->getQuery("PRAGMA synchronous=NORMAL");
     query.exec();
 }
 
@@ -76,14 +75,12 @@ void DB::prepareCollectionDB() const
     QFile file(":/db/script.sql");
 
     if (!file.exists()) {
-        QString log = QStringLiteral("Fatal error on build database. The file '");
-        log.append(file.fileName() + QStringLiteral("' for database and tables creation query cannot be not found!"));
-        qDebug() << log;
+        qCritical() << "Database schema resource not found:" << file.fileName();
         return;
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << QStringLiteral("Fatal error on try to create database! The file with sql queries for database creation cannot be opened!");
+        qCritical() << "Failed to open database schema resource:" << file.fileName();
         return;
     }
 
@@ -113,11 +110,10 @@ void DB::prepareCollectionDB() const
         }
         if (!line.isEmpty()) {
             if (!query.exec(line)) {
-                qDebug() << "exec failed" << query.lastQuery() << query.lastError();
+                qWarning() << "Schema statement failed:" << query.lastQuery() << query.lastError();
             }
 
-        } else
-            qDebug() << "exec wrong" << query.lastError();
+        }
     }
     file.close();
 }
@@ -130,7 +126,6 @@ bool DB::checkExistance(const QString &tableName, const QString &searchId, const
 
 bool DB::checkExistance(const QString &queryStr)
 {
-    qDebug() << "CHECKIGN QUERY TAG" << queryStr;
     auto query = this->getQuery(queryStr);
 
     if (query.exec()) {
@@ -151,11 +146,11 @@ QSqlQuery DB::getQuery(const QString &queryTxt) const
 bool DB::insert(const QString &tableName, const QVariantMap &insertData)
 {
     if (tableName.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on insert! The table name is empty!");
+        qWarning() << "DB::insert: table name is empty";
         return false;
 
     } else if (insertData.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on insert! The insertData is empty!");
+        qWarning() << "DB::insert: insert data is empty";
         return false;
     }
 
@@ -180,10 +175,10 @@ bool DB::insert(const QString &tableName, const QVariantMap &insertData)
 bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QVariantMap &where)
 {
     if (tableName.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on insert! The table name is empty!");
+        qWarning() << "DB::update: table name is empty";
         return false;
     } else if (updateData.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on insert! The insertData is empty!");
+        qWarning() << "DB::update: update data is empty";
         return false;
     }
 
@@ -203,7 +198,6 @@ bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QV
 
     QString sqlQueryString = "UPDATE " + tableName + " SET " + QString(set.join(",")) + " WHERE " + QString(condition.join(","));
     auto query = this->getQuery(sqlQueryString);
-    qDebug() << sqlQueryString;
     return query.exec();
 }
 
@@ -217,11 +211,11 @@ bool DB::update(const QString &table, const QString &column, const QVariant &new
 bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)
 {
     if (tableName.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on removing! The table name is empty!");
+        qWarning() << "DB::remove: table name is empty";
         return false;
 
     } else if (removeData.isEmpty()) {
-        qDebug() << QStringLiteral("Fatal error on insert! The removeData is empty!");
+        qWarning() << "DB::remove: remove data is empty";
         return false;
     }
 
@@ -239,7 +233,6 @@ bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)
     }
 
     QString sqlQueryString = "DELETE FROM " + tableName + " WHERE " + strValues;
-    qDebug() << sqlQueryString;
 
     return this->getQuery(sqlQueryString).exec();
 }

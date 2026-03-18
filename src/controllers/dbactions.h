@@ -29,10 +29,8 @@ class DBActions : public DB
 public:
     static DBActions *getInstance()
     {
-        qWarning() << "GETTIG TAGGING INSTANCE" << QThread::currentThread() << qApp->thread();
-
         if (QThread::currentThread() != qApp->thread()) {
-            qWarning() << "Can not get Tagging instance from a thread different than the mian one  " << QThread::currentThread() << qApp->thread();
+            qWarning() << "DBActions::getInstance() called from a non-main thread" << QThread::currentThread();
             return nullptr;
         }
 

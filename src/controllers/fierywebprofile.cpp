@@ -31,8 +31,6 @@ void FieryWebProfile::handleDownload(QQuickWebEngineDownloadRequest *downloadIte
 {
         DownloadItem *download = qobject_cast<DownloadItem *>(downloadItem);
 
-    qDebug() << "GOT TO DOWNLOAD HANDLE" << downloadItem->url();
-
     download->accept();
     download->pause();
 

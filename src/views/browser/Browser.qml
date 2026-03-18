@@ -23,6 +23,7 @@ Maui.SplitViewItem
     Maui.Controls.toolTipText:  _webView.url
 
     property bool _webFullScreen: false
+    property string _hoveredUrl: ""
 
     // Exit-fullscreen button shown in the top-right corner while the page
     // is in web-requested fullscreen. Pressing Escape or clicking it calls
@@ -102,7 +103,7 @@ Maui.SplitViewItem
 
         onLinkHovered: (url) =>
         {
-            console.log("LINK HOVERED", url)
+            control._hoveredUrl = url
         }
 
         onFindTextFinished: {
@@ -207,6 +208,38 @@ Maui.SplitViewItem
                     "})()"
                 )
             }
+        }
+    }
+
+    // Status bar: shows the URL of any link currently under the cursor.
+    // Positioned at the bottom-left, overlaying the page content, matching
+    // the convention used by all major browsers to help users detect phishing.
+    Rectangle
+    {
+        z: 5
+        anchors.left: _webView.left
+        anchors.bottom: _webView.bottom
+        visible: control._hoveredUrl.length > 0
+
+        width: Math.min(_statusLabel.implicitWidth + Maui.Style.space.medium * 2,
+                        _webView.width * 0.75)
+        height: _statusLabel.implicitHeight + Maui.Style.space.small * 2
+
+        color: Maui.Theme.backgroundColor
+        border.color: Maui.Theme.separatorColor
+        border.width: 1
+        radius: Maui.Style.radiusV
+
+        Label
+        {
+            id: _statusLabel
+            anchors.fill: parent
+            anchors.margins: Maui.Style.space.medium
+            text: control._hoveredUrl
+            elide: Text.ElideRight
+            font.pointSize: Maui.Style.fontGroup.small
+            color: Maui.Theme.textColor
+            verticalAlignment: Text.AlignVCenter
         }
     }
 
