@@ -3,6 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import org.mauikit.controls as Maui
+import org.mauikit.filebrowsing as FB
+import org.maui.fiery as Fiery
 
 Maui.SettingsDialog
 {
@@ -13,60 +15,59 @@ Maui.SettingsDialog
         title: i18n("Navigation")
         description: i18n("Configure the app basic navigation features.")
 
-
         Maui.FlexSectionItem
         {
             label1.text: i18n("Restore Session")
-            label2.text: i18n("Open previous tabs.")
+            label2.text: i18n("Open previous tabs on launch.")
 
             Switch
             {
                 Layout.fillHeight: true
                 checkable: true
-                checked:  appSettings.restoreSession
-                onToggled: appSettings.restoreSession = ! appSettings.restoreSession
+                checked: appSettings.restoreSession
+                onToggled: appSettings.restoreSession = !appSettings.restoreSession
             }
         }
 
         Maui.FlexSectionItem
         {
-            label1.text: i18n("Switch to Tab")
-            label2.text: i18n("When opening a new link jump to the new tab.")
+            label1.text: i18n("Switch to New Tab")
+            label2.text: i18n("Automatically focus a tab when it is opened.")
 
             Switch
             {
                 Layout.fillHeight: true
                 checkable: true
-                checked:  appSettings.switchToTab
-                onToggled: appSettings.switchToTab = ! appSettings.switchToTab
+                checked: appSettings.switchToTab
+                onToggled: appSettings.switchToTab = !appSettings.switchToTab
             }
         }
 
         Maui.FlexSectionItem
         {
-            label1.text: i18n("Auto Load Images")
-            label2.text: i18n("Automatically loads images on web pages.")
+            label1.text: i18n("Load Images")
+            label2.text: i18n("Automatically load images on web pages.")
 
             Switch
             {
                 Layout.fillHeight: true
                 checkable: true
-                checked:  appSettings.autoLoadImages
-                onToggled: appSettings.autoLoadImages = ! appSettings.autoLoadImages
+                checked: appSettings.autoLoadImages
+                onToggled: appSettings.autoLoadImages = !appSettings.autoLoadImages
             }
         }
 
         Maui.FlexSectionItem
         {
-            label1.text: i18n("Hyperlink Auditing")
-            label2.text: i18n("Enables support for the ping attribute for hyperlinks.")
+            label1.text: i18n("Load Favicons")
+            label2.text: i18n("Automatically load site icons for tabs.")
 
             Switch
             {
                 Layout.fillHeight: true
                 checkable: true
-                checked:  appSettings.hyperlinkAuditingEnabled
-                onToggled: appSettings.hyperlinkAuditingEnabled = ! appSettings.hyperlinkAuditingEnabled
+                checked: appSettings.autoLoadIconsForPage
+                onToggled: appSettings.autoLoadIconsForPage = !appSettings.autoLoadIconsForPage
             }
         }
     }
@@ -74,7 +75,7 @@ Maui.SettingsDialog
     Maui.FlexSectionItem
     {
         label1.text: i18n("General")
-        label2.text: i18n("Configure global preferences.")
+        label2.text: i18n("Configure home page, search engine, and downloads.")
 
         ToolButton
         {
@@ -87,135 +88,13 @@ Maui.SettingsDialog
     Maui.FlexSectionItem
     {
         label1.text: i18n("Features")
-        label2.text: i18n("Configure the browser plugins and features.")
+        label2.text: i18n("Configure browser features and media behaviour.")
 
         ToolButton
         {
             icon.name: "go-next"
             checkable: true
             onToggled: control.addPage(_featuresComponent)
-        }
-    }
-
-    Component
-    {
-        id: _generalComponent
-
-        Maui.SettingsPage
-        {
-            title: i18n("General")
-
-            Maui.SectionItem
-            {
-                label1.text: i18n("Home Page")
-                label2.text: i18n("Page to load initially and default.")
-
-                TextField
-                {
-                    Layout.fillWidth: true
-                    text: appSettings.homePage
-                }
-            }
-
-            Maui.SectionItem
-            {
-                label1.text: i18n("Search Engine")
-                label2.text: i18n("Engine to be use for default searching content.")
-
-                TextField
-                {
-                    Layout.fillWidth: true
-                    text: appSettings.searchEnginePage
-                }
-            }
-
-            Maui.SectionGroup
-            {
-                title: i18n("Downloads")
-
-                Maui.SectionItem
-                {
-                    label1.text: i18n("Downloads Path")
-                    label2.text: i18n("Pick a path where files will be saved.")
-
-                    TextField
-                    {
-                        Layout.fillWidth: true
-                        text: appSettings.downloadsPath
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Auto Save")
-                    label2.text: i18n("Download files without asking.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.autoSave
-                        onToggled: appSettings.autoSave = ! appSettings.autoSave
-                    }
-                }
-
-            }
-
-        }
-    }
-
-    Component
-    {
-        id: _featuresComponent
-
-        Maui.SettingsPage
-        {
-            title: i18n("Features")
-
-            Maui.SectionGroup
-            {
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Accelerated 2D Canvas")
-                    label2.text: i18n("Specifies whether the HTML 5 2D canvas should be an OpenGL framebuffer. This makes many painting operations faster, but slows down pixel access.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.accelerated2dCanvasEnabled
-                        onToggled: appSettings.accelerated2dCanvasEnabled = ! appSettings.accelerated2dCanvasEnabled
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("PDF Viewer")
-                    label2.text: i18n("PDF documents will be opened in the internal PDF viewer instead of being downloaded.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.pdfViewerEnabled
-                        onToggled: appSettings.pdfViewerEnabled = ! appSettings.pdfViewerEnabled
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Plugins Enabled")
-                    label2.text: i18n("Enables support for Pepper plugins, such as the Flash player.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.pluginsEnabled
-                        onToggled: appSettings.pluginsEnabled = ! appSettings.pluginsEnabled
-                    }
-                }
-            }
         }
     }
 
@@ -232,80 +111,10 @@ Maui.SettingsDialog
         }
     }
 
-
-    Component
-    {
-        id: _jsComponent
-        Maui.SettingsPage
-        {
-            title: i18n("JavaScript")
-
-            Maui.SectionGroup
-            {
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Javascript Enabled")
-                    label2.text: i18n("Enables the running of JavaScript programs.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.javascriptEnabled
-                        onToggled: appSettings.javascriptEnabled = ! appSettings.javascriptEnabled
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Javascript Can Access Clipboard")
-                    label2.text: i18n("Allows JavaScript programs to read from or write to the clipboard.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.javascriptCanAccessClipboard
-                        onToggled: appSettings.javascriptCanAccessClipboard = ! appSettings.javascriptCanAccessClipboard
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Javascript Can Paste")
-                    label2.text: i18n("Enables JavaScript execCommand(paste).")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.javascriptCanPaste
-                        onToggled: appSettings.javascriptCanPaste = ! appSettings.javascriptCanPaste
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Allow Window Activation From JavaScript")
-                    label2.text: i18n("Allows the window.focus() method in JavaScript.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.allowWindowActivationFromJavaScript
-                        onToggled: appSettings.allowWindowActivationFromJavaScript = ! appSettings.allowWindowActivationFromJavaScript
-                    }
-                }
-
-            }
-        }
-    }
-
     Maui.FlexSectionItem
     {
-        label1.text: i18n("Security & Privacy")
-        label2.text: i18n("Configure the look and feel of the editor. The settings are applied globally")
+        label1.text: i18n("Privacy & Security")
+        label2.text: i18n("Ad blocker, tracking, and data options.")
 
         ToolButton
         {
@@ -315,111 +124,438 @@ Maui.SettingsDialog
         }
     }
 
+    // ── General ─────────────────────────────────────────────────────────────
+
     Component
     {
-        id: _privacyComponent
+        id: _generalComponent
+
         Maui.SettingsPage
         {
-            title: i18n("Security & Privacy")
+            title: i18n("General")
+
+            Maui.SectionItem
+            {
+                label1.text: i18n("Home Page")
+                label2.text: i18n("Page loaded on startup and for new tabs.")
+
+                TextField
+                {
+                    Layout.fillWidth: true
+                    text: appSettings.homePage
+                    onEditingFinished: appSettings.homePage = text
+                }
+            }
+
+            Maui.SectionItem
+            {
+                label1.text: i18n("Search Engine")
+                label2.text: i18n("Engine used when entering a plain query.")
+
+                TextField
+                {
+                    Layout.fillWidth: true
+                    text: appSettings.searchEnginePage
+                    onEditingFinished: appSettings.searchEnginePage = text
+                }
+            }
+
+            Maui.SectionItem
+            {
+                label1.text: i18n("User Agent")
+                label2.text: i18n("Override the browser identity string sent to websites. Leave blank to use the default.")
+
+                TextField
+                {
+                    Layout.fillWidth: true
+                    placeholderText: i18n("Default")
+                    text: appSettings.customUserAgent
+                    onEditingFinished: appSettings.customUserAgent = text
+                }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Downloads")
+
+                Maui.SectionItem
+                {
+                    label1.text: i18n("Downloads Folder")
+                    label2.text: i18n("Where downloaded files are saved.")
+
+                    TextField
+                    {
+                        id: _downloadsPathField
+                        Layout.fillWidth: true
+                        text: appSettings.downloadsPath
+                        onEditingFinished: appSettings.downloadsPath = text
+                    }
+
+                    ToolButton
+                    {
+                        icon.name: "folder-open"
+                        onClicked: _folderDialog.open()
+                    }
+
+                    FB.FileDialog
+                    {
+                        id: _folderDialog
+                        mode: FB.FileDialog.Dirs
+                        onFinished: function(paths)
+                        {
+                            if(paths.length > 0)
+                            {
+                                const path = paths[0].toString().replace("file://", "")
+                                appSettings.downloadsPath = path
+                                _downloadsPathField.text = path
+                            }
+                        }
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Auto Save")
+                    label2.text: i18n("Download files without asking each time.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.autoSave
+                        onToggled: appSettings.autoSave = !appSettings.autoSave
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Features ─────────────────────────────────────────────────────────────
+
+    Component
+    {
+        id: _featuresComponent
+
+        Maui.SettingsPage
+        {
+            title: i18n("Features")
 
             Maui.SectionGroup
             {
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Allow Geolocation On Insecure Origins")
-                    label2.text: i18n("Only secure origins such as HTTPS have been able to request Geolocation features.")
+                    label1.text: i18n("PDF Viewer")
+                    label2.text: i18n("Open PDF documents in the browser instead of downloading.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked:  appSettings.allowGeolocationOnInsecureOrigins
-                        onToggled: appSettings.allowGeolocationOnInsecureOrigins = ! appSettings.allowGeolocationOnInsecureOrigins
+                        checked: appSettings.pdfViewerEnabled
+                        onToggled: appSettings.pdfViewerEnabled = !appSettings.pdfViewerEnabled
                     }
                 }
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Allow Running Insecure Content")
-                    label2.text: i18n("By default, HTTPS pages cannot run JavaScript, CSS, plugins or web-sockets from HTTP URLs.")
+                    label1.text: i18n("WebGL")
+                    label2.text: i18n("Enable hardware-accelerated 3D graphics.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked:  appSettings.allowRunningInsecureContent
-                        onToggled: appSettings.allowRunningInsecureContent = ! appSettings.allowRunningInsecureContent
-                    }
-                }
-
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("DNS Prefetch Enabled")
-                    label2.text: i18n("Enables speculative prefetching of DNS records for HTML links before they are activated.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.dnsPrefetchEnabled
-                        onToggled: appSettings.dnsPrefetchEnabled = ! appSettings.dnsPrefetchEnabled
+                        checked: appSettings.webGLEnabled
+                        onToggled: appSettings.webGLEnabled = !appSettings.webGLEnabled
                     }
                 }
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Local Content Can Access File Urls")
-                    label2.text: i18n("Allows locally loaded documents to access other local URLs.")
+                    label1.text: i18n("Fullscreen")
+                    label2.text: i18n("Allow web pages to request fullscreen mode.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked:  appSettings.localContentCanAccessFileUrls
-                        onToggled: appSettings.localContentCanAccessFileUrls = ! appSettings.localContentCanAccessFileUrls
+                        checked: appSettings.fullScreenSupportEnabled
+                        onToggled: appSettings.fullScreenSupportEnabled = !appSettings.fullScreenSupportEnabled
                     }
                 }
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Local Content Can Access Remote Urls")
-                    label2.text: i18n("Allows locally loaded documents to access remote URLs.")
+                    label1.text: i18n("Screen Capture")
+                    label2.text: i18n("Allow web pages to capture screen contents.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked:  appSettings.localContentCanAccessRemoteUrls
-                        onToggled: appSettings.localContentCanAccessRemoteUrls = ! appSettings.localContentCanAccessRemoteUrls
+                        checked: appSettings.screenCaptureEnabled
+                        onToggled: appSettings.screenCaptureEnabled = !appSettings.screenCaptureEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Error Pages")
+                    label2.text: i18n("Show built-in error pages when a page fails to load.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.errorPageEnabled
+                        onToggled: appSettings.errorPageEnabled = !appSettings.errorPageEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Scroll Bars")
+                    label2.text: i18n("Show scroll bars on web pages.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.showScrollBars
+                        onToggled: appSettings.showScrollBars = !appSettings.showScrollBars
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Block Autoplay")
+                    label2.text: i18n("Require a user gesture before media starts playing.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.playbackRequiresUserGesture
+                        onToggled: appSettings.playbackRequiresUserGesture = !appSettings.playbackRequiresUserGesture
+                    }
+                }
+            }
+        }
+    }
+
+    // ── JavaScript ───────────────────────────────────────────────────────────
+
+    Component
+    {
+        id: _jsComponent
+
+        Maui.SettingsPage
+        {
+            title: i18n("JavaScript")
+
+            Maui.SectionGroup
+            {
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Enable JavaScript")
+                    label2.text: i18n("Run JavaScript on web pages. Disabling this will break most sites.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.javascriptEnabled
+                        onToggled: appSettings.javascriptEnabled = !appSettings.javascriptEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Clipboard Access")
+                    label2.text: i18n("Allow JavaScript to read from and write to the clipboard.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.javascriptCanAccessClipboard
+                        onToggled: appSettings.javascriptCanAccessClipboard = !appSettings.javascriptCanAccessClipboard
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Open New Windows")
+                    label2.text: i18n("Allow JavaScript to open new browser windows.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.javascriptCanOpenWindows
+                        onToggled: appSettings.javascriptCanOpenWindows = !appSettings.javascriptCanOpenWindows
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Privacy & Security ───────────────────────────────────────────────────
+
+    Component
+    {
+        id: _privacyComponent
+
+        Maui.SettingsPage
+        {
+            title: i18n("Privacy & Security")
+
+            Maui.SectionGroup
+            {
+                title: i18n("Tracking & Ads")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Do Not Track")
+                    label2.text: i18n("Send a DNT header asking sites not to track you. Compliance is voluntary.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.doNotTrack
+                        onToggled: appSettings.doNotTrack = !appSettings.doNotTrack
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Ad Blocker")
+                    label2.text: i18n("Block requests to known ad and tracker domains. Changes take effect after reload. Place a custom hosts-format file at ~/.config/fiery/blocklist.txt to override the built-in list.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.adBlockEnabled
+                        onToggled: appSettings.adBlockEnabled = !appSettings.adBlockEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Cookie Banner Blocker")
+                    label2.text: i18n("Automatically remove cookie consent popups and GDPR banners.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.cookieBannerBlocker
+                        onToggled: appSettings.cookieBannerBlocker = !appSettings.cookieBannerBlocker
+                    }
+                }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Security")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Allow Mixed Content")
+                    label2.text: i18n("Allow HTTPS pages to load resources over HTTP. Disable for stricter security.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowRunningInsecureContent
+                        onToggled: appSettings.allowRunningInsecureContent = !appSettings.allowRunningInsecureContent
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("WebRTC IP Protection")
+                    label2.text: i18n("Limit WebRTC to public IP addresses only, preventing local network IP leaks.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.webRTCPublicInterfacesOnly
+                        onToggled: appSettings.webRTCPublicInterfacesOnly = !appSettings.webRTCPublicInterfacesOnly
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("DNS Prefetch")
+                    label2.text: i18n("Pre-resolve DNS for links on the page to speed up navigation.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.dnsPrefetchEnabled
+                        onToggled: appSettings.dnsPrefetchEnabled = !appSettings.dnsPrefetchEnabled
                     }
                 }
 
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Local Storage")
-                    label2.text: i18n("Enables support for the HTML 5 local storage feature.")
+                    label2.text: i18n("Allow websites to store data locally in the browser.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked:  appSettings.localStorageEnabled
-                        onToggled: appSettings.localStorageEnabled = ! appSettings.localStorageEnabled
+                        checked: appSettings.localStorageEnabled
+                        onToggled: appSettings.localStorageEnabled = !appSettings.localStorageEnabled
+                    }
+                }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Clear Browsing Data")
+                description: i18n("Permanently delete stored browsing data.")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Browsing History")
+                    label2.text: i18n("Clear all visited URLs and page titles.")
+
+                    Button
+                    {
+                        text: i18n("Clear")
+                        onClicked: Fiery.History.clearAll()
                     }
                 }
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("WebRTC Public Interfaces Only")
-                    label2.text: i18n("Limits WebRTC to public IP addresses only. When disabled WebRTC may also use local network IP addresses, but remote hosts can also see your local network IP address.")
+                    label1.text: i18n("Cache")
+                    label2.text: i18n("Clear cached images and files.")
 
-                    Switch
+                    Button
                     {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked:  appSettings.webRTCPublicInterfacesOnly
-                        onToggled: appSettings.webRTCPublicInterfacesOnly = ! appSettings.webRTCPublicInterfacesOnly
+                        text: i18n("Clear")
+                        onClicked: root.profile.clearHttpCache()
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Cookies & Site Data")
+                    label2.text: i18n("Clear cookies stored by websites.")
+
+                    Button
+                    {
+                        text: i18n("Clear")
+                        onClicked: root.profile.cookieStore.deleteAllCookies()
                     }
                 }
             }

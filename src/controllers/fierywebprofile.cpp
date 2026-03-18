@@ -9,11 +9,9 @@
 
 #include "downloadsmanager.h"
 
-class QQuickWebEngineDownloadRequest : public DownloadItem
-{
-};
-
-
+// QQuickWebEngineDownloadRequest is not in public headers; forward-declare it
+// as a DownloadItem subclass since that is what Qt's runtime type actually is.
+class QQuickWebEngineDownloadRequest : public DownloadItem {};
 
 FieryWebProfile::FieryWebProfile(QObject *parent)
     : QQuickWebEngineProfile{parent}
@@ -46,7 +44,7 @@ void FieryWebProfile::handleDownloadFinished(DownloadItem *downloadItem)
     Q_EMIT downloadFinished(downloadItem);
 }
 
-void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
+void FieryWebProfile::showNotification(QWebEngineNotification */*webNotification*/)
 {
 
 }
@@ -56,5 +54,6 @@ void FieryWebProfile::setUrlInterceptor(QWebEngineUrlRequestInterceptor *newUrlI
     if (m_urlInterceptor == newUrlInterceptor)
         return;
     m_urlInterceptor = newUrlInterceptor;
+    setUrlRequestInterceptor(newUrlInterceptor);
     Q_EMIT urlInterceptorChanged();
 }

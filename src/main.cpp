@@ -14,6 +14,7 @@
 #include "controllers/surf.h"
 #include "controllers/fierywebprofile.h"
 #include "controllers/downloadsmanager.h"
+#include "controllers/requestinterceptor.h"
 
 #include "../fiery_version.h"
 
@@ -23,8 +24,33 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
+    // Allow WebEngine and Qt Quick to share the same OpenGL context.
+    // Without this, every composited WebEngine frame requires an extra
+    // texture upload across context boundaries.
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
+    // Append performance flags to whatever the user may have set in the
+    // environment. These must be set before QtWebEngineQuick::initialize().
+    //
+    // --ignore-gpu-blocklist          Force GPU rasterization even when
+    //                                 Chromium's internal blocklist would
+    //                                 fall back to software (common on Linux).
+    // --enable-gpu-rasterization      Rasterize tiles on the GPU.
+    // --enable-oop-rasterization      Rasterize in the GPU process, freeing
+    // --canvas-oop-rasterization      the renderer thread for JS work.
+    // --num-raster-threads=4          Parallelise tile rasterization.
+    QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
+    if (!chromiumFlags.isEmpty())
+        chromiumFlags += ' ';
+    chromiumFlags += "--ignore-gpu-blocklist "
+                     "--enable-gpu-rasterization "
+                     "--enable-oop-rasterization "
+                     "--canvas-oop-rasterization "
+                     "--num-raster-threads=4";
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", chromiumFlags);
+
     QtWebEngineQuick::initialize();
+    QApplication app(argc, argv);
 
     app.setOrganizationName("Maui");
     app.setWindowIcon(QIcon(":/fiery.svg"));
@@ -76,6 +102,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance<DownloadsManager>(FIERY_URI, 1, 0, "DownloadsManager", &DownloadsManager::instance());
 
     qmlRegisterType<FieryWebProfile>(FIERY_URI, 1, 0, "FieryWebProfile");
+    qmlRegisterType<RequestInterceptor>(FIERY_URI, 1, 0, "RequestInterceptor");
     qmlRegisterSingletonType<HistoryModel>(FIERY_URI, 1, 0, "History", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(scriptEngine)
         Q_UNUSED(engine)

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtWebEngine
@@ -13,12 +12,20 @@ import "../widgets"
 Maui.Page
 {
     id: control
-    property alias currentTab : _browserListView.currentItem
-    readonly property WebEngineView currentBrowser : currentTab.currentItem.webView
-    property alias listView: _browserListView
-    property alias count: _browserListView.count
-    readonly property alias model : _browserListView.contentModel
+    property bool privateMode: false
+    readonly property var activeView: privateMode ? _privateTabView : _browserListView
+
+    property var currentTab: activeView.currentItem
+    readonly property WebEngineView currentBrowser: currentTab && currentTab.currentItem ? currentTab.currentItem.webView : null
+    readonly property var listView: activeView
+    property int count: activeView.count
+    readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
+    onSearchFieldVisibleChanged:
+    {
+        if(!searchFieldVisible && control.currentBrowser)
+            control.currentBrowser.findText("")
+    }
 
 
     headBar.visible: !root.isWide
@@ -94,6 +101,7 @@ Maui.Page
 
         onOpened:
         {
+            _entryField.text = currentBrowser ? currentBrowser.url : ""
             _entryField.forceActiveFocus()
             _entryField.selectAll()
         }
@@ -104,7 +112,6 @@ Maui.Page
             id: _entryField
             Layout.fillWidth: true
             placeholderText: i18n("Search or enter URL")
-            text: currentBrowser.url
 
             activeFocusOnPress : true
             inputMethodHints: Qt.ImhUrlCharactersOnly  | Qt.ImhNoAutoUppercase
@@ -112,10 +119,10 @@ Maui.Page
             onAccepted:
             {
                 if(text.length > 0)
-                    _browserView.openUrl(text)
-                else
+                    control.openUrl(text)
+                else if(_historyListView.currentItem)
                 {
-                    _browserView.openUrl(_historyListView.currentItem.url)
+                    control.openUrl(_historyListView.currentItem.url)
                 }
 
                 _navigationPopup.close()
@@ -153,8 +160,8 @@ Maui.Page
 
                     onClicked:
                     {
-                        _browserView.openUrl(model.url)
-                        _historyListView.close()
+                        control.openUrl(_entryField.text)
+                        _navigationPopup.close()
                     }
                 }
 
@@ -169,15 +176,18 @@ Maui.Page
 
                     onClicked:
                     {
-                         control.currentBrowser.findText(_entryField.text)
-                        _historyListView.close()
+                        _searchField.text = _entryField.text
+                        control.searchFieldVisible = true
+                        control.currentBrowser.findText(_entryField.text)
+                        _navigationPopup.close()
                     }
                 }
             }
 
             Keys.onEnterPressed:
             {
-                _browserView.openUrl(_historyListView.currentItem.url)
+                if(_historyListView.currentItem)
+                    control.openUrl(_historyListView.currentItem.url)
             }
 
             model: Maui.BaseModel
@@ -201,7 +211,7 @@ Maui.Page
                 template.imageSizeHint: Maui.Style.iconSizes.medium
                 onClicked:
                 {
-                    _browserView.openUrl(model.url)
+                    control.openUrl(model.url)
                     _navigationPopup.close()
                 }
             }
@@ -212,13 +222,14 @@ Maui.Page
     {
         id: _browserListView
         anchors.fill: parent
+        visible: !privateMode
         holder.emoji: "qrc:/internet.svg"
 
         holder.title: i18n("Start Browsing")
         holder.body: i18n("Enter a new URL or open a recent site.")
 
         onNewTabClicked: openTab("")
-        onCloseTabClicked: _browserListView.closeTab(index)
+        onCloseTabClicked: (index) => _browserListView.closeTab(index)
 
         menuActions: Action
         {
@@ -242,7 +253,7 @@ Maui.Page
         }
 
         tabBar.showNewTabButton: false
-        tabBar.visible: true
+        tabBar.visible: root.visibility !== Window.FullScreen
         altTabBar: Maui.Handy.isMobile
         tabBar.rightContent: [
             Loader
@@ -263,6 +274,87 @@ Maui.Page
             visible: active
             sourceComponent: _navigationControlsComponent
         }
+    }
+
+    Item
+    {
+        id: _privateModeView
+        anchors.fill: parent
+        visible: privateMode
+
+        Maui.Holder
+        {
+            z: 1
+            anchors.fill: parent
+            visible: _privateTabView.count === 0
+            emoji: "face-glasses"
+            title: i18n("Private Browsing")
+            body: i18n("Fiery won't save your browsing history, cookies, or site data in Private Browsing mode. Downloads will still be saved.\n\nYour activity may still be visible to your network or device administrator.")
+
+            actions: Action
+            {
+                text: i18n("New Private Tab")
+                onTriggered: openTab("")
+            }
+        }
+
+        Maui.TabView
+        {
+            id: _privateTabView
+            anchors.fill: parent
+            visible: count > 0
+            holder.emoji: "qrc:/internet.svg"
+            holder.title: i18n("Start Browsing Privately")
+            holder.body: i18n("Enter a new URL or open a recent site.")
+
+            onNewTabClicked: openTab("")
+            onCloseTabClicked: (index) => _privateTabView.closeTab(index)
+
+            menuActions: Action
+            {
+                text: i18n("Detach")
+                onTriggered:
+                {
+                    let index = _privateTabView.menu.index
+                    var urls = _privateTabView.tabAt(index).urls
+                    newWindow(urls)
+                    _privateTabView.closeTab(index)
+                }
+            }
+
+            tabViewButton: NavigationBar
+            {
+                tabView: _privateTabView
+            }
+
+            tabBar.showNewTabButton: false
+            tabBar.visible: root.visibility !== Window.FullScreen
+            altTabBar: Maui.Handy.isMobile
+            tabBar.rightContent: [
+                Loader
+                {
+                    asynchronous: true
+                    active: root.isWide
+                    visible: active
+                    sourceComponent: _browserMenuComponent
+                },
+                Maui.WindowControls {}
+            ]
+
+            tabBar.leftContent: Loader
+            {
+                asynchronous: true
+                active: root.isWide
+                visible: active
+                sourceComponent: _navigationControlsComponent
+            }
+        }
+    }
+
+    WebEngineProfile
+    {
+        id: _incognitoProfile
+        offTheRecord: true
     }
 
     Component.onCompleted: openTab(appSettings.homePage)
@@ -317,9 +409,15 @@ Maui.Page
 
             ToolButton
             {
-                text: _browserListView.count
-                visible: _browserListView.count > 1
-                onClicked: _browserListView.openOverview()
+                icon.name: "view-refresh"
+                onClicked: currentBrowser.reload()
+            }
+
+            ToolButton
+            {
+                text: activeView.count
+                visible: activeView.count > 1
+                onClicked: activeView.openOverview()
                 icon.name: "view-group"
             }
         }
@@ -341,8 +439,12 @@ Maui.Page
 
             ToolButton
             {
-                icon.name: "view-refresh"
-                onClicked: currentBrowser.reload()
+                icon.name: currentTab && currentTab.count === 2 ? "view-right-close" : "view-split-left-right"
+                onClicked: currentTab && currentTab.count === 2 ? currentTab.pop() : control.openSplit("")
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: currentTab && currentTab.count === 2 ? i18n("Close Split View") : i18n("Split View")
             }
 
             Maui.ToolButtonMenu
@@ -356,60 +458,39 @@ Maui.Page
                         icon.name: "love"
                         checked: Fiery.Bookmarks.isBookmark(currentBrowser.url)
                         checkable: true
-                        onTriggered:  Fiery.Bookmarks.insertBookmark(currentBrowser.url, currentBrowser.title)
+                        onTriggered: Fiery.Bookmarks.insertBookmark(currentBrowser.url, currentBrowser.title)
                     }
-
-                    Action
-                    {
-                        text: i18n("Share")
-                        icon.name: "edit-share"
-                    }
-                }
-
-                Maui.ToolActions
-                {
-                    autoExclusive: false
-                    checkable: false
 
                     Action
                     {
                         icon.name: "zoom-out"
-                        onTriggered:
-                        {
-                            appSettings.zoomFactor = Math.max(appSettings.zoomFactor-0.25, 0.25)
-                        }
+                        onTriggered: appSettings.zoomFactor = Math.max(appSettings.zoomFactor - 0.25, 0.25)
                     }
 
                     Action
                     {
                         icon.name: "zoom-fit-page"
-                        onTriggered:
-                        {
-                            appSettings.zoomFactor = 1.0
-                        }
+                        onTriggered: appSettings.zoomFactor = 1.0
                     }
 
                     Action
                     {
                         icon.name: "zoom-in"
-                        onTriggered:
-                        {
-                            appSettings.zoomFactor = Math.min(appSettings.zoomFactor+0.25, 5.0)
-                        }
+                        onTriggered: appSettings.zoomFactor = Math.min(appSettings.zoomFactor + 0.25, 5.0)
                     }
                 }
 
                 MenuItem
                 {
-                    text: i18n("New Tab")
-                    icon.name: "list-add"
-                    onTriggered: _browserView.openTab("")
-                }
-
-                MenuItem
-                {
-                    text: i18n("Incognito Tab")
-                    icon.name: "actor"
+                    text: privateMode ? i18n("Exit Private Browsing") : i18n("Private Browsing")
+                    icon.name: "face-glasses"
+                    checked: privateMode
+                    onTriggered:
+                    {
+                        privateMode = !privateMode
+                        if(privateMode && _privateTabView.count === 0)
+                            Qt.callLater(openEditMode)
+                    }
                 }
 
                 MenuSeparator {}
@@ -444,8 +525,8 @@ Maui.Page
                 {
                     text: i18n("Find In Page")
                     icon.name: "edit-find"
-                    checked: _browserView.searchFieldVisible
-                    onTriggered: _browserView.searchFieldVisible = !_browserView.searchFieldVisible
+                    checked: control.searchFieldVisible
+                    onTriggered: control.searchFieldVisible = !control.searchFieldVisible
                 }
 
                 MenuSeparator {}
@@ -476,10 +557,9 @@ Maui.Page
     {
         var index = browserIndex(path)
 
-        if(index[0] >= 0 && index [1] >= 0)
+        if(index[0] >= 0 && index[1] >= 0)
         {
-
-            _browserListView.currentIndex = index[0]
+            activeView.currentIndex = index[0]
 
             var tab = control.model.get(index[0])
             tab.currentIndex = index[1]
@@ -511,20 +591,22 @@ Maui.Page
         return [-1,-1]
     }
 
-    function openTab(path)
+    function openTab(path, profile)
     {
         if(findTab(path))
-        {
             return;
-        }
 
-        _browserListView.addTab(_browserComponent, {"url": _surf.formatUrl(path)}, !appSettings.switchToTab && path.length > 0);
+        if(privateMode && !profile)
+            profile = _incognitoProfile
+
+        var props = {"url": _surf.formatUrl(path)}
+        if(profile)
+            props["browserProfile"] = profile
+
+        activeView.addTab(_browserComponent, props, !appSettings.switchToTab && path.length > 0);
 
         if(path.length === 0)
-        {
-            openEditMode()
-        }
-
+            Qt.callLater(openEditMode)
     }
 
     function openSplit(path)
@@ -541,6 +623,8 @@ Maui.Page
 
     function openUrl(path)
     {
+        if(!control.currentBrowser)
+            return
 
         if(validURL(path))
         {

@@ -1,12 +1,12 @@
-import QtQuick 2.14
-import QtQml 2.14
-import QtQuick.Controls 2.14
-import QtQuick.Layouts 1.3
-import QtWebEngine 1.10
+import QtQuick
+import QtQml
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtWebEngine
 
-import org.mauikit.controls 1.3 as Maui
+import org.mauikit.controls as Maui
 
-import org.maui.fiery 1.0 as Fiery
+import org.maui.fiery as Fiery
 
 Maui.TabViewButton
 {
@@ -15,6 +15,8 @@ Maui.TabViewButton
     property int position: control.TabBar.position
 
     readonly property WebEngineView webView : control.tabView.contentModel.get(control.mindex).browser.webView
+
+    text: control.tabView.contentModel.get(control.mindex).title
 
     onClicked:
     {
@@ -32,9 +34,12 @@ Maui.TabViewButton
         control.tabView.openTabMenu(control.mindex)
     }
 
-    //    text: control.hovered ? control.webView.url : control.webView.title
+    onCloseClicked:
+    {
+        control.tabView.closeTabClicked(control.mindex)
+    }
 
-    icon.source:  control.webView.icon
+    icon.source: control.webView.icon
     icon.color: "transparent"
 
     Maui.ProgressIndicator

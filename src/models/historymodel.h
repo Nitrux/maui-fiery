@@ -19,5 +19,6 @@ private:
 public Q_SLOTS:
     void appendUrl(const QUrl &url, const QString &title);
     void updateIcon(const QUrl &url, const QString &icon);
+    void clearAll();
 
 };

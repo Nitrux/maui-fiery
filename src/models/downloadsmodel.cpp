@@ -12,10 +12,9 @@ DownloadsModel::DownloadsModel(DownloadsManager *parent) : QAbstractListModel(pa
     ,m_manager(parent)
 {
 
-    connect(m_manager, &DownloadsManager::newDownload, [this](DownloadItem *item)
+    connect(m_manager, &DownloadsManager::newDownload, [this](DownloadItem *)
             {
                 beginResetModel();
-                //                qDebug() << "RESET DOWNLOAD MODEL FOR" << item->url();
                 endResetModel();
             });
 }

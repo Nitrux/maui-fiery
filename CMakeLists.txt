@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+# Suppress Qt CMake developer warnings about QML plugin static imports
+# (irrelevant for shared/dynamic builds, which is the only build type supported)
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS TRUE CACHE BOOL "" FORCE)
+
 set(FIERY_VERSION 2.0.2)
 add_compile_definitions(APP_COPYRIGHT_NOTICE="© 2022-2025 Maui Development Team")
 
@@ -32,7 +36,6 @@ include(KDEClangFormat)
 include(ECMSetupVersion)
 include(ECMSourceVersionControl)
 include(FeatureSummary)
-include(ECMQMLModules)
 
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Qml Sql)
 find_package(KF6 ${KF5_VERSION} REQUIRED COMPONENTS I18n CoreAddons)

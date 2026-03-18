@@ -48,6 +48,12 @@ void HistoryModel::updateIcon(const QUrl &url, const QString &icon)
     DBActions::getInstance()->urlIcon(url, icon);
 }
 
+void HistoryModel::clearAll()
+{
+    DBActions::getInstance()->clearHistory();
+    setList();
+}
+
 void HistoryModel::setList()
 {
     this->m_list.clear();

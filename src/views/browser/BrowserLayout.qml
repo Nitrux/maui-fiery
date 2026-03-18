@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import QtWebEngine
 
 import org.mauikit.controls as Maui
-import org.mauikit.filebrowsing as FB
 
 Item
 {
@@ -10,8 +10,10 @@ Item
 
     Maui.Controls.title: title
     Maui.Controls.toolTipText: currentItem.url
+    Maui.Controls.color: browserProfile.offTheRecord ? Maui.Theme.highlightColor : ""
 
     property url url
+    property WebEngineProfile browserProfile: root.profile
 
     property alias currentIndex : _splitView.currentIndex
     property alias orientation : _splitView.orientation
@@ -39,18 +41,6 @@ Item
                             event.accepted = true
                         }
 
-                        if((event.key === Qt.Key_Space) && (event.modifiers & Qt.ControlModifier))
-                        {
-                            tabView.findTab()
-                            event.accepted = true
-                        }
-
-
-                        if(event.key === Qt.Key_F4)
-                        {
-                            control.terminalVisible = !control.terminalVisible
-                            event.accepted = true
-                        }
                     }
 
     Maui.SplitView
@@ -79,7 +69,7 @@ Item
             return
         }
 
-        _splitView.addSplit(_browserComponent, {'url': path})
+        _splitView.addSplit(_browserComponent, {'url': path, 'browserProfile': control.browserProfile})
     }
 
     function pop()
@@ -92,24 +82,14 @@ Item
         closeSplit(_splitView.currentIndex === 1 ? 0 : 1)
     }
 
-    function closeSplit(index) //closes a split but triggering a warning before
+    function closeSplit(index)
     {
         if(index >= _splitView.count)
         {
             return
         }
 
-        const item = _splitView.itemAt(index)
-        if( item.editor.document.modified)
-        {
-            _dialogLoader.sourceComponent = _unsavedDialogComponent
-            dialog.callback = function () { destroyItem(index) }
-            dialog.open()
-            return
-        } else
-        {
-            destroyItem(index)
-        }
+        destroyItem(index)
     }
 
     function destroyItem(index) //deestroys a split view withouth warning

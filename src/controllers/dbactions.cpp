@@ -39,17 +39,26 @@ void DBActions::urlIcon(const QUrl &url, const QString &icon)
 
 FMH::MODEL_LIST DBActions::getHistory() const
 {
-return FMH::toModelList(this->get("select * from HISTORY h inner join ICONS i where i.url = h.url"));
+return FMH::toModelList(this->get("select * from HISTORY h left join ICONS i on i.url = h.url"));
 }
 
 FMH::MODEL_LIST DBActions::getBookmarks() const
 {
-    return FMH::toModelList(this->get("select * from BOOKMARKS b inner join ICONS i where i.url = b.url"));
+    return FMH::toModelList(this->get("select * from BOOKMARKS b left join ICONS i on i.url = b.url"));
 }
 
 bool DBActions::isBookmark(const QUrl &url)
 {
     return checkExistance("BOOKMARKS", "url", url.toString());
+}
+
+void DBActions::clearHistory()
+{
+    auto query = this->getQuery("DELETE FROM HISTORY");
+    query.exec();
+    auto query2 = this->getQuery("DELETE FROM ICONS");
+    query2.exec();
+    Q_EMIT this->historyCleared();
 }
 
 DBActions::DBActions(QObject *parent) : DB(parent)

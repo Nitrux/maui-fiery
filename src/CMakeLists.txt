@@ -4,13 +4,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 remove_definitions(-DQT_NO_CAST_FROM_ASCII -DQT_STRICT_ITERATORS -DQT_NO_CAST_FROM_BYTEARRAY -DQT_NO_URL_CAST_FROM_STRING)
 
-if (Qt6Core_VERSION VERSION_GREATER_EQUAL "6.10.0")
-    find_package(Qt6CorePrivate ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE)
-endif()
-
-if (Qt6WebEngineQuick_VERSION VERSION_GREATER_EQUAL "6.10.0")
-    find_package(Qt6WebEngineQuickPrivate ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE)
-endif()
 
 set(fiery_SRCS
     main.cpp
@@ -19,10 +12,10 @@ set(fiery_SRCS
     controllers/dbactions.cpp
     db/db.cpp
     models/downloadsmodel.cpp
-    models/recentmodel.cpp
     models/bookmarksmodel.cpp
     controllers/surf.cpp
-    controllers/fierywebprofile.cpp)
+    controllers/fierywebprofile.cpp
+    controllers/requestinterceptor.cpp)
 
 qt_add_resources(fiery_ASSETS
     assets/img_assets.qrc
@@ -31,6 +24,9 @@ qt_add_resources(fiery_ASSETS
 qt_add_executable(${PROJECT_NAME}
     ${fiery_SRCS}
     ${fiery_ASSETS})
+
+qt_policy(SET QTP0001 OLD) # keep :/app/maui/fiery/ resource prefix
+qt_policy(SET QTP0004 OLD) # no qmldir required for subdirectories
 
 qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     NO_PLUGIN
@@ -56,7 +52,5 @@ target_link_libraries(${PROJECT_NAME}
     KF6::I18n
     KF6::CoreAddons
 
-    Qt::CorePrivate
     Qt::WebEngineCore
-    Qt::WebEngineQuick
-    Qt::WebEngineQuickPrivate)
+    Qt::WebEngineQuick)

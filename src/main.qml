@@ -14,7 +14,7 @@ import "views/widgets"
 Maui.ApplicationWindow
 {
     id: root
-    title: browserView.currentTab.title
+    title: browserView.currentTab ? browserView.currentTab.title : "Fiery"
 
     readonly property var views : ({browser: 0, tabs: 1, history: 2})
 
@@ -30,45 +30,51 @@ Maui.ApplicationWindow
         property url searchEnginePage: "https://duckduckgo.com/?q="
         property color backgroundColor : root.Maui.Theme.backgroundColor
 
-        property bool accelerated2dCanvasEnabled : true
-        property bool allowGeolocationOnInsecureOrigins : false
         property bool allowRunningInsecureContent : false
-        property bool allowWindowActivationFromJavaScript : false
         property bool autoLoadIconsForPage : true
         property bool autoLoadImages : true
-        //        property bool defaultTextEncoding : string
         property bool dnsPrefetchEnabled : false
         property bool errorPageEnabled : true
-        property bool focusOnNavigationEnabled : false
-        property bool fullscreenSupportEnabled : false
-        property bool hyperlinkAuditingEnabled : false
+        property bool fullScreenSupportEnabled : false
         property bool javascriptCanAccessClipboard : true
         property bool javascriptCanOpenWindows : true
-        property bool javascriptCanPaste : true
         property bool javascriptEnabled : true
-        property bool linksIncludedInFocusChain : true
-        property bool localContentCanAccessFileUrls : true
-        property bool localContentCanAccessRemoteUrls : false
         property bool localStorageEnabled : true
         property bool pdfViewerEnabled : true
         property bool playbackRequiresUserGesture : true
-        property bool pluginsEnabled : false
-        property bool printElementBackgrounds : true
         property bool screenCaptureEnabled : true
         property bool showScrollBars : true
-        property bool spatialNavigationEnabled : false
-        property bool touchIconsEnabled : false
-        //        property bool unknownUrlSchemePolicy : WebEngineSettings::UnknownUrlSchemePolicy
         property bool webGLEnabled : true
-        property bool  webRTCPublicInterfacesOnly : false
+        property bool webRTCPublicInterfacesOnly : false
 
-        property string downloadsPath : browserView.profile.downloadPath
+        property string downloadsPath : root.profile.downloadPath
 
         property bool restoreSession: true
         property bool switchToTab: false
-        property double zoomFactor
+        property double zoomFactor: 1.0
 
         property bool autoSave: false
+
+        // Privacy
+        property bool doNotTrack: false
+        property bool adBlockEnabled: false
+        property bool cookieBannerBlocker: false
+        property string customUserAgent: ""
+    }
+
+    Fiery.RequestInterceptor
+    {
+        id: _requestInterceptor
+        doNotTrack: appSettings.doNotTrack
+        adBlockEnabled: appSettings.adBlockEnabled
+    }
+
+    Binding
+    {
+        target: root.profile
+        property: "httpUserAgent"
+        value: appSettings.customUserAgent
+        when: appSettings.customUserAgent.length > 0
     }
 
     Fiery.Surf
@@ -106,12 +112,8 @@ Maui.ApplicationWindow
 
     property WebEngineProfile profile: Fiery.FieryWebProfile
     {
-        //            httpUserAgent: tabs.currentItem.userAgent.userAgent
-        //            offTheRecord: tabs.privateTabsMode
-        //            storageName: tabs.privateTabsMode ? "Private" : Settings.profile
-
-        //            questionLoader: rootPage.questionLoader
-        //            urlInterceptor: typeof AdblockUrlInterceptor !== "undefined" && AdblockUrlInterceptor
+        downloadPath: appSettings.downloadsPath
+        urlInterceptor: _requestInterceptor
 
         onDownloadFinished: (download) =>
         {

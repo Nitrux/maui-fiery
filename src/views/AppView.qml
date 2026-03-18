@@ -39,8 +39,8 @@ Maui.SideBarView
 
             Action
             {
-                text: i18n("Home")
-                icon.name: "go-home"
+                text: i18n("Bookmarks")
+                icon.name: "bookmarks"
                 checked: _sidebarSwipeView.currentIndex === 0
                 onTriggered: _sidebarSwipeView.currentIndex = 0
             }
@@ -71,9 +71,8 @@ Maui.SideBarView
             {
                 active: visible
                 asynchronous: true
-                sourceComponent:  HomeView {}
+                sourceComponent: HomeView {}
             }
-
 
             Loader
             {
@@ -108,7 +107,7 @@ Maui.SideBarView
 
                             label1.text: model.name
                             label2.text: model.url
-                            iconSource: download.state === WebEngineDownloadItem.DownloadCompleted ? model.filePath : model.icon
+                            iconSource: download.state === WebEngineDownloadRequest.DownloadCompleted ? model.filePath : model.icon
 
                             property var download : model.download
 
@@ -117,7 +116,7 @@ Maui.SideBarView
                             ToolButton
                             {
 
-                                visible: !_downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadItem.DownloadInProgress
+                                visible: !_downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress
                                 text: i18n("Pause")
                                 icon.name: "media-playback-pause"
                                 onClicked: _downloadDelegate.download.pause()
@@ -125,7 +124,7 @@ Maui.SideBarView
 
                             ToolButton
                             {
-                                visible: _downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadItem.DownloadInProgress
+                                visible: _downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress
                                 text: i18n("Continue")
                                 icon.name: "media-playback-start"
                                 onClicked: _downloadDelegate.download.resume();
@@ -133,7 +132,7 @@ Maui.SideBarView
 
                             ToolButton
                             {
-                                icon.name: _downloadDelegate.download.state === WebEngineDownloadItem.DownloadInProgress ? "dialog-cancel" : "list-remove"
+                                icon.name: _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress ? "dialog-cancel" : "list-remove"
                             }
                         }
                     }

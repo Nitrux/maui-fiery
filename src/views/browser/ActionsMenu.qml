@@ -53,17 +53,6 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        text: i18n("Translate")
-        height: visible? implicitHeight : 00 - control.spacing
-        visible:  request.editFlags & ContextMenuRequest.CanTranslate
-        onTriggered:
-        {
-            _webView.triggerWebAction(WebEngineView.Tran);
-        }
-    }
-
-    MenuItem
-    {
         text: i18n("Select All")
         height: visible? implicitHeight : 00 - control.spacing
         visible:  request.editFlags & ContextMenuRequest.CanSelectAll
@@ -103,7 +92,18 @@ Maui.ContextualMenu
         visible: control.isValidUrl
         onTriggered:
         {
-            openTab( control.request.linkUrl);
+            webView.url = control.request.linkUrl
+        }
+    }
+
+    MenuItem
+    {
+        text: i18n("Open Link in New Tab")
+        height: visible? implicitHeight : 00 - control.spacing
+        visible: control.isValidUrl
+        onTriggered:
+        {
+            openTab(control.request.linkUrl)
         }
     }
 

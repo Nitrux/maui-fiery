@@ -1,10 +1,10 @@
-import QtQuick 2.14
-import QtQuick.Controls 2.14
-import QtQuick.Layouts 1.3
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
-import org.mauikit.controls 1.3 as Maui
+import org.mauikit.controls as Maui
 
-import org.maui.fiery 1.0 as Fiery
+import org.maui.fiery as Fiery
 
 Maui.Page
 {
@@ -24,6 +24,10 @@ Maui.Page
         id: _listView
         anchors.fill: parent
 
+        holder.visible: count === 0
+        holder.emoji: "bookmarks"
+        holder.title: i18n("No Bookmarks")
+        holder.body: i18n("Bookmarked pages will appear here.")
 
         model: Maui.BaseModel
         {

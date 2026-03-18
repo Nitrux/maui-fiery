@@ -30,7 +30,7 @@
 
 #include <MauiKit4/FileBrowsing/fmstatic.h>
 
-const static QString DB_Dir_Path = FMStatic::DataPath + "/sol";
+const static QString DB_Dir_Path = FMStatic::DataPath + "/fiery";
 const static QString DB_Path = DB_Dir_Path + "/data.db";
 
 DB::DB(QObject *parent) : QObject(parent)
