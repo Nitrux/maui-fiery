@@ -16,6 +16,27 @@ Maui.ApplicationWindow
     id: root
     title: browserView.currentTab ? browserView.currentTab.title : "Fiery"
 
+    color: "transparent"
+    background: null
+
+    Maui.WindowBlur
+    {
+        view: root
+        geometry: Qt.rect(0, 0, root.width, root.height)
+        windowRadius: Maui.Style.radiusV
+        enabled: true
+    }
+
+    Rectangle
+    {
+        anchors.fill: parent
+        color: Maui.Theme.backgroundColor
+        opacity: 0.76
+        radius: Maui.Style.radiusV
+        border.color: Qt.rgba(1, 1, 1, 0)
+        border.width: 1
+    }
+
     readonly property var views : ({browser: 0, tabs: 1, history: 2})
 
     readonly property alias currentBrowser : _appView.currentBrowser

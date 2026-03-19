@@ -5,6 +5,7 @@
 #include <QDate>
 #include <QIcon>
 #include <QThread>
+#include <QSurfaceFormat>
 
 #include <MauiKit4/Core/mauiapp.h>
 
@@ -26,6 +27,12 @@
 
 int main(int argc, char *argv[])
 {
+    // Enable compositor-level alpha channel for window transparency.
+    // Must be set before QApplication is created.
+    QSurfaceFormat format;
+    format.setAlphaBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);
+
     // Allow WebEngine and Qt Quick to share the same OpenGL context.
     // Without this, every composited WebEngine frame requires an extra
     // texture upload across context boundaries.

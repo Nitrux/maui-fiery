@@ -13,6 +13,9 @@ Maui.Page
 {
     id: control
     property bool privateMode: false
+
+    background: null
+    headerMargins: Maui.Style.contentMargins
     readonly property var activeView: privateMode ? _privateTabView : _browserListView
 
     property var currentTab: activeView.currentItem
@@ -438,6 +441,8 @@ Maui.Page
         id: _browserListView
         anchors.fill: parent
         visible: !privateMode
+        background: null
+        tabBarMargins: Maui.Style.contentMargins
         holder.emoji: "qrc:/internet.svg"
 
         holder.title: i18n("Start Browsing")
@@ -526,6 +531,8 @@ Maui.Page
             id: _privateTabView
             anchors.fill: parent
             visible: count > 0
+            background: null
+            tabBarMargins: Maui.Style.contentMargins
             holder.emoji: "qrc:/internet.svg"
             holder.title: i18n("Start Browsing Privately")
             holder.body: i18n("Enter a new URL or open a recent site.")

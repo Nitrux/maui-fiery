@@ -15,6 +15,7 @@ import "home"
 Maui.SideBarView
 {
     id: _sideBarView
+    background: null
 
     readonly property alias currentBrowser : _browserView.currentBrowser
     readonly property alias browserView : _browserView
@@ -26,6 +27,8 @@ Maui.SideBarView
     sideBar.content: Maui.Page
     {
         anchors.fill: parent
+        background: null
+        headerMargins: Maui.Style.contentMargins
         Maui.Theme.colorSet: Maui.Theme.Window
         Maui.Theme.inherit: false
 
