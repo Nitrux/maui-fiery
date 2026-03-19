@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    add_compile_options(-march=x86-64-v4 -O3 -ffast-math)
+    add_compile_options(-march=x86-64-v3 -O3 -ffast-math)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
