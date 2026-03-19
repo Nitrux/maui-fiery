@@ -14,7 +14,7 @@
 class QQuickWebEngineDownloadRequest : public DownloadItem {};
 
 FieryWebProfile::FieryWebProfile(QObject *parent)
-    : QQuickWebEngineProfile{parent}
+    : QQuickWebEngineProfile{QStringLiteral("Fiery"), parent}
 {
     connect(this, &QQuickWebEngineProfile::downloadRequested, this, &FieryWebProfile::handleDownload);
     connect(this, &QQuickWebEngineProfile::downloadFinished, this, &FieryWebProfile::handleDownloadFinished);

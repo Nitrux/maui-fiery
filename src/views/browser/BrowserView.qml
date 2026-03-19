@@ -165,23 +165,6 @@ Maui.Page
                     }
                 }
 
-                Maui.ListBrowserDelegate
-                {
-                    Layout.fillWidth: true
-                    label1.text: _entryField.text
-                    label2.text: i18n("Search on page.")
-
-                    iconSource: "edit-find"
-                    iconSizeHint: Maui.Style.iconSizes.medium
-
-                    onClicked:
-                    {
-                        _searchField.text = _entryField.text
-                        control.searchFieldVisible = true
-                        control.currentBrowser.findText(_entryField.text)
-                        _navigationPopup.close()
-                    }
-                }
             }
 
             Keys.onEnterPressed:
@@ -626,35 +609,18 @@ Maui.Page
         if(!control.currentBrowser)
             return
 
-        if(validURL(path))
+        if(_surf.isValidUrl(path))
         {
-          if(protocolURL(path))
-            control.currentBrowser.url = path
-          else
-            control.currentBrowser.url = 'http://'+path
-        }else
+            if(_surf.hasProtocol(path))
+                control.currentBrowser.url = path
+            else
+                control.currentBrowser.url = 'http://' + path
+        } else
         {
-            control.currentBrowser.url = appSettings.searchEnginePage+path
+            control.currentBrowser.url = appSettings.searchEnginePage + path
         }
 
         control.currentTab.forceActiveFocus()
-    }
-
-    function validURL(str)
-    {
-        var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
-                                 '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
-                                 '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
-                                 '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
-                                 '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
-                                 '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
-        return !!pattern.test(str);
-    }
-
-    function protocolURL(str)
-    {
-        var pattern = new RegExp('^https?:\\/\\/');
-        return !!pattern.test(str);
     }
 
 }

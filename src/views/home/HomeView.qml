@@ -40,7 +40,7 @@ Maui.Page
             filterCaseSensitivity: Qt.CaseInsensitive
         }
 
-        delegate:  Maui.ListBrowserDelegate
+        delegate: Maui.ListBrowserDelegate
         {
             width: ListView.view.width
             label1.text: model.title
@@ -51,6 +51,42 @@ Maui.Page
             {
                 _listView.currentIndex = index
                 _browserView.openTab(model.url)
+            }
+
+            onRightClicked:
+            {
+                _listView.currentIndex = index
+                _bookmarkMenu.url = model.url
+                _bookmarkMenu.popup()
+            }
+
+            onPressAndHold:
+            {
+                _listView.currentIndex = index
+                _bookmarkMenu.url = model.url
+                _bookmarkMenu.popup()
+            }
+        }
+
+        Menu
+        {
+            id: _bookmarkMenu
+            property string url: ""
+
+            MenuItem
+            {
+                text: i18n("Open")
+                icon.name: "document-open"
+                onTriggered: _browserView.openTab(_bookmarkMenu.url)
+            }
+
+            MenuSeparator {}
+
+            MenuItem
+            {
+                text: i18n("Remove Bookmark")
+                icon.name: "bookmark-remove"
+                onTriggered: Fiery.Bookmarks.removeBookmark(_bookmarkMenu.url)
             }
         }
 

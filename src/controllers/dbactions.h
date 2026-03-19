@@ -43,6 +43,7 @@ public:
 
     void addToHistory(const UrlData &data);
     void addBookmark(const UrlData &data);
+    void removeBookmark(const QUrl &url);
     void clearHistory();
 
     void urlIcon(const QUrl &url, const QString &icon);
@@ -66,6 +67,7 @@ private:
 Q_SIGNALS:
     void historyUrlInserted(UrlData data);
     void bookmarkInserted(UrlData data);
+    void bookmarkRemoved(QUrl url);
     void iconInserted(QUrl url, QString icon);
     void historyCleared();
 

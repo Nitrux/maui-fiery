@@ -10,9 +10,13 @@ DBActions *DBActions::m_instance = nullptr;
 void DBActions::addToHistory(const UrlData &data)
 {
     auto mData = data.toMap();
-    mData.insert("adddate",  QDateTime::currentDateTime().toString(Qt::TextDate));
-    if(this->insert("HISTORY", mData))
+    mData.insert("adddate", QDateTime::currentDateTime().toString(Qt::ISODate));
+    qInfo() << "addToHistory:" << data.url << "insert result:";
+    // INSERT OR REPLACE updates adddate on revisit so the signal always fires
+    // and the model stays current regardless of whether the URL is new or repeat.
+    if (this->insert("HISTORY", mData, /*orReplace=*/true))
     {
+        qInfo() << "  -> insert OK, emitting historyUrlInserted";
         Q_EMIT this->historyUrlInserted(data);
     }
 }
@@ -20,10 +24,18 @@ void DBActions::addToHistory(const UrlData &data)
 void DBActions::addBookmark(const UrlData &data)
 {
     auto mData = data.toMap();
-    mData.insert("adddate",  QDateTime::currentDateTime().toString(Qt::TextDate));
-    if(this->insert("BOOKMARKS", mData))
+    mData.insert("adddate", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (this->insert("BOOKMARKS", mData))
     {
         Q_EMIT this->bookmarkInserted(data);
+    }
+}
+
+void DBActions::removeBookmark(const QUrl &url)
+{
+    if (this->remove("BOOKMARKS", {{FMH::MODEL_KEY::URL, url.toString()}}))
+    {
+        Q_EMIT this->bookmarkRemoved(url);
     }
 }
 

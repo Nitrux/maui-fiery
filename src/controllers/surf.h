@@ -10,5 +10,7 @@ public:
 
 public Q_SLOTS:
     static QUrl formatUrl(const QUrl &url);
+    static bool isValidUrl(const QString &input);
+    static bool hasProtocol(const QString &input);
 
 };

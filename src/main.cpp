@@ -3,6 +3,7 @@
 #include <QCommandLineParser>
 #include <QQmlContext>
 #include <QIcon>
+#include <QThread>
 
 #include <MauiKit4/Core/mauiapp.h>
 
@@ -42,11 +43,16 @@ int main(int argc, char *argv[])
     QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     if (!chromiumFlags.isEmpty())
         chromiumFlags += ' ';
+    // Use at least 2 raster threads, scaled to the number of logical cores.
+    // Avoids unnecessary context switching on low-end devices while allowing
+    // high-end hardware to fully utilise available cores.
+    const int rasterThreads = qMax(2, QThread::idealThreadCount());
     chromiumFlags += "--ignore-gpu-blocklist "
                      "--enable-gpu-rasterization "
                      "--enable-oop-rasterization "
                      "--canvas-oop-rasterization "
-                     "--num-raster-threads=4";
+                     "--ozone-platform-hint=auto "
+                     "--num-raster-threads=" + QByteArray::number(rasterThreads);
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", chromiumFlags);
 
     QtWebEngineQuick::initialize();
@@ -106,18 +112,15 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType<HistoryModel>(FIERY_URI, 1, 0, "History", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(scriptEngine)
         Q_UNUSED(engine)
-
-        //           engine->setObjectOwnership(platform, QQmlEngine::CppOwnership);
-        return new HistoryModel;
+        static HistoryModel *instance = new HistoryModel;
+        return instance;
     });
-
 
     qmlRegisterSingletonType<BookMarksModel>(FIERY_URI, 1, 0, "Bookmarks", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(scriptEngine)
         Q_UNUSED(engine)
-
-        //           engine->setObjectOwnership(platform, QQmlEngine::CppOwnership);
-        return new BookMarksModel;
+        static BookMarksModel *instance = new BookMarksModel;
+        return instance;
     });
 
     engine.load(url);

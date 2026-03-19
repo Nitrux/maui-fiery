@@ -84,7 +84,7 @@ protected:
      * @param insertData
      * @return
      */
-    bool insert(const QString &tableName, const QVariantMap &insertData);
+    bool insert(const QString &tableName, const QVariantMap &insertData, bool orReplace = false);
 
     /**
      * @brief update

@@ -6,11 +6,14 @@ BookMarksModel::BookMarksModel()
 {
     this->setList();
 
-    connect(DBActions::getInstance(), &DBActions::bookmarkInserted, [this](UrlData data)
+    connect(DBActions::getInstance(), &DBActions::bookmarkInserted, [this](UrlData)
     {
-        Q_EMIT this->preItemAppended();
-        this->m_list << data.toModel();
-        Q_EMIT this->postItemAppended();
+        this->setList();
+    });
+
+    connect(DBActions::getInstance(), &DBActions::bookmarkRemoved, [this](QUrl)
+    {
+        this->setList();
     });
 
     connect(DBActions::getInstance(), &DBActions::iconInserted, [this](QUrl url, QString icon)
@@ -30,8 +33,8 @@ const FMH::MODEL_LIST &BookMarksModel::items() const
 
 void BookMarksModel::setList()
 {
-    this->m_list.clear();
     Q_EMIT this->preListChanged();
+    this->m_list.clear();
     this->m_list << DBActions::getInstance()->getBookmarks();
     Q_EMIT this->postListChanged();
 }
@@ -39,6 +42,11 @@ void BookMarksModel::setList()
 void BookMarksModel::insertBookmark(const QUrl &url, const QString &title) const
 {
     DBActions::getInstance()->addBookmark({url, title});
+}
+
+void BookMarksModel::removeBookmark(const QUrl &url)
+{
+    DBActions::getInstance()->removeBookmark(url);
 }
 
 bool BookMarksModel::isBookmark(const QUrl &url)

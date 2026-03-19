@@ -132,7 +132,7 @@ bool DB::checkExistance(const QString &queryStr)
         if (query.next())
             return true;
     } else
-        qDebug() << query.lastError().text();
+        qWarning() << "DB::checkExistance failed:" << query.lastError().text();
 
     return false;
 }
@@ -143,7 +143,7 @@ QSqlQuery DB::getQuery(const QString &queryTxt) const
     return query;
 }
 
-bool DB::insert(const QString &tableName, const QVariantMap &insertData)
+bool DB::insert(const QString &tableName, const QVariantMap &insertData, bool orReplace)
 {
     if (tableName.isEmpty()) {
         qWarning() << "DB::insert: table name is empty";
@@ -161,7 +161,8 @@ bool DB::insert(const QString &tableName, const QVariantMap &insertData)
     for (int i = 0; i < totalFields; ++i)
         strValues.append("?");
 
-    QString sqlQueryString = "INSERT INTO " + tableName + " (" + QString(fields.join(",")) + ") VALUES(" + QString(strValues.join(",")) + ")";
+    const QString verb = orReplace ? QStringLiteral("INSERT OR REPLACE INTO") : QStringLiteral("INSERT INTO");
+    QString sqlQueryString = verb + " " + tableName + " (" + QString(fields.join(",")) + ") VALUES(" + QString(strValues.join(",")) + ")";
     QSqlQuery query(this->m_db);
     query.prepare(sqlQueryString);
 
@@ -169,7 +170,11 @@ bool DB::insert(const QString &tableName, const QVariantMap &insertData)
     for (const QVariant &value : values)
         query.bindValue(k++, value);
 
-    return query.exec();
+    if (!query.exec()) {
+        qWarning() << "DB::insert failed on" << tableName << ":" << query.lastError().text() << "|" << query.lastQuery();
+        return false;
+    }
+    return true;
 }
 
 bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QVariantMap &where)

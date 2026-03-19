@@ -73,13 +73,14 @@ Maui.SplitViewItem
             //                _menu.show()
         }
 
-        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];function r(){s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}}r();new MutationObserver(r).observe(document.documentElement,{childList:true,subtree:true});})();"
+        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];function r(){s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}}r();var t;new MutationObserver(function(){if(t)clearTimeout(t);t=setTimeout(r,500);}).observe(document.documentElement,{childList:true,subtree:true});})();"
 
         onLoadingChanged: function(loadingInfo)
         {
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
             {
                 control._loadFailed = false
+                console.log("Load succeeded. offTheRecord:", _webView.profile.offTheRecord, "url:", control.url)
                 if (!_webView.profile.offTheRecord)
                     Fiery.History.appendUrl(control.url, control.title)
                 if (appSettings.cookieBannerBlocker)
@@ -175,39 +176,60 @@ Maui.SplitViewItem
 
     // Workaround for QtWebEngine GPU surface not repainting after a
     // Wayland compositor workspace switch (e.g. Hyprland).
-    // requestAnimationFrame asks Blink's renderer to schedule a paint
-    // frame, which causes it to submit a fresh texture to Qt Quick.
+    //
+    // Root cause: when Hyprland hides a workspace it stops sending
+    // wl_surface.frame callbacks.  Chromium's Viz compositor detects the
+    // absence of BeginFrame acknowledgements and goes idle.  When the
+    // workspace is shown again Viz is still idle — it won't produce a new
+    // GPU frame until it receives a BeginFrame, but it won't receive one
+    // until it submits a frame.  Qt Quick therefore composites a stale or
+    // empty texture → black screen.
+    //
+    // The single-RAF approach used previously was fragile: Wayland
+    // re-enables wl_surface.frame callbacks asynchronously, so the one
+    // frame of GPU activity could fire before the compositor was ready to
+    // accept it, leaving Viz idle again.  A multi-frame burst keeps Viz
+    // active long enough for the callback round-trip to complete.
+    //
+    // The same stall can happen when a tab is brought back to the
+    // foreground after being backgrounded long enough for Viz to throttle,
+    // so we also trigger on onVisibleChanged.
+    function _kickVizCompositor()
+    {
+        _webView.lifecycleState = WebEngineView.Active
+        _webView.runJavaScript(
+            "(function(){" +
+            "  var old=document.getElementById('fiery-viz-kick');" +
+            "  if(old)old.remove();" +
+            "  var e=document.createElement('div');" +
+            "  e.id='fiery-viz-kick';" +
+            "  e.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;" +
+                               "transform:translateZ(0);pointer-events:none;" +
+                               "opacity:0.001;z-index:2147483647';" +
+            "  document.documentElement.appendChild(e);" +
+            "  var frames=0;" +
+            "  function tick(){" +
+            "    if(++frames<5&&e.parentNode){e.style.width=(2+frames)+'px';requestAnimationFrame(tick);}" +
+            "    else{e.remove();}" +
+            "  }" +
+            "  requestAnimationFrame(tick);" +
+            "})()"
+        )
+    }
+
+    onVisibleChanged:
+    {
+        if (visible && Window.window.active)
+            _kickVizCompositor()
+    }
+
     Connections
     {
         target: Window.window
         function onActiveChanged()
         {
             if (Window.window.active && control.visible)
-            {
-                // When a Wayland compositor (e.g. Hyprland) hides a workspace,
-                // it stops sending wl_surface.frame callbacks. Chromium's Viz
-                // compositor detects this and stops producing GPU frames. When
-                // the workspace becomes active again, Viz is still idle —
-                // waiting for a BeginFrame it won't get — so Qt Quick composites
-                // a stale/empty texture (black screen).
-                //
-                // An empty requestAnimationFrame() doesn't fix this because it
-                // produces no damage in Viz's compositor layer tree. We need to
-                // create actual layer damage. Briefly inserting a GPU-composited
-                // element (transform:translateZ forces its own cc::Layer) marks
-                // Viz's tree as dirty and forces a real swap buffer submission.
-                _webView.lifecycleState = WebEngineView.Active
-                _webView.runJavaScript(
-                    "(function(){" +
-                    "  var e=document.createElement('div');" +
-                    "  e.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;" +
-                                       "transform:translateZ(0);pointer-events:none;" +
-                                       "opacity:0.001;z-index:2147483647';" +
-                    "  document.documentElement.appendChild(e);" +
-                    "  requestAnimationFrame(function(){e.remove();});" +
-                    "})()"
-                )
-            }
+                _kickVizCompositor()
         }
     }
 
@@ -253,13 +275,6 @@ Maui.SplitViewItem
         body: i18n("Enter a new URL or open a recent site.")
     }
 
-    Component.onCompleted:
-    {
-        if(!control.url || !control.url.toString().length || !validURL(control.url))
-        {
-            //            _stackView.push(_startComponent)
-        }
-    }
 }
 
 

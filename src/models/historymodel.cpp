@@ -6,11 +6,9 @@ HistoryModel::HistoryModel()
 {
     this->setList();
 
-    connect(DBActions::getInstance(), &DBActions::historyUrlInserted, [this](UrlData data)
+    connect(DBActions::getInstance(), &DBActions::historyUrlInserted, [this](UrlData)
     {
-        Q_EMIT this->preItemAppended();
-        this->m_list << data.toModel();
-        Q_EMIT this->postItemAppended();
+        this->setList();
     });
 
     connect(DBActions::getInstance(), &DBActions::iconInserted, [this](QUrl url, QString icon)
@@ -46,8 +44,8 @@ void HistoryModel::clearAll()
 
 void HistoryModel::setList()
 {
-    this->m_list.clear();
     Q_EMIT this->preListChanged();
+    this->m_list.clear();
     this->m_list << DBActions::getInstance()->getHistory();
     Q_EMIT this->postListChanged();
 }

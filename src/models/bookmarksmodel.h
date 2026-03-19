@@ -17,6 +17,7 @@ private:
 
 public Q_SLOTS:
     void insertBookmark(const QUrl &url, const QString &title) const;
+    void removeBookmark(const QUrl &url);
     bool isBookmark(const QUrl &url);
 
 };

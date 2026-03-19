@@ -18,6 +18,3 @@ url TEXT,
 icon TEXT,
 PRIMARY KEY(url)
 );
-
-
-COMMIT;
