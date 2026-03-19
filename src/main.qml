@@ -42,7 +42,7 @@ Maui.ApplicationWindow
         property bool dnsPrefetchEnabled : false
         property bool errorPageEnabled : true
         property bool fullScreenSupportEnabled : false
-        property bool javascriptCanAccessClipboard : true
+        property bool javascriptCanAccessClipboard : false
         property bool javascriptCanOpenWindows : true
         property bool javascriptEnabled : true
         property bool localStorageEnabled : true
@@ -51,7 +51,7 @@ Maui.ApplicationWindow
         property bool screenCaptureEnabled : true
         property bool showScrollBars : true
         property bool webGLEnabled : true
-        property bool webRTCPublicInterfacesOnly : false
+        property bool webRTCPublicInterfacesOnly : true
 
         property string downloadsPath : root.profile.downloadPath
 
@@ -64,6 +64,15 @@ Maui.ApplicationWindow
         // Serialised JSON array of URLs from the last session, used when
         // restoreSession is true.  Written on window close; read on startup.
         property string sessionUrlsJson: ""
+
+        // Permissions — global allow/deny for each browser capability request.
+        // When disabled the permission is silently denied without prompting the user.
+        property bool allowNotifications:   false
+        property bool allowGeolocation:     false
+        property bool allowMicrophone:      false
+        property bool allowCamera:          false
+        property bool allowDesktopCapture:  false
+        property bool allowMouseLock:       false
 
         // Privacy
         property bool doNotTrack: false

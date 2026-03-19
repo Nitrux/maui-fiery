@@ -57,6 +57,8 @@ bool surf::isValidUrl(const QString &input)
 
 bool surf::hasProtocol(const QString &input)
 {
-    return input.startsWith(QLatin1String("http://"),  Qt::CaseInsensitive)
-        || input.startsWith(QLatin1String("https://"), Qt::CaseInsensitive);
+    // scheme().length() > 1 reuses the same guard as isValidUrl: it accepts any
+    // explicit URI scheme (http, https, ftp, file, about, data, …) while
+    // excluding single-letter Windows drive letters.
+    return QUrl(input).scheme().length() > 1;
 }

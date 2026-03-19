@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">       
         <file>db/script.sql</file>
+        <file>blocklist.txt</file>
     </qresource>
 </RCC>

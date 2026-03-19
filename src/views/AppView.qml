@@ -90,6 +90,41 @@ Maui.SideBarView
                 {
                     background: null
 
+                    // Warn before handing executable file types to the OS handler.
+                    Dialog
+                    {
+                        id: _execWarningDialog
+                        property url pendingPath
+
+                        title: i18n("Open Downloaded File?")
+                        standardButtons: Dialog.Open | Dialog.Cancel
+
+                        anchors.centerIn: parent
+
+                        Label
+                        {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: i18n("This file may be executable. Opening it could run code on your system. Are you sure you want to open it?")
+                        }
+
+                        onAccepted: Qt.openUrlExternally(pendingPath)
+                    }
+
+                    function openDownloadedFile(filePath)
+                    {
+                        var dangerous = [".sh", ".bash", ".zsh", ".desktop", ".AppImage",
+                                         ".run", ".bin", ".exe", ".py", ".pl", ".rb", ".command"]
+                        var path = filePath.toString().toLowerCase()
+                        if (dangerous.some(function(ext) { return path.endsWith(ext) }))
+                        {
+                            _execWarningDialog.pendingPath = filePath
+                            _execWarningDialog.open()
+                        }
+                        else
+                            Qt.openUrlExternally(filePath)
+                    }
+
                     // Shared context menu — populated with the tapped row's data
                     // before popup() is called, matching the pattern used in HomeView.
                     Maui.ContextualMenu
@@ -105,7 +140,7 @@ Maui.SideBarView
                             text: i18n("Open")
                             enabled: _downloadMenu.currentDownload !== null
                                      && _downloadMenu.currentDownload.state === WebEngineDownloadRequest.DownloadCompleted
-                            onTriggered: Qt.openUrlExternally(_downloadMenu.currentFilePath)
+                            onTriggered: openDownloadedFile(_downloadMenu.currentFilePath)
                         }
 
                         MenuSeparator {}
@@ -170,7 +205,7 @@ Maui.SideBarView
                                 onClicked:
                                 {
                                     if (!_dlItem._inProgress)
-                                        Qt.openUrlExternally(model.filePath)
+                                        openDownloadedFile(model.filePath)
                                 }
 
                                 onRightClicked:

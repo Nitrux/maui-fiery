@@ -113,6 +113,19 @@ Maui.SettingsDialog
 
     Maui.FlexSectionItem
     {
+        label1.text: i18n("Permissions")
+        label2.text: i18n("Control which features websites are allowed to use.")
+
+        ToolButton
+        {
+            icon.name: "go-next"
+            checkable: true
+            onToggled: control.addPage(_permissionsComponent)
+        }
+    }
+
+    Maui.FlexSectionItem
+    {
         label1.text: i18n("Privacy & Security")
         label2.text: i18n("Ad blocker, tracking, and data options.")
 
@@ -394,6 +407,107 @@ Maui.SettingsDialog
                         checkable: true
                         checked: appSettings.javascriptCanOpenWindows
                         onToggled: appSettings.javascriptCanOpenWindows = !appSettings.javascriptCanOpenWindows
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Permissions ──────────────────────────────────────────────────────────
+
+    Component
+    {
+        id: _permissionsComponent
+
+        Maui.SettingsPage
+        {
+            title: i18n("Permissions")
+
+            Maui.SectionGroup
+            {
+                description: i18n("These are global defaults. When disabled, the permission is silently denied for all sites without a prompt.")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Notifications")
+                    label2.text: i18n("Allow websites to send desktop notifications.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowNotifications
+                        onToggled: appSettings.allowNotifications = !appSettings.allowNotifications
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Location")
+                    label2.text: i18n("Allow websites to request your geographic location.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowGeolocation
+                        onToggled: appSettings.allowGeolocation = !appSettings.allowGeolocation
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Microphone")
+                    label2.text: i18n("Allow websites to access your microphone.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowMicrophone
+                        onToggled: appSettings.allowMicrophone = !appSettings.allowMicrophone
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Camera")
+                    label2.text: i18n("Allow websites to access your camera.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowCamera
+                        onToggled: appSettings.allowCamera = !appSettings.allowCamera
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Screen Capture")
+                    label2.text: i18n("Allow websites to record your screen or desktop audio.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowDesktopCapture
+                        onToggled: appSettings.allowDesktopCapture = !appSettings.allowDesktopCapture
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Pointer Lock")
+                    label2.text: i18n("Allow websites to capture and hide the cursor (used in browser games).")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.allowMouseLock
+                        onToggled: appSettings.allowMouseLock = !appSettings.allowMouseLock
                     }
                 }
             }

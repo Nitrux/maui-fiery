@@ -29,12 +29,14 @@ QWebEngineUrlRequestInterceptor *FieryWebProfile::urlInterceptor() const
 
 void FieryWebProfile::handleDownload(QQuickWebEngineDownloadRequest *downloadItem)
 {
-        DownloadItem *download = qobject_cast<DownloadItem *>(downloadItem);
+    DownloadItem *download = qobject_cast<DownloadItem *>(downloadItem);
+    if (!download)
+        return;
 
     download->accept();
     download->pause();
 
-    DownloadsManager::instance().add(downloadItem);
+    DownloadsManager::instance().add(download);
 }
 
 void FieryWebProfile::handleDownloadFinished(DownloadItem *downloadItem)

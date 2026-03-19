@@ -1,0 +1,756 @@
+# Fiery built-in ad & tracker block list
+# Format: one hostname per line (bare hostname or "0.0.0.0 hostname").
+# Lines beginning with '#' are comments.
+# Subdomains are matched automatically by the interceptor, so listing
+# "example.com" also blocks "ads.example.com", "track.example.com", etc.
+
+# ── Google advertising & analytics ───────────────────────────────────────────
+doubleclick.net
+googleadservices.com
+googlesyndication.com
+googletagservices.com
+adservice.google.com
+google-analytics.com
+analytics.google.com
+imasdk.googleapis.com
+googleoptimize.com
+pagead2.googlesyndication.com
+tpc.googlesyndication.com
+adwords.googlesyndication.com
+stats.g.doubleclick.net
+cm.g.doubleclick.net
+ad.doubleclick.net
+
+# ── Google Tag Manager (used for tracker injection on many sites) ─────────────
+googletagmanager.com
+
+# ── Meta / Facebook ───────────────────────────────────────────────────────────
+connect.facebook.net
+pixel.facebook.com
+an.facebook.com
+graph.facebook.com
+staticxx.facebook.com
+www.facebook.com
+edge-chat.facebook.com
+edge-chat.messenger.com
+
+# ── Instagram (Meta tracking endpoints) ──────────────────────────────────────
+graph.instagram.com
+
+# ── Amazon advertising ────────────────────────────────────────────────────────
+adsystem.amazon.com
+aax.amazon-adsystem.com
+fls-na.amazon.com
+ir.ebaystatic.com
+
+# ── Microsoft / Bing ──────────────────────────────────────────────────────────
+bat.bing.com
+clarity.ms
+c.clarity.ms
+ads.microsoft.com
+bingads.microsoft.com
+
+# ── Twitter / X ───────────────────────────────────────────────────────────────
+ads.twitter.com
+ads.x.com
+analytics.twitter.com
+analytics.x.com
+t.co
+syndication.twitter.com
+
+# ── LinkedIn ──────────────────────────────────────────────────────────────────
+snap.licdn.com
+px.ads.linkedin.com
+dc.ads.linkedin.com
+
+# ── TikTok ────────────────────────────────────────────────────────────────────
+tracking.tiktok.com
+analytics.tiktok.com
+ads.tiktok.com
+mon.tiktok.com
+mcs.tiktok.com
+
+# ── Snapchat ──────────────────────────────────────────────────────────────────
+tr.snapchat.com
+sc-static.net
+sc-cdn.net
+
+# ── Pinterest ─────────────────────────────────────────────────────────────────
+ct.pinterest.com
+log.pinterest.com
+trk.pinterest.com
+
+# ── Reddit ────────────────────────────────────────────────────────────────────
+alb.reddit.com
+pixel.redd.it
+events.redd.it
+
+# ── Yahoo / Oath / Verizon Media ──────────────────────────────────────────────
+advertising.com
+adtech.de
+media.net
+ads.yahoo.com
+yahooapis.com
+gemini.yahoo.com
+nexage.com
+
+# ── AppNexus / Xandr ──────────────────────────────────────────────────────────
+adnxs.com
+ib.adnxs.com
+secure.adnxs.com
+lax1.ib.adnxs.com
+
+# ── Criteo ────────────────────────────────────────────────────────────────────
+criteo.com
+criteo.net
+static.criteo.net
+dis.criteo.com
+sslwidget.criteo.com
+widget.criteo.com
+
+# ── The Trade Desk ────────────────────────────────────────────────────────────
+adsrvr.org
+match.adsrvr.org
+js.adsrvr.org
+
+# ── Rubicon Project / Magnite ─────────────────────────────────────────────────
+rubiconproject.com
+fastlane.rubiconproject.com
+eus.rubiconproject.com
+
+# ── OpenX ─────────────────────────────────────────────────────────────────────
+openx.net
+openx.com
+ox-d.openx.net
+us-u.openx.net
+
+# ── PubMatic ──────────────────────────────────────────────────────────────────
+pubmatic.com
+ads.pubmatic.com
+image2.pubmatic.com
+simage2.pubmatic.com
+
+# ── Index Exchange ────────────────────────────────────────────────────────────
+indexww.com
+casalemedia.com
+ssum-sec.casalemedia.com
+
+# ── Smart AdServer ────────────────────────────────────────────────────────────
+smartadserver.com
+www3.smartadserver.com
+diff.smartadserver.com
+
+# ── Outbrain ──────────────────────────────────────────────────────────────────
+outbrain.com
+widgets.outbrain.com
+amplify.outbrain.com
+odb.outbrain.com
+
+# ── Taboola ───────────────────────────────────────────────────────────────────
+taboola.com
+trc.taboola.com
+cdn.taboola.com
+nr-data.taboola.com
+images.taboola.com
+
+# ── Sharethrough ──────────────────────────────────────────────────────────────
+sharethrough.com
+
+# ── 33Across ──────────────────────────────────────────────────────────────────
+33across.com
+sic.33across.com
+lexicon.33across.com
+
+# ── TripleLift ────────────────────────────────────────────────────────────────
+triplelift.com
+tlx.3lift.com
+eb2.3lift.com
+
+# ── Sovrn / Lijit ─────────────────────────────────────────────────────────────
+lijit.com
+sovrn.com
+
+# ── MGID ──────────────────────────────────────────────────────────────────────
+mgid.com
+
+# ── Revcontent ────────────────────────────────────────────────────────────────
+revcontent.com
+labs-cdn.revcontent.com
+
+# ── Zemanta ───────────────────────────────────────────────────────────────────
+zemanta.com
+
+# ── Gravity / AdsNative ───────────────────────────────────────────────────────
+gravity.com
+
+# ── SpeedShift Media ──────────────────────────────────────────────────────────
+speedshiftmedia.com
+
+# ── GumGum ────────────────────────────────────────────────────────────────────
+gumgum.com
+
+# ── Teads ─────────────────────────────────────────────────────────────────────
+teads.tv
+t.teads.tv
+
+# ── Undertone / Perion ────────────────────────────────────────────────────────
+undertone.com
+
+# ── ContextWeb / Pulsepoint ───────────────────────────────────────────────────
+contextweb.com
+bids.contextweb.com
+
+# ── Conversant / Epsilon ──────────────────────────────────────────────────────
+conversantmedia.com
+dotomi.com
+dtmpub.com
+
+# ── Sizmek / Amazon DSP ───────────────────────────────────────────────────────
+serving-sys.com
+mediamind.com
+
+# ── Quantcast ─────────────────────────────────────────────────────────────────
+quantserve.com
+pixel.quantserve.com
+cms.quantserve.com
+
+# ── Comscore ──────────────────────────────────────────────────────────────────
+scorecardresearch.com
+beacon.scorecardresearch.com
+comscore.com
+imrworldwide.com
+nr7.us
+
+# ── Nielsen ───────────────────────────────────────────────────────────────────
+nielsen.com
+exelate.com
+prism.app-us1.com
+
+# ── Neustar / TransUnion ──────────────────────────────────────────────────────
+agkn.com
+neustar.biz
+
+# ── Integral Ad Science ───────────────────────────────────────────────────────
+adsafeprotected.com
+static.adsafeprotected.com
+
+# ── DoubleVerify ──────────────────────────────────────────────────────────────
+doubleverify.com
+cdn.doubleverify.com
+rtb.doubleverify.com
+
+# ── MOAT (Oracle Data Cloud) ──────────────────────────────────────────────────
+moatads.com
+moatpixel.com
+z.moatads.com
+
+# ── LiveRamp / Acxiom ─────────────────────────────────────────────────────────
+liveramp.com
+rlcdn.com
+pippio.com
+
+# ── Oracle BlueKai ────────────────────────────────────────────────────────────
+bluekai.com
+bkrtx.com
+oracle.com.edgekey.net
+
+# ── Adobe Audience Manager / Target / Analytics ───────────────────────────────
+omtrdc.net
+demdex.net
+2o7.net
+adobedtm.com
+assets.adobedtm.com
+adobedc.net
+
+# ── Lotame ────────────────────────────────────────────────────────────────────
+crwdcntrl.net
+lotame.com
+
+# ── Bombora ───────────────────────────────────────────────────────────────────
+bombora.com
+
+# ── Salesforce / Krux ─────────────────────────────────────────────────────────
+krxd.net
+beacon.krxd.net
+
+# ── Kochava ───────────────────────────────────────────────────────────────────
+kochava.com
+
+# ── Adjust ────────────────────────────────────────────────────────────────────
+adjust.com
+app.adjust.com
+
+# ── AppsFlyer ─────────────────────────────────────────────────────────────────
+appsflyer.com
+t.appsflyer.com
+
+# ── Branch.io ─────────────────────────────────────────────────────────────────
+app.link
+branch.io
+
+# ── Everflow / CAKE ───────────────────────────────────────────────────────────
+everflow.io
+
+# ── Impact (affiliate tracking) ───────────────────────────────────────────────
+impact.com
+sjv.io
+
+# ── Commission Junction / CJ Affiliate ───────────────────────────────────────
+doubleclick.net
+emjcd.com
+
+# ── ShareASale ────────────────────────────────────────────────────────────────
+shareasale.com
+
+# ── ── Analytics & session-recording ────────────────────────────────────────
+# Google Analytics already listed above
+mixpanel.com
+api.mixpanel.com
+cdn.mxpnl.com
+
+amplitude.com
+api2.amplitude.com
+api.amplitude.com
+cdn.amplitude.com
+
+segment.com
+api.segment.io
+cdn.segment.com
+cdn.segment.io
+
+heapanalytics.com
+heap.io
+
+fullstory.com
+edge.fullstory.com
+rs.fullstory.com
+
+logrocket.com
+cdn.lr-in.com
+cdn.lr-ingest.io
+
+mouseflow.com
+a.mouseflow.com
+
+crazyegg.com
+script.crazyegg.com
+
+luckyorange.com
+cs.luckyorange.net
+
+kissmetrics.com
+doug1izaerwt3.cloudfront.net
+
+woopra.com
+static.woopra.com
+
+chartbeat.com
+static.chartbeat.com
+ping.chartbeat.net
+
+parsely.com
+api.parsely.com
+srv.chartbeat.com
+
+hotjar.com
+static.hotjar.com
+script.hotjar.com
+insights.hotjar.com
+vcl-us1.hotjar.com
+
+clarity.ms
+c.clarity.ms
+
+inspectlet.com
+hn.inspectlet.com
+
+hubspot.com
+js.hs-analytics.net
+js.hscollectedforms.net
+js.hsadspixel.net
+forms.hsforms.com
+track.hubspot.com
+
+marketo.com
+munchkin.marketo.net
+
+eloqua.com
+img.en25.com
+
+# ── New Relic (browser agent) ─────────────────────────────────────────────────
+nr-data.net
+js-agent.newrelic.com
+bam.nr-data.net
+bam-cell.nr-data.net
+
+# ── Datadog (browser RUM) ─────────────────────────────────────────────────────
+browser-intake-datadoghq.com
+rum.browser-intake-datadoghq.com
+
+# ── Dynatrace (RUM) ───────────────────────────────────────────────────────────
+dynatrace.com
+
+# ── Sentry (error/session tracking — not crash-reporting self-hosted) ─────────
+# sentry.io intentionally excluded; used for legitimate crash reporting.
+
+# ── Intercom ──────────────────────────────────────────────────────────────────
+intercom.io
+js.intercomcdn.com
+api-iam.intercom.io
+widget.intercom.io
+
+# ── Drift ─────────────────────────────────────────────────────────────────────
+drift.com
+js.driftt.com
+
+# ── Zendesk ───────────────────────────────────────────────────────────────────
+zopim.com
+static.zdassets.com
+
+# ── Olark ─────────────────────────────────────────────────────────────────────
+olark.com
+static.olark.com
+
+# ── Freshworks / Freshchat ────────────────────────────────────────────────────
+freshchat.com
+wchat.freshchat.com
+assets.freshservice.com
+
+# ── Klaviyo ───────────────────────────────────────────────────────────────────
+klaviyo.com
+static.klaviyo.com
+
+# ── Mailchimp / Mandrill tracking ────────────────────────────────────────────
+list-manage.com
+mailchimp.com
+
+# ── Braze ─────────────────────────────────────────────────────────────────────
+braze.com
+sdk.iad-01.braze.com
+
+# ── Iterable ──────────────────────────────────────────────────────────────────
+iterable.com
+
+# ── Customer.io ───────────────────────────────────────────────────────────────
+customer.io
+track.customer.io
+
+# ── Optimizely ────────────────────────────────────────────────────────────────
+optimizely.com
+cdn.optimizely.com
+logx.optimizely.com
+
+# ── VWO (Visual Website Optimizer) ────────────────────────────────────────────
+vwo.com
+dev.visualwebsiteoptimizer.com
+
+# ── LaunchDarkly ──────────────────────────────────────────────────────────────
+launchdarkly.com
+app.launchdarkly.com
+clientstream.launchdarkly.com
+
+# ── SplitIO ───────────────────────────────────────────────────────────────────
+split.io
+sdk.split.io
+
+# ── SpeedCurve / mPulse ───────────────────────────────────────────────────────
+mpulse.net
+go-mpulse.net
+
+# ── Akamai mPulse ─────────────────────────────────────────────────────────────
+akstat.io
+akamaized.net
+
+# ── ── Malvertising / known bad actors ──────────────────────────────────────
+2mdn.net
+ad.ro.lt
+ad1.emediate.eu
+ads.creative-serving.com
+ads.pubserve.me
+adserver.adtechus.com
+cdn.adnxs.com
+cdn.doubleverify.com
+cdn.id5-sync.com
+id5-sync.com
+match.360yield.com
+match.prod.bidr.io
+prebid.adnxs.com
+ib.anycast.adnxs.com
+secure.flashtalking.com
+static.flashtalking.com
+flashtalking.com
+yastatic.net
+an.yandex.ru
+mc.yandex.ru
+counter.yadro.ru
+pixel.yandex.net
+ssp.yandex.ru
+direct.yandex.ru
+banners.adfox.ru
+adfox.ru
+tns-counter.ru
+top-fwz1.mail.ru
+
+# ── Telemetry & update-check beacons ─────────────────────────────────────────
+safebrowsing.googleapis.com
+update.googleapis.com
+clientservices.googleapis.com
+
+# ── Funding Choices (Google consent) ─────────────────────────────────────────
+fundingchoicesmessages.google.com
+consent.google.com
+
+# ── IAB / TCF consent frameworks ─────────────────────────────────────────────
+cmp.quantcast.com
+cmp2.quantcast.com
+tcf.privacy-center.org
+
+# ── OneTrust / CookiePro (consent banners) ───────────────────────────────────
+onetrust.com
+cdn.cookielaw.org
+optanon.blob.core.windows.net
+geolocation.onetrust.com
+
+# ── TrustArc ──────────────────────────────────────────────────────────────────
+trustarc.com
+consent.truste.com
+
+# ── Evidon ────────────────────────────────────────────────────────────────────
+evidon.com
+
+# ── UserCentrics ──────────────────────────────────────────────────────────────
+usercentrics.eu
+app.usercentrics.eu
+
+# ── Didomi ────────────────────────────────────────────────────────────────────
+sdk.privacy-center.org
+
+# ── Sourcepoint ───────────────────────────────────────────────────────────────
+sourcepoint.com
+cdn.privacy-mgmt.com
+
+# ── Disqus (comment tracking & ads) ──────────────────────────────────────────
+disqus.com
+disquscdn.com
+
+# ── Tapad ─────────────────────────────────────────────────────────────────────
+tapad.com
+go.tapad.com
+
+# ── Spotxchange / SpotX ───────────────────────────────────────────────────────
+spotxchange.com
+spotx.tv
+
+# ── Undertone ─────────────────────────────────────────────────────────────────
+undertone.com
+
+# ── YuMe ──────────────────────────────────────────────────────────────────────
+yume.com
+
+# ── RealVu ────────────────────────────────────────────────────────────────────
+realvu.net
+
+# ── Nativo ────────────────────────────────────────────────────────────────────
+nativo.com
+adserver.nativo.com
+
+# ── AdColony ──────────────────────────────────────────────────────────────────
+adcolony.com
+
+# ── MoPub / Twitter Audience Network ─────────────────────────────────────────
+mopub.com
+
+# ── InMobi ────────────────────────────────────────────────────────────────────
+inmobi.com
+cf.innity.com
+
+# ── Oath / Verizon Media ──────────────────────────────────────────────────────
+oath.com
+video.unrulymedia.com
+unruly.co
+unrulymedia.com
+
+# ── Viant / Vindico ───────────────────────────────────────────────────────────
+vindico.com
+viantinc.com
+
+# ── Centro / Basis ────────────────────────────────────────────────────────────
+centro.net
+
+# ── StackAdapt ────────────────────────────────────────────────────────────────
+stackadapt.com
+tags.srv.stackadapt.com
+
+# ── Beeswax ───────────────────────────────────────────────────────────────────
+beeswax.com
+
+# ── MediaMath ─────────────────────────────────────────────────────────────────
+mathtag.com
+cm.mathtag.com
+
+# ── Liveramp / RampID ─────────────────────────────────────────────────────────
+rlcdn.com
+
+# ── Dun & Bradstreet / Bombora ────────────────────────────────────────────────
+dnb.com
+
+# ── Samba TV ──────────────────────────────────────────────────────────────────
+samba.tv
+assets.samba.tv
+
+# ── Nielsen Extended ──────────────────────────────────────────────────────────
+nNielsen.com
+edigitalsurvey.com
+enhance.com
+
+# ── Eyeota ────────────────────────────────────────────────────────────────────
+eyeota.net
+cm.eyeota.net
+
+# ── Dstillery ─────────────────────────────────────────────────────────────────
+dstillery.com
+match.dstillery.com
+
+# ── Deep Intent ───────────────────────────────────────────────────────────────
+deepintent.com
+
+# ── Blis ──────────────────────────────────────────────────────────────────────
+blismedia.com
+
+# ── Bidswitch ─────────────────────────────────────────────────────────────────
+bidswitch.net
+x.bidswitch.net
+
+# ── Improve Digital ───────────────────────────────────────────────────────────
+improvedigital.com
+ad.360yield.com
+
+# ── Smart RTB+ ────────────────────────────────────────────────────────────────
+smartclip.net
+smartclip.com
+
+# ── Adform ────────────────────────────────────────────────────────────────────
+adform.net
+adform.com
+track.adform.net
+
+# ── AdGear ────────────────────────────────────────────────────────────────────
+adgear.com
+d.adgear.com
+
+# ── MediaNet ──────────────────────────────────────────────────────────────────
+media.net
+
+# ── Yieldmo ───────────────────────────────────────────────────────────────────
+yieldmo.com
+ads.yieldmo.com
+
+# ── Kargo ─────────────────────────────────────────────────────────────────────
+kargo.com
+
+# ── DistroScale ───────────────────────────────────────────────────────────────
+distroscale.com
+
+# ── Digital Turbine / Locker Dome ────────────────────────────────────────────
+lockerdome.com
+digitalturbine.com
+
+# ── Evolent / Eversight ───────────────────────────────────────────────────────
+eversight.ai
+
+# ── AdTheorent ────────────────────────────────────────────────────────────────
+adtheorent.com
+
+# ── Peer39 ────────────────────────────────────────────────────────────────────
+peer39.com
+peer39.net
+
+# ── Grapeshot / Oracle Contextual ─────────────────────────────────────────────
+grapeshot.co.uk
+
+# ── Semasio ───────────────────────────────────────────────────────────────────
+semasio.net
+
+# ── Weborama ──────────────────────────────────────────────────────────────────
+weborama.fr
+weborama.com
+
+# ── Adikteev ──────────────────────────────────────────────────────────────────
+adikteev.com
+
+# ── Adloox ────────────────────────────────────────────────────────────────────
+adloox.com
+
+# ── WhiteOps / Human Security ─────────────────────────────────────────────────
+whiteops.com
+humandetection.tech
+
+# ── Cxense ────────────────────────────────────────────────────────────────────
+cxense.com
+scdn.cxense.com
+
+# ── Piano / AT Internet ───────────────────────────────────────────────────────
+piano.io
+xiti.com
+
+# ── comScore Extended ─────────────────────────────────────────────────────────
+voicefive.com
+certifica.com
+
+# ── Verve Group ───────────────────────────────────────────────────────────────
+vervegroup.com
+ads.vervegroup.com
+
+# ── Widespace ─────────────────────────────────────────────────────────────────
+widespace.com
+
+# ── Phunware ──────────────────────────────────────────────────────────────────
+phunware.com
+
+# ── LiveIntent ────────────────────────────────────────────────────────────────
+liveintent.com
+ad.liveintent.com
+
+# ── Zedo ──────────────────────────────────────────────────────────────────────
+zedo.com
+
+# ── Marchex ───────────────────────────────────────────────────────────────────
+marchex.io
+
+# ── Adacado ───────────────────────────────────────────────────────────────────
+adacado.com
+
+# ── AdButler ──────────────────────────────────────────────────────────────────
+adbutler.com
+servedbyadbutler.com
+
+# ── BrightRoll / Oath ─────────────────────────────────────────────────────────
+brightroll.com
+
+# ── Videology / Amobee ────────────────────────────────────────────────────────
+amobee.com
+videologygroup.com
+
+# ── Yieldbird ─────────────────────────────────────────────────────────────────
+yieldbird.com
+
+# ── Mediaplex ─────────────────────────────────────────────────────────────────
+mediaplex.com
+
+# ── Digital River ─────────────────────────────────────────────────────────────
+digitalriver.com
+
+# ── Cross-network pixel trackers ──────────────────────────────────────────────
+pixel.wp.com
+pixel.twitter.com
+pixel.advertising.com
+pixel.mathtag.com
+
+# ── Misc known trackers ───────────────────────────────────────────────────────
+tr.snapchat.com
+events.launchdarkly.com
+cdn.evgnet.com
+adsymptotic.com
+cdn.adsymptotic.com
+amazon-adsystem.com
+s.amazon-adsystem.com

@@ -44,6 +44,50 @@ Maui.SplitViewItem
         onClicked: _webView.triggerWebAction(WebEngineView.ExitFullScreen)
     }
 
+    // Mandatory anti-phishing overlay shown for 4 s whenever a page enters
+    // fullscreen.  Rendered at z=100 — entirely above the WebEngineView — so
+    // the page cannot cover or mimic it with its own drawing.
+    Rectangle
+    {
+        id: _fullscreenOverlay
+        z: 100
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Maui.Style.space.big
+
+        visible: false
+        radius: Maui.Style.radiusV
+        color: Maui.Theme.backgroundColor
+        border.color: Maui.Theme.textColor
+        border.width: 1
+        opacity: 0.95
+
+        width:  _fullscreenLabel.implicitWidth  + Maui.Style.space.huge * 2
+        height: _fullscreenLabel.implicitHeight + Maui.Style.space.medium * 2
+
+        Label
+        {
+            id: _fullscreenLabel
+            anchors.centerIn: parent
+            color: Maui.Theme.textColor
+            text:
+            {
+                var host = ""
+                try { host = new URL(_webView.url.toString()).hostname } catch(e) {}
+                return host.length > 0
+                    ? i18n("%1 is now fullscreen · Press Esc to exit", host)
+                    : i18n("Page is now fullscreen · Press Esc to exit")
+            }
+        }
+
+        Timer
+        {
+            id: _fullscreenOverlayTimer
+            interval: 4000
+            onTriggered: _fullscreenOverlay.visible = false
+        }
+    }
+
     Shortcut
     {
         sequence: "Escape"
@@ -78,7 +122,10 @@ Maui.SplitViewItem
                 var filePaths = paths.map(function(p)
                 {
                     var s = p.toString()
-                    return s.startsWith("file://") ? s.slice(7) : s
+                    // Strip the file:// prefix and decode percent-encoded characters
+                    // (e.g. %20 → space) so the engine receives a plain filesystem
+                    // path rather than a URL-encoded string.
+                    return decodeURIComponent(s.startsWith("file://") ? s.slice(7) : s)
                 })
                 req.acceptFiles(filePaths)
             }
@@ -200,9 +247,50 @@ Maui.SplitViewItem
             request.accept()
             control._webFullScreen = request.toggleOn
             if (request.toggleOn)
+            {
                 Window.window.showFullScreen()
+                _fullscreenOverlay.visible = true
+                _fullscreenOverlayTimer.restart()
+            }
             else
+            {
                 Window.window.showNormal()
+                _fullscreenOverlayTimer.stop()
+                _fullscreenOverlay.visible = false
+            }
+        }
+
+        onFeaturePermissionRequested: (securityOrigin, feature) =>
+        {
+            var granted = false
+            switch (feature)
+            {
+                case WebEngineView.Notifications:
+                    granted = appSettings.allowNotifications
+                    break
+                case WebEngineView.Geolocation:
+                    granted = appSettings.allowGeolocation
+                    break
+                case WebEngineView.MediaAudioCapture:
+                    granted = appSettings.allowMicrophone
+                    break
+                case WebEngineView.MediaVideoCapture:
+                    granted = appSettings.allowCamera
+                    break
+                case WebEngineView.MediaAudioVideoCapture:
+                    granted = appSettings.allowMicrophone && appSettings.allowCamera
+                    break
+                case WebEngineView.DesktopVideoCapture:
+                case WebEngineView.DesktopAudioVideoCapture:
+                    granted = appSettings.allowDesktopCapture
+                    break
+                case WebEngineView.MouseLock:
+                    granted = appSettings.allowMouseLock
+                    break
+                default:
+                    break
+            }
+            _webView.grantFeaturePermission(securityOrigin, feature, granted)
         }
 
         onNavigationRequested: (request) =>
@@ -222,7 +310,7 @@ Maui.SplitViewItem
         settings.javascriptCanPaste : false
         settings.javascriptEnabled : appSettings.javascriptEnabled
         settings.linksIncludedInFocusChain : true
-        settings.localContentCanAccessFileUrls : true
+        settings.localContentCanAccessFileUrls : false
         settings.localContentCanAccessRemoteUrls : false
         settings.localStorageEnabled : appSettings.localStorageEnabled
         settings.pdfViewerEnabled : appSettings.pdfViewerEnabled

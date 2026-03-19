@@ -139,9 +139,7 @@ Maui.ContextualMenu
         text:  i18n('Search for "%1"', elidedText)
         onTriggered:
         {
-
-            openTab(appSettings.searchEnginePage+ fullText);
-
+            openTab(appSettings.searchEnginePage + encodeURIComponent(fullText));
         }
     }
 

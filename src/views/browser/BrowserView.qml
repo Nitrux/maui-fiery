@@ -21,6 +21,7 @@ Maui.Page
     property int count: activeView.count
     readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
+    property string _lastClosedUrl: ""
     onSearchFieldVisibleChanged:
     {
         if(!searchFieldVisible && control.currentBrowser)
@@ -88,6 +89,215 @@ Maui.Page
         onActivated: _navigationPopup.open()
     }
 
+    Shortcut
+    {
+        sequence: "Ctrl+T"
+        onActivated: openTab("")
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+W"
+        enabled: activeView.count > 0
+        onActivated:
+        {
+            if (currentBrowser)
+                control._lastClosedUrl = currentBrowser.url.toString()
+            activeView.closeTab(activeView.currentIndex)
+        }
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+R"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.reload()
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+D"
+        enabled: currentBrowser !== null
+        onActivated: Fiery.Bookmarks.insertBookmark(currentBrowser.url, currentBrowser.title)
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+J"
+        onActivated: openDownloads()
+    }
+
+    // ── Core navigation ───────────────────────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Ctrl+Shift+T"
+        enabled: control._lastClosedUrl.length > 0
+        onActivated:
+        {
+            openTab(control._lastClosedUrl)
+            control._lastClosedUrl = ""
+        }
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+Tab"
+        enabled: activeView.count > 1
+        onActivated: activeView.currentIndex = (activeView.currentIndex + 1) % activeView.count
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+Shift+Tab"
+        enabled: activeView.count > 1
+        onActivated: activeView.currentIndex = (activeView.currentIndex - 1 + activeView.count) % activeView.count
+    }
+
+    Shortcut { sequence: "Ctrl+1"; enabled: activeView.count >= 1; onActivated: activeView.currentIndex = 0 }
+    Shortcut { sequence: "Ctrl+2"; enabled: activeView.count >= 2; onActivated: activeView.currentIndex = 1 }
+    Shortcut { sequence: "Ctrl+3"; enabled: activeView.count >= 3; onActivated: activeView.currentIndex = 2 }
+    Shortcut { sequence: "Ctrl+4"; enabled: activeView.count >= 4; onActivated: activeView.currentIndex = 3 }
+    Shortcut { sequence: "Ctrl+5"; enabled: activeView.count >= 5; onActivated: activeView.currentIndex = 4 }
+    Shortcut { sequence: "Ctrl+6"; enabled: activeView.count >= 6; onActivated: activeView.currentIndex = 5 }
+    Shortcut { sequence: "Ctrl+7"; enabled: activeView.count >= 7; onActivated: activeView.currentIndex = 6 }
+    Shortcut { sequence: "Ctrl+8"; enabled: activeView.count >= 8; onActivated: activeView.currentIndex = 7 }
+    Shortcut { sequence: "Ctrl+9"; enabled: activeView.count > 0;  onActivated: activeView.currentIndex = activeView.count - 1 }
+
+    // ── Window control ────────────────────────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Ctrl+N"
+        onActivated: newWindow([appSettings.homePage])
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+Shift+N"
+        onActivated:
+        {
+            privateMode = !privateMode
+            if (privateMode && _privateTabView.count === 0)
+                Qt.callLater(openEditMode)
+        }
+    }
+
+    // ── Navigation & page control ─────────────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Alt+Left"
+        enabled: currentBrowser !== null && currentBrowser.canGoBack
+        onActivated: currentBrowser.goBack()
+    }
+
+    Shortcut
+    {
+        sequence: "Alt+Right"
+        enabled: currentBrowser !== null && currentBrowser.canGoForward
+        onActivated: currentBrowser.goForward()
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+Shift+R"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.triggerWebAction(WebEngineView.ReloadAndBypassCache)
+    }
+
+    Shortcut
+    {
+        sequence: "Escape"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.stop()
+    }
+
+    // ── Address bar ───────────────────────────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Ctrl+L"
+        onActivated: _navigationPopup.open()
+    }
+
+    // ── Page interaction ──────────────────────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Ctrl+F"
+        onActivated: control.searchFieldVisible = !control.searchFieldVisible
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl++"
+        enabled: currentBrowser !== null
+        onActivated: appSettings.zoomFactor = Math.min(appSettings.zoomFactor + 0.25, 5.0)
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+-"
+        enabled: currentBrowser !== null
+        onActivated: appSettings.zoomFactor = Math.max(appSettings.zoomFactor - 0.25, 0.25)
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+0"
+        enabled: currentBrowser !== null
+        onActivated: appSettings.zoomFactor = 1.0
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+P"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.runJavaScript("window.print()")
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+S"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.triggerWebAction(WebEngineView.SavePage)
+    }
+
+    Shortcut
+    {
+        sequence: "F11"
+        onActivated:
+        {
+            if (root.visibility === Window.FullScreen)
+                root.showNormal()
+            else
+                root.showFullScreen()
+        }
+    }
+
+    // ── History / downloads / dev tools ───────────────────────────────────────
+
+    Shortcut
+    {
+        sequence: "Ctrl+H"
+        onActivated: openHistory()
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+Shift+I"
+        enabled: currentBrowser !== null
+        onActivated: currentBrowser.triggerWebAction(WebEngineView.InspectElement)
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+U"
+        enabled: currentBrowser !== null
+        onActivated: openTab("view-source:" + currentBrowser.url)
+    }
+
     Maui.PopupPage
     {
         id: _navigationPopup
@@ -126,6 +336,35 @@ Maui.Page
                 }
 
                 _navigationPopup.close()
+            }
+
+            // Ctrl+Enter: append .com to the typed word and navigate.
+            // Alt+Enter: open the typed URL / query in a new tab.
+            Keys.onPressed: (event) =>
+            {
+                const isReturn = event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                if (!isReturn)
+                    return
+
+                if (event.modifiers & Qt.ControlModifier)
+                {
+                    var t = _entryField.text.trim()
+                    if (t.length > 0)
+                    {
+                        control.openUrl(t.endsWith(".com") ? t : t + ".com")
+                        _navigationPopup.close()
+                    }
+                    event.accepted = true
+                }
+                else if (event.modifiers & Qt.AltModifier)
+                {
+                    if (_entryField.text.length > 0)
+                    {
+                        openTab(_entryField.text)
+                        _navigationPopup.close()
+                    }
+                    event.accepted = true
+                }
             }
 
             Keys.forwardTo: _historyListView
@@ -659,15 +898,19 @@ Maui.Page
         if(!control.currentBrowser)
             return
 
+        // Block javascript: pseudo-protocol to prevent Self-XSS via the address bar.
+        if(path.toString().trim().toLowerCase().startsWith("javascript:"))
+            return
+
         if(_surf.isValidUrl(path))
         {
             if(_surf.hasProtocol(path))
                 control.currentBrowser.url = path
             else
-                control.currentBrowser.url = 'http://' + path
+                control.currentBrowser.url = 'https://' + path
         } else
         {
-            control.currentBrowser.url = appSettings.searchEnginePage + path
+            control.currentBrowser.url = appSettings.searchEnginePage + encodeURIComponent(path)
         }
 
         control.currentTab.forceActiveFocus()
