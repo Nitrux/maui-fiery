@@ -116,7 +116,15 @@ Maui.ApplicationWindow
         id: _acceptDownloadAction
         property var download
         text: i18n("Accept")
-        onTriggered: () =>{ _acceptDownloadAction.download.resume() }
+        onTriggered: () => { _acceptDownloadAction.download.resume() }
+    }
+
+    Action
+    {
+        id: _cancelDownloadAction
+        property var download
+        text: i18n("Cancel")
+        onTriggered: () => { Fiery.DownloadsManager.cancelDownload(_cancelDownloadAction.download) }
     }
 
     Action
@@ -160,7 +168,8 @@ Maui.ApplicationWindow
         function onNewDownload(download)
         {
             _acceptDownloadAction.download = download
-            root.notify("dialog-question", download.downloadFileName, i18n("Do you want to download and save this file?"), [_acceptDownloadAction])
+            _cancelDownloadAction.download = download
+            root.notify("dialog-question", download.downloadFileName, i18n("Do you want to download and save this file?"), [_acceptDownloadAction, _cancelDownloadAction])
         }
     }
 

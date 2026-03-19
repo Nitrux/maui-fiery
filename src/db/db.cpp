@@ -120,8 +120,14 @@ void DB::prepareCollectionDB() const
 
 bool DB::checkExistance(const QString &tableName, const QString &searchId, const QString &search)
 {
-    const auto queryStr = QString("SELECT %1 FROM %2 WHERE %3 = \"%4\"").arg(searchId, tableName, searchId, search);
-    return this->checkExistance(queryStr);
+    const QString queryStr = QString("SELECT %1 FROM %2 WHERE %3 = ?").arg(searchId, tableName, searchId);
+    QSqlQuery query(this->m_db);
+    query.prepare(queryStr);
+    query.addBindValue(search);
+    if (query.exec())
+        return query.next();
+    qWarning() << "DB::checkExistance failed:" << query.lastError().text();
+    return false;
 }
 
 bool DB::checkExistance(const QString &queryStr)

@@ -30,6 +30,7 @@ public Q_SLOTS:
     void add(DownloadItem *download);
     void remove(int index);
     void removeAndDeleteFile(int index);
+    void cancelDownload(DownloadItem *download);
 
     DownloadItem *item(int index);
     int count() const;

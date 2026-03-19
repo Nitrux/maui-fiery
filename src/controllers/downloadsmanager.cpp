@@ -50,6 +50,13 @@ void DownloadsManager::removeAndDeleteFile(int index)
     Q_EMIT downloadRemoved(index);
 }
 
+void DownloadsManager::cancelDownload(DownloadItem *download)
+{
+    int index = m_downloads.indexOf(download);
+    if (index >= 0)
+        removeAndDeleteFile(index);
+}
+
 DownloadItem *DownloadsManager::item(int index)
 {
     if(index < 0 || index >= m_downloads.count())
