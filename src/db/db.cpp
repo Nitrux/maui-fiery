@@ -248,20 +248,23 @@ bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)
         return false;
     }
 
-    QString strValues;
-    auto i = 0;
+    QStringList conditions;
     const auto keys = removeData.keys();
-    for (const auto &key : keys) {
-        strValues.append(QString("%1 = \"%2\"").arg(FMH::MODEL_NAME[key], removeData[key]));
-        i++;
+    for (const auto &key : keys)
+        conditions.append(FMH::MODEL_NAME[key] + " = ?");
 
-        if (removeData.size() > 1 && i < removeData.size())
-        {
-            strValues.append(" AND ");
-        }
+    const QString sqlQueryString = "DELETE FROM " + tableName
+                                   + " WHERE " + conditions.join(QStringLiteral(" AND "));
+
+    QSqlQuery query(this->m_db);
+    query.prepare(sqlQueryString);
+
+    for (const auto &key : keys)
+        query.addBindValue(removeData[key]);
+
+    if (!query.exec()) {
+        qWarning() << "DB::remove failed on" << tableName << ":" << query.lastError().text() << "|" << query.lastQuery();
+        return false;
     }
-
-    QString sqlQueryString = "DELETE FROM " + tableName + " WHERE " + strValues;
-
-    return this->getQuery(sqlQueryString).exec();
+    return true;
 }

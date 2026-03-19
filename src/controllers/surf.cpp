@@ -39,13 +39,17 @@ bool surf::isValidUrl(const QString &input)
     // Bare local-network hostnames (e.g. "pihole", "nas", "myrouter") look
     // identical to single-word search terms, so we require an additional
     // signal before treating them as URLs:
-    //   • a trailing slash:  "pihole/"  — unambiguous URL intent
-    //   • a non-root path:   "nas/admin" — contains a URL path component
+    //   • a trailing slash:   "pihole/"     — unambiguous URL intent
+    //   • a non-root path:    "nas/admin"   — contains a URL path component
+    //   • an explicit port:   "myrouter:8080" — host:port notation
     if (trimmed.endsWith(QLatin1Char('/')))
         return true;
 
     const QString path = url.path();
     if (!path.isEmpty() && path != QLatin1String("/"))
+        return true;
+
+    if (url.port() != -1)
         return true;
 
     return false;
