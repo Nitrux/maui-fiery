@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
                      "--enable-oop-rasterization "
                      "--canvas-oop-rasterization "
                      "--ozone-platform-hint=auto "
+                     "--disable-features=OverlayScrollbar "
                      "--num-raster-threads=" + QByteArray::number(rasterThreads);
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", chromiumFlags);
 
@@ -86,6 +87,13 @@ int main(int argc, char *argv[])
     about.setProgramLogo(app.windowIcon());
 
     KAboutData::setApplicationData(about);
+    // KAboutData::setApplicationData resets the Qt organization name to whatever
+    // KAboutData has stored (empty by default). Re-apply it afterwards so that
+    // QSettings and QStandardPaths use the correct "Maui" organization prefix,
+    // matching the convention used by all other MauiKit applications:
+    //   config  → ~/.config/Maui/fiery.conf
+    //   cache   → ~/.cache/Maui/fiery/
+    app.setOrganizationName(QStringLiteral("Maui"));
     MauiApp::instance()->setIconName("qrc:/fiery.png");
 
     QCommandLineParser parser;

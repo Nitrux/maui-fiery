@@ -7,6 +7,9 @@
 
 #include <QWebEngineUrlRequestInterceptor>
 #include <QWebEngineDownloadRequest>
+#include <QStandardPaths>
+#include <QCoreApplication>
+#include <QDir>
 
 #include "downloadsmanager.h"
 
@@ -17,6 +20,32 @@ class QQuickWebEngineDownloadRequest : public DownloadItem {};
 FieryWebProfile::FieryWebProfile(QObject *parent)
     : QQuickWebEngineProfile{QStringLiteral("Fiery"), parent}
 {
+    // QStandardPaths::AppDataLocation includes the organization name on this
+    // Linux/Qt build, producing ~/.local/share/Maui/fiery — but MauiKit
+    // convention is ~/.local/share/<app> (no org prefix in the data dir).
+    // Pin the path explicitly using GenericDataLocation (always XDG_DATA_HOME,
+    // i.e. ~/.local/share) and append only the application name.
+    const QString dataBase = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                             + QLatin1Char('/') + QCoreApplication::applicationName();
+    setPersistentStoragePath(dataBase + QStringLiteral("/QtWebEngine/Fiery"));
+
+    // The named-profile constructor derives a default path from AppDataLocation
+    // (which includes the org name on some Linux/Qt builds) and creates that
+    // directory tree before setPersistentStoragePath can redirect it.  Walk
+    // back up and remove each empty directory so they do not linger.
+    // QDir::rmdir() is a no-op on non-empty directories, so this is safe.
+    const QString defaultBase = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (defaultBase != dataBase) {
+        QDir stale(defaultBase + QStringLiteral("/QtWebEngine"));
+        stale.rmdir(QStringLiteral("Fiery"));       // …/QtWebEngine/Fiery
+        stale.cdUp();
+        stale.rmdir(QStringLiteral("QtWebEngine")); // …/Maui/fiery/QtWebEngine
+        QDir appDir(defaultBase);
+        appDir.cdUp();
+        const QString orgDir = appDir.absolutePath();
+        QDir().rmdir(defaultBase);                  // …/Maui/fiery  (only if now empty)
+        QDir().rmdir(orgDir);                       // …/Maui        (only if now empty)
+    }
     connect(this, &QQuickWebEngineProfile::downloadRequested, this, &FieryWebProfile::handleDownload);
     connect(this, &QQuickWebEngineProfile::downloadFinished, this, &FieryWebProfile::handleDownloadFinished);
     connect(this, &QQuickWebEngineProfile::presentNotification, this, &FieryWebProfile::showNotification);

@@ -40,19 +40,13 @@ Maui.TabViewButton
         when: control._pinned
     }
 
-    // Keep width fixed for pinned (icon-only square) and delegate to the
-    // base formula otherwise. Avoids accessing ListView.view which is null
-    // when the tab bar is not inside a ListView.
-    width: _pinned
-           ? implicitHeight + Maui.Style.space.medium
-           : Math.max(160, Math.min(260, implicitWidth))
-
-    background: Rectangle
+    // Keep width fixed for pinned (icon-only square) tabs.
+    Binding
     {
-        color: control.checked
-               ? Maui.Theme.alternateBackgroundColor
-               : (control.hovered || control.pressed ? Maui.Theme.hoverColor : "transparent")
-        radius: Maui.Style.radiusV
+        target: control
+        property: "width"
+        value: implicitHeight + Maui.Style.space.medium
+        when: control._pinned
     }
 
     onClicked:
