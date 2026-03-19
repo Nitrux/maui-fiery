@@ -176,6 +176,7 @@ Maui.SplitViewItem
 
         profile: control.browserProfile
         zoomFactor: appSettings.zoomFactor
+        backgroundColor: Maui.Theme.backgroundColor
 
         onContextMenuRequested: (request) =>
         {
