@@ -187,30 +187,54 @@ bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QV
         return false;
     }
 
+    // Column and table names cannot be bound as parameters, but values can.
+    // Build the SET and WHERE clauses with ? placeholders for all values.
     QStringList set;
     const auto updateKeys = updateData.keys();
     for (const auto &key : updateKeys)
-    {
-        set.append(FMH::MODEL_NAME[key] + " = '" + updateData[key] + "'");
-    }
+        set.append(FMH::MODEL_NAME[key] + " = ?");
 
     QStringList condition;
     const auto whereKeys = where.keys();
     for (const auto &key : whereKeys)
-    {
-         condition.append(key + " = '" + where[key].toString() + "'");
-    }
+        condition.append(key + " = ?");
 
-    QString sqlQueryString = "UPDATE " + tableName + " SET " + QString(set.join(",")) + " WHERE " + QString(condition.join(","));
-    auto query = this->getQuery(sqlQueryString);
-    return query.exec();
+    const QString sqlQueryString = "UPDATE " + tableName
+                                   + " SET " + set.join(QStringLiteral(", "))
+                                   + " WHERE " + condition.join(QStringLiteral(" AND "));
+
+    QSqlQuery query(this->m_db);
+    query.prepare(sqlQueryString);
+
+    for (const auto &key : updateKeys)
+        query.addBindValue(updateData[key]);
+    for (const auto &key : whereKeys)
+        query.addBindValue(where.value(key));
+
+    if (!query.exec()) {
+        qWarning() << "DB::update failed on" << tableName << ":" << query.lastError().text() << "|" << query.lastQuery();
+        return false;
+    }
+    return true;
 }
 
 bool DB::update(const QString &table, const QString &column, const QVariant &newValue, const QVariant &op, const QString &id)
 {
-    auto queryStr = QString("UPDATE %1 SET %2 = \"%3\" WHERE %4 = \"%5\"").arg(table, column, newValue.toString().replace("\"", "\"\""), op.toString(), id);
-    auto query = this->getQuery(queryStr);
-    return query.exec();
+    // Bind the two user-supplied values; table/column/op are column/table
+    // identifiers that SQL does not accept as parameters.
+    const QString sqlQueryString = QString("UPDATE %1 SET %2 = ? WHERE %3 = ?")
+                                       .arg(table, column, op.toString());
+
+    QSqlQuery query(this->m_db);
+    query.prepare(sqlQueryString);
+    query.addBindValue(newValue);
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        qWarning() << "DB::update failed on" << table << ":" << query.lastError().text() << "|" << query.lastQuery();
+        return false;
+    }
+    return true;
 }
 
 bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)

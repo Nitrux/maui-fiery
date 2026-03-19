@@ -76,7 +76,6 @@ Maui.Page
             MenuItem
             {
                 text: i18n("Open")
-                icon.name: "document-open"
                 onTriggered: _browserView.openTab(_bookmarkMenu.url)
             }
 
@@ -85,7 +84,6 @@ Maui.Page
             MenuItem
             {
                 text: i18n("Remove Bookmark")
-                icon.name: "bookmark-remove"
                 onTriggered: Fiery.Bookmarks.removeBookmark(_bookmarkMenu.url)
             }
         }

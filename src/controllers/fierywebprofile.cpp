@@ -42,9 +42,23 @@ void FieryWebProfile::handleDownloadFinished(DownloadItem *downloadItem)
     Q_EMIT downloadFinished(downloadItem);
 }
 
-void FieryWebProfile::showNotification(QWebEngineNotification */*webNotification*/)
+void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
 {
+    if (!webNotification)
+        return;
 
+    // show() registers the notification as displayed and fires the web page's
+    // Notification.onshow callback.
+    webNotification->show();
+
+    m_pendingNotification = webNotification;
+    Q_EMIT notificationReceived(webNotification->title(), webNotification->message());
+}
+
+void FieryWebProfile::acceptNotification()
+{
+    if (m_pendingNotification)
+        m_pendingNotification->click();
 }
 
 void FieryWebProfile::setUrlInterceptor(QWebEngineUrlRequestInterceptor *newUrlInterceptor)

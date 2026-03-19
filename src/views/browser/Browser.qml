@@ -4,6 +4,7 @@ import QtQuick.Controls
 
 import QtWebEngine
 import org.mauikit.controls as Maui
+import org.mauikit.filebrowsing as FB
 import org.maui.fiery as Fiery
 
 
@@ -24,6 +25,7 @@ Maui.SplitViewItem
 
     property bool _webFullScreen: false
     property string _hoveredUrl: ""
+    property var _pendingFileRequest: null
 
     // Exit-fullscreen button shown in the top-right corner while the page
     // is in web-requested fullscreen. Pressing Escape or clicking it calls
@@ -55,6 +57,50 @@ Maui.SplitViewItem
         webView: _webView
     }
 
+    // File-chooser / save-as dialog shown in response to onFileDialogRequested.
+    // When the user accepts, acceptFiles() forwards the selected paths to the
+    // web page; when they cancel (visible returns to false with no selection),
+    // reject() lets the page know the dialog was dismissed.
+    FB.FileDialog
+    {
+        id: _fileDialog
+
+        onFinished: function(paths)
+        {
+            if (control._pendingFileRequest === null)
+                return
+
+            var req = control._pendingFileRequest
+            control._pendingFileRequest = null
+
+            if (paths.length > 0)
+            {
+                var filePaths = paths.map(function(p)
+                {
+                    var s = p.toString()
+                    return s.startsWith("file://") ? s.slice(7) : s
+                })
+                req.acceptFiles(filePaths)
+            }
+            else
+            {
+                req.reject()
+            }
+        }
+
+        onVisibleChanged:
+        {
+            // If the dialog was closed without triggering onFinished (user
+            // pressed Cancel or dismissed the dialog), clean up the pending
+            // request so the web page isn't left waiting.
+            if (!visible && control._pendingFileRequest !== null)
+            {
+                control._pendingFileRequest.reject()
+                control._pendingFileRequest = null
+            }
+        }
+    }
+
     WebEngineView
     {
         id: _webView
@@ -73,7 +119,11 @@ Maui.SplitViewItem
             //                _menu.show()
         }
 
-        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];function r(){s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}}r();var t;new MutationObserver(function(){if(t)clearTimeout(t);t=setTimeout(r,500);}).observe(document.documentElement,{childList:true,subtree:true});})();"
+        // The observer disconnects as soon as a banner is removed (success),
+        // and unconditionally after 20 mutation callbacks as a failsafe for
+        // highly dynamic single-page applications that would otherwise keep
+        // running querySelectorAll against ~40 selectors indefinitely.
+        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];var o;var n=0;function r(){var f=false;s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}return f;}r();var t;o=new MutationObserver(function(){if(++n>20){o.disconnect();return;}if(t)clearTimeout(t);t=setTimeout(function(){if(r())o.disconnect();},500);});o.observe(document.documentElement,{childList:true,subtree:true});})();"
 
         onLoadingChanged: function(loadingInfo)
         {
@@ -114,8 +164,26 @@ Maui.SplitViewItem
 
         onFileDialogRequested: (request) =>
         {
-            console.log("FILE DIALOG REQUESTED", request.mode, FileDialogRequest.FileModeSave)
+            request.accepted = true
+            control._pendingFileRequest = request
 
+            switch (request.mode)
+            {
+                case FileDialogRequest.FileModeOpen:
+                case FileDialogRequest.FileModeOpenMultiple:
+                    _fileDialog.mode = FB.FileDialog.Open
+                    break
+                case FileDialogRequest.FileModeSave:
+                    _fileDialog.mode = FB.FileDialog.Save
+                    break
+                case FileDialogRequest.FileModeUploadFolder:
+                    _fileDialog.mode = FB.FileDialog.Dirs
+                    break
+                default:
+                    _fileDialog.mode = FB.FileDialog.Open
+            }
+
+            _fileDialog.open()
         }
 
         onNewWindowRequested: (request) =>

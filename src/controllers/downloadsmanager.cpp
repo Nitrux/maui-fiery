@@ -1,5 +1,7 @@
 #include "downloadsmanager.h"
 #include <QUrl>
+#include <QFile>
+#include <QDir>
 
 DownloadsManager::DownloadsManager(QObject *parent) : QObject(parent)
     ,m_model(new DownloadsModel(this))
@@ -26,6 +28,26 @@ void DownloadsManager::remove(int index)
 
     m_downloads.at(index)->cancel();
     m_downloads.erase(m_downloads.begin() + index);
+    Q_EMIT downloadRemoved(index);
+}
+
+void DownloadsManager::removeAndDeleteFile(int index)
+{
+    if(index < 0 || index >= m_downloads.count())
+        return;
+
+    auto item = m_downloads.at(index);
+
+    if(item->state() == QWebEngineDownloadRequest::DownloadInProgress)
+        item->cancel();
+
+    const QString filePath = item->downloadDirectory()
+                             + QDir::separator()
+                             + item->downloadFileName();
+    QFile::remove(filePath);
+
+    m_downloads.erase(m_downloads.begin() + index);
+    Q_EMIT downloadRemoved(index);
 }
 
 DownloadItem *DownloadsManager::item(int index)

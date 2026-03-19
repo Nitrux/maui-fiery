@@ -29,6 +29,7 @@ public:
 public Q_SLOTS:
     void add(DownloadItem *download);
     void remove(int index);
+    void removeAndDeleteFile(int index);
 
     DownloadItem *item(int index);
     int count() const;
@@ -42,5 +43,6 @@ private:
 
 Q_SIGNALS:
     void newDownload(DownloadItem *download);
+    void downloadRemoved(int index);
 
 };

@@ -29,8 +29,26 @@ bool surf::isValidUrl(const QString &input)
     const QUrl url = QUrl::fromUserInput(trimmed);
     if (!url.isValid() || url.host().isEmpty())
         return false;
+
     const QString host = url.host();
-    return host.contains(QLatin1Char('.')) || host == QLatin1String("localhost");
+
+    // Public hostnames always contain a dot; localhost is the lone exception.
+    if (host.contains(QLatin1Char('.')) || host == QLatin1String("localhost"))
+        return true;
+
+    // Bare local-network hostnames (e.g. "pihole", "nas", "myrouter") look
+    // identical to single-word search terms, so we require an additional
+    // signal before treating them as URLs:
+    //   • a trailing slash:  "pihole/"  — unambiguous URL intent
+    //   • a non-root path:   "nas/admin" — contains a URL path component
+    if (trimmed.endsWith(QLatin1Char('/')))
+        return true;
+
+    const QString path = url.path();
+    if (!path.isEmpty() && path != QLatin1String("/"))
+        return true;
+
+    return false;
 }
 
 bool surf::hasProtocol(const QString &input)

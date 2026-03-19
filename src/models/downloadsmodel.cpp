@@ -17,6 +17,12 @@ DownloadsModel::DownloadsModel(DownloadsManager *parent) : QAbstractListModel(pa
                 beginResetModel();
                 endResetModel();
             });
+
+    connect(m_manager, &DownloadsManager::downloadRemoved, [this](int index)
+            {
+                beginRemoveRows(QModelIndex(), index, index);
+                endRemoveRows();
+            });
 }
 
 int DownloadsModel::rowCount(const QModelIndex &parent) const

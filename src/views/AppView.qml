@@ -86,8 +86,42 @@ Maui.SideBarView
             {
                 active: visible
                 asynchronous: true
-                sourceComponent:  Maui.Page
+                sourceComponent: Maui.Page
                 {
+                    background: null
+
+                    // Shared context menu — populated with the tapped row's data
+                    // before popup() is called, matching the pattern used in HomeView.
+                    Maui.ContextualMenu
+                    {
+                        id: _downloadMenu
+
+                        property int rowIndex: -1
+                        property url currentFilePath
+                        property var currentDownload: null
+
+                        MenuItem
+                        {
+                            text: i18n("Open")
+                            enabled: _downloadMenu.currentDownload !== null
+                                     && _downloadMenu.currentDownload.state === WebEngineDownloadRequest.DownloadCompleted
+                            onTriggered: Qt.openUrlExternally(_downloadMenu.currentFilePath)
+                        }
+
+                        MenuSeparator {}
+
+                        MenuItem
+                        {
+                            text: i18n("Remove from Downloads")
+                            onTriggered: Fiery.DownloadsManager.remove(_downloadMenu.rowIndex)
+                        }
+
+                        MenuItem
+                        {
+                            text: i18n("Delete File")
+                            onTriggered: Fiery.DownloadsManager.removeAndDeleteFile(_downloadMenu.rowIndex)
+                        }
+                    }
 
                     Maui.ListBrowser
                     {
@@ -99,40 +133,78 @@ Maui.SideBarView
                         holder.emoji: "download"
                         holder.visible: count === 0
 
-                        delegate: Maui.ListBrowserDelegate
+                        delegate: Item
                         {
-                            id: _downloadDelegate
+                            id: _dlItem
 
                             width: ListView.view.width
+                            height: _del.implicitHeight
 
-                            label1.text: model.name
-                            label2.text: model.url
-                            iconSource: download.state === WebEngineDownloadRequest.DownloadCompleted ? model.filePath : model.icon
+                            property var download: model.download
+                            readonly property bool _inProgress: download.state === WebEngineDownloadRequest.DownloadInProgress
 
-                            property var download : model.download
-
-                            onClicked: Qt.openUrlExternally(model.filePath)
-
-                            ToolButton
+                            // Format a byte count into a human-readable string.
+                            function formatBytes(bytes)
                             {
-
-                                visible: !_downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress
-                                text: i18n("Pause")
-                                icon.name: "media-playback-pause"
-                                onClicked: _downloadDelegate.download.pause()
+                                if (bytes < 0)            return "?"
+                                if (bytes < 1024)         return bytes + " B"
+                                if (bytes < 1048576)      return (bytes / 1024).toFixed(1) + " KB"
+                                if (bytes < 1073741824)   return (bytes / 1048576).toFixed(1) + " MB"
+                                return (bytes / 1073741824).toFixed(2) + " GB"
                             }
 
-                            ToolButton
+                            Maui.ListBrowserDelegate
                             {
-                                visible: _downloadDelegate.download.isPaused && _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress
-                                text: i18n("Continue")
-                                icon.name: "media-playback-start"
-                                onClicked: _downloadDelegate.download.resume();
+                                id: _del
+                                anchors.fill: parent
+
+                                label1.text: model.name
+                                label2.text: _dlItem._inProgress
+                                             ? _dlItem.formatBytes(download.receivedBytes) + " / " + _dlItem.formatBytes(download.totalBytes)
+                                             : model.url
+
+                                iconSource: download.state === WebEngineDownloadRequest.DownloadCompleted
+                                            ? model.filePath
+                                            : model.icon
+
+                                onClicked:
+                                {
+                                    if (!_dlItem._inProgress)
+                                        Qt.openUrlExternally(model.filePath)
+                                }
+
+                                onRightClicked:
+                                {
+                                    _downloadMenu.rowIndex = index
+                                    _downloadMenu.currentFilePath = model.filePath
+                                    _downloadMenu.currentDownload = _dlItem.download
+                                    _downloadMenu.popup()
+                                }
+
+                                onPressAndHold:
+                                {
+                                    _downloadMenu.rowIndex = index
+                                    _downloadMenu.currentFilePath = model.filePath
+                                    _downloadMenu.currentDownload = _dlItem.download
+                                    _downloadMenu.popup()
+                                }
                             }
 
-                            ToolButton
+                            // Thin progress strip anchored to the bottom of the
+                            // delegate, visible only while the download is running.
+                            // Matches the indeterminate style used in NavigationBar
+                            // for page-load progress, but shows real byte progress
+                            // when the server reports a Content-Length.
+                            Maui.ProgressIndicator
                             {
-                                icon.name: _downloadDelegate.download.state === WebEngineDownloadRequest.DownloadInProgress ? "dialog-cancel" : "list-remove"
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                visible: _dlItem._inProgress
+                                indeterminate: _dlItem.download.totalBytes <= 0
+                                value: _dlItem.download.totalBytes > 0
+                                       ? _dlItem.download.receivedBytes / _dlItem.download.totalBytes
+                                       : 0
                             }
                         }
                     }

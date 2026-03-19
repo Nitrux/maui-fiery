@@ -21,6 +21,12 @@ Maui.ApplicationWindow
     readonly property alias currentBrowser : _appView.currentBrowser
     readonly property alias browserView : _appView.browserView
 
+    onClosing: (close) =>
+    {
+        if (appSettings.restoreSession)
+            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls())
+    }
+
     Settings
     {
         id: appSettings
@@ -54,6 +60,10 @@ Maui.ApplicationWindow
         property double zoomFactor: 1.0
 
         property bool autoSave: false
+
+        // Serialised JSON array of URLs from the last session, used when
+        // restoreSession is true.  Written on window close; read on startup.
+        property string sessionUrlsJson: ""
 
         // Privacy
         property bool doNotTrack: false
@@ -107,7 +117,22 @@ Maui.ApplicationWindow
         property var download
         text: i18n("Accept")
         onTriggered: () =>{ _acceptDownloadAction.download.resume() }
+    }
 
+    Action
+    {
+        id: _notificationClickAction
+        text: i18n("Open")
+        onTriggered: () => root.profile.acceptNotification()
+    }
+
+    Connections
+    {
+        target: root.profile
+        function onNotificationReceived(title, message)
+        {
+            root.notify("dialog-question", title, message, [_notificationClickAction])
+        }
     }
 
     property WebEngineProfile profile: Fiery.FieryWebProfile
@@ -127,11 +152,6 @@ Maui.ApplicationWindow
             }
         }
 
-        //        onPresentNotification:
-        //        {
-        //            root.notify("dialog-question", notification.title, notification.message,  () =>{ notification.click() }, i18n("Accept"))
-        //            notification.show()
-        //        }
     }
 
     Connections

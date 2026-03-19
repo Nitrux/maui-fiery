@@ -360,7 +360,24 @@ Maui.Page
         offTheRecord: true
     }
 
-    Component.onCompleted: openTab(appSettings.homePage)
+    Component.onCompleted:
+    {
+        if (appSettings.restoreSession && appSettings.sessionUrlsJson.length > 0)
+        {
+            try
+            {
+                var urls = JSON.parse(appSettings.sessionUrlsJson)
+                if (urls && urls.length > 0)
+                {
+                    urls.forEach(url => openTab(url))
+                    return
+                }
+            }
+            catch (e) {}
+        }
+
+        openTab(appSettings.homePage)
+    }
 
     Component
     {
@@ -613,6 +630,28 @@ Maui.Page
         }
 
         openTab(path)
+    }
+
+    function collectSessionUrls()
+    {
+        var urls = []
+        for (var i = 0; i < _browserListView.count; i++)
+        {
+            const tab = _browserListView.contentModel.get(i)
+            if (!tab) continue
+
+            for (var j = 0; j < tab.count; j++)
+            {
+                const browser = tab.model.get(j)
+                if (browser && browser.url)
+                {
+                    const u = browser.url.toString()
+                    if (u.length > 0 && u !== "about:blank")
+                        urls.push(u)
+                }
+            }
+        }
+        return urls
     }
 
     function openUrl(path)
