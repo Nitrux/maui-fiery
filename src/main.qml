@@ -136,22 +136,6 @@ Maui.ApplicationWindow
         onTriggered: () => { Fiery.DownloadsManager.cancelDownload(_cancelDownloadAction.download) }
     }
 
-    Action
-    {
-        id: _notificationClickAction
-        text: i18n("Open")
-        onTriggered: () => root.profile.acceptNotification()
-    }
-
-    Connections
-    {
-        target: root.profile
-        function onNotificationReceived(title, message)
-        {
-            root.notify("dialog-question", title, message, [_notificationClickAction])
-        }
-    }
-
     property WebEngineProfile profile: Fiery.FieryWebProfile
     {
         downloadPath: appSettings.downloadsPath
@@ -204,16 +188,30 @@ Maui.ApplicationWindow
         }
     }
 
-    //The urls represent the split view, so it might be one or two.
-    function newWindow(urls)
+    // urls: array of 1 or 2 URLs (the second is the split-view partner).
+    // incognito: when true the new window opens in private-browsing mode so the
+    // detached URLs are never written to disk with the persistent profile.
+    function newWindow(urls, incognito)
     {
-        console.log("GOT", urls, urls[0])
-        var newWindow = windowComponent.createObject(root)
-        newWindow.webView.url = urls[0]
+        var win = windowComponent.createObject(root)
 
-        if(urls[1])
+        if (incognito)
         {
-            newWindow.appView.browserView.openSplit(urls[1])
+            var bv = win.appView.browserView
+            // Close the initial tab that Component.onCompleted opened with the
+            // default (persistent) profile before we switch to private mode.
+            if (bv.activeView.count > 0)
+                bv.activeView.closeTab(0)
+            bv.privateMode = true
+            bv.openTab(urls[0])
+            if (urls[1])
+                bv.openSplit(urls[1])
+        }
+        else
+        {
+            win.webView.url = urls[0]
+            if (urls[1])
+                win.appView.browserView.openSplit(urls[1])
         }
     }
 }

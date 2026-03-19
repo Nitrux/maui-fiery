@@ -2,5 +2,6 @@
     <qresource prefix="/">       
         <file>db/script.sql</file>
         <file>blocklist.txt</file>
+        <file alias="knotifications6/fiery.notifyrc">fiery.notifyrc</file>
     </qresource>
 </RCC>

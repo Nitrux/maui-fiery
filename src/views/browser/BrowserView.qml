@@ -132,11 +132,13 @@ Maui.Page
     Shortcut
     {
         sequence: "Ctrl+Shift+T"
-        enabled: control._lastClosedUrl.length > 0
         onActivated:
         {
-            openTab(control._lastClosedUrl)
-            control._lastClosedUrl = ""
+            if (control._lastClosedUrl.length > 0)
+            {
+                openTab(control._lastClosedUrl)
+                control._lastClosedUrl = ""
+            }
         }
     }
 
@@ -231,7 +233,9 @@ Maui.Page
 
     Shortcut
     {
-        sequence: "Ctrl++"
+        // "Ctrl+=" covers the physical key (= / +) without requiring Shift.
+        // "Ctrl++" is kept as an alias for keyboards that map it directly.
+        sequences: ["Ctrl+=", "Ctrl++"]
         enabled: currentBrowser !== null
         onActivated: appSettings.zoomFactor = Math.min(appSettings.zoomFactor + 0.25, 5.0)
     }
@@ -248,13 +252,6 @@ Maui.Page
         sequence: "Ctrl+0"
         enabled: currentBrowser !== null
         onActivated: appSettings.zoomFactor = 1.0
-    }
-
-    Shortcut
-    {
-        sequence: "Ctrl+P"
-        enabled: currentBrowser !== null
-        onActivated: currentBrowser.runJavaScript("window.print()")
     }
 
     Shortcut
@@ -284,12 +281,6 @@ Maui.Page
         onActivated: openHistory()
     }
 
-    Shortcut
-    {
-        sequence: "Ctrl+Shift+I"
-        enabled: currentBrowser !== null
-        onActivated: currentBrowser.triggerWebAction(WebEngineView.InspectElement)
-    }
 
     Shortcut
     {
@@ -311,7 +302,9 @@ Maui.Page
 
         onOpened:
         {
-            _entryField.text = currentBrowser ? currentBrowser.url : ""
+            // Display the URL with any IDN hostname converted to Punycode so
+            // homograph spoofing is visible while the popup is open.
+            _entryField.text = currentBrowser ? _surf.safeDisplayUrl(currentBrowser.url.toString()) : ""
             _entryField.forceActiveFocus()
             _entryField.selectAll()
         }
@@ -548,7 +541,7 @@ Maui.Page
                     {
                         let index = _privateTabView.menu.index
                         var urls = _privateTabView.tabAt(index).urls
-                        newWindow(urls)
+                        newWindow(urls, true /* incognito */)
                         _privateTabView.closeTab(index)
                     }
                 },

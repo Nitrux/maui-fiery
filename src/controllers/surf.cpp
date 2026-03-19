@@ -55,6 +55,31 @@ bool surf::isValidUrl(const QString &input)
     return false;
 }
 
+QString surf::safeDisplayUrl(const QString &urlStr)
+{
+    QUrl url(urlStr);
+    const QString host = url.host();
+
+    // If the hostname contains non-ASCII characters it may be an IDN homograph
+    // attack (e.g. Cyrillic 'а' visually identical to Latin 'a').  Convert the
+    // host to its ACE / Punycode form (xn--...) so the deception is visible.
+    bool hasNonAscii = false;
+    for (const QChar &c : host) {
+        if (c.unicode() > 127) {
+            hasNonAscii = true;
+            break;
+        }
+    }
+
+    if (hasNonAscii) {
+        const QByteArray ace = QUrl::toAce(host);
+        if (!ace.isEmpty())
+            url.setHost(QString::fromLatin1(ace));
+    }
+
+    return url.toString();
+}
+
 bool surf::hasProtocol(const QString &input)
 {
     // scheme().length() > 1 reuses the same guard as isValidUrl: it accepts any

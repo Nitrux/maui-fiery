@@ -37,7 +37,7 @@ include(ECMSourceVersionControl)
 include(FeatureSummary)
 
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Qml Sql)
-find_package(KF6 ${KF5_VERSION} REQUIRED COMPONENTS I18n CoreAddons)
+find_package(KF6 ${KF5_VERSION} REQUIRED COMPONENTS I18n CoreAddons Notifications)
 
 find_package(Qt6WebEngineCore REQUIRED)
 find_package(Qt6WebEngineQuick REQUIRED)
@@ -79,6 +79,7 @@ install(TARGETS ${PROJECT_NAME} ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
 install(FILES org.kde.fiery.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES org.kde.fiery.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
 install(FILES src/assets/fiery.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+install(FILES src/fiery.notifyrc DESTINATION ${KDE_INSTALL_KNOTIFYRCDIR})
 
 feature_summary(WHAT ALL   FATAL_ON_MISSING_REQUIRED_PACKAGES)
 file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h)

@@ -51,6 +51,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Qml
     KF6::I18n
     KF6::CoreAddons
+    KF6::Notifications
 
     Qt::WebEngineCore
     Qt::WebEngineQuick)

@@ -158,12 +158,25 @@ Maui.SplitViewItem
         zoomFactor: appSettings.zoomFactor
 
         onContextMenuRequested: (request) =>
-                                {
+        {
             request.accepted = true // Make sure QtWebEngine doesn't show its own context menu.
             _menu.request = request
-            _menu.show()
 
-            //                _menu.show()
+            // Stamp the element under the pointer with a unique attribute *now*,
+            // before the menu is visible.  The Speed and Fullscreen JS actions
+            // then target this attribute instead of re-running elementFromPoint
+            // at trigger time, closing the window where a page could inject a
+            // replacement element at those coordinates.
+            const elemId = 'fiery-ctx-' + Date.now()
+            _menu.contextElemId = elemId
+            _webView.runJavaScript(
+                '(function(x,y,id){' +
+                '  var e=document.elementFromPoint(x,y);' +
+                '  if(e) e.setAttribute("data-fiery-ctx",id);' +
+                '})(' + request.x + ',' + request.y + ',"' + elemId + '")'
+            )
+
+            _menu.show()
         }
 
         // The observer disconnects as soon as a banner is removed (success),
@@ -413,7 +426,10 @@ Maui.SplitViewItem
             id: _statusLabel
             anchors.fill: parent
             anchors.margins: Maui.Style.space.medium
-            text: control._hoveredUrl
+            // Collapse any whitespace runs (including \r, \n, tabs) to a single
+            // space so a padded URL cannot hide a malicious suffix past the elision.
+            // safeDisplayUrl converts non-ASCII hostnames to Punycode (IDN protection).
+            text: _surf.safeDisplayUrl(control._hoveredUrl).replace(/\s+/g, ' ').trim()
             elide: Text.ElideRight
             font.pointSize: Maui.Style.fontGroup.small
             color: Maui.Theme.textColor

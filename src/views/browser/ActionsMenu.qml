@@ -17,6 +17,13 @@ Maui.ContextualMenu
     property bool isImage: request && request.mediaType === ContextMenuRequest.MediaTypeImage
     property bool isVideo: request && request.mediaType === ContextMenuRequest.MediaTypeVideo
 
+    // Unique attribute value stamped onto the target element the moment the
+    // context menu opens.  All JS actions use querySelector on this attribute
+    // rather than re-evaluating elementFromPoint at trigger time, preventing a
+    // malicious page from injecting a different element into those coordinates
+    // between menu-open and menu-item-click.
+    property string contextElemId: ""
+
     Maui.MenuItemActionRow
     {
         Action
@@ -229,8 +236,10 @@ Maui.ContextualMenu
                 stepSize: 25
                 onValueModified: {
                     control.playbackRate = value
-                    const point = control.request.x + ', ' + control.request.y
-                    const js = 'document.elementFromPoint(' + point + ').playbackRate = ' + control.playbackRate / 100 + ';'
+                    const js = '(function(id,rate){' +
+                               '  var e=document.querySelector("[data-fiery-ctx=\'"+id+"\']");' +
+                               '  if(e) e.playbackRate=rate;' +
+                               '})("' + control.contextElemId + '",' + control.playbackRate / 100 + ')'
                     webView.runJavaScript(js)
                 }
                 textFromValue: function(value, locale) {
@@ -255,10 +264,12 @@ Maui.ContextualMenu
         visible: webView.settings.javascriptEnabled && control.isVideo
         text: webView.isFullScreen ? i18n("Exit fullscreen") : i18n("Fullscreen")
         onTriggered: {
-            const point = control.request.x + ', ' + control.request.y
             const js = webView.isFullScreen
-                     ? 'document.exitFullscreen()'
-                     : 'document.elementFromPoint(' + point + ').requestFullscreen()'
+                ? 'document.exitFullscreen()'
+                : '(function(id){' +
+                  '  var e=document.querySelector("[data-fiery-ctx=\'"+id+"\']");' +
+                  '  if(e) e.requestFullscreen();' +
+                  '})("' + control.contextElemId + '")'
             webView.runJavaScript(js)
         }
     }

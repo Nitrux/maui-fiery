@@ -1,8 +1,9 @@
 #include "fierywebprofile.h"
 
-
 #include <QQuickWindow>
 #include <QWebEngineNotification>
+#include <KNotification>
+#include <KLocalizedString>
 
 #include <QWebEngineUrlRequestInterceptor>
 #include <QWebEngineDownloadRequest>
@@ -33,6 +34,18 @@ void FieryWebProfile::handleDownload(QQuickWebEngineDownloadRequest *downloadIte
     if (!download)
         return;
 
+    // Rate limiting: reject requests beyond kMaxDownloadsPerSecond per second.
+    // Not calling accept() is sufficient — Qt cancels the download automatically.
+    if (!m_downloadRateTimer.isValid() || m_downloadRateTimer.elapsed() > 1000) {
+        m_downloadRateTimer.start();
+        m_downloadRateCount = 0;
+    }
+    if (++m_downloadRateCount > kMaxDownloadsPerSecond) {
+        qWarning() << "FieryWebProfile: download rate limit exceeded, rejecting request from"
+                   << download->url().host();
+        return;
+    }
+
     download->accept();
     download->pause();
 
@@ -49,12 +62,30 @@ void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
     if (!webNotification)
         return;
 
-    // show() registers the notification as displayed and fires the web page's
-    // Notification.onshow callback.
+    // Registers the notification with the browser engine (fires Notification.onshow).
     webNotification->show();
-
     m_pendingNotification = webNotification;
-    Q_EMIT notificationReceived(webNotification->title(), webNotification->message());
+
+    // Forward the notification to the desktop notification system via KNotification
+    // so it appears in the system tray / notification centre rather than as an
+    // in-app popup inside the browser window.
+    const QString origin = webNotification->origin().host();
+    const QString title  = origin.isEmpty()
+                               ? webNotification->title()
+                               : origin + QStringLiteral(": ") + webNotification->title();
+
+    auto *notif = new KNotification(QStringLiteral("webNotification"),
+                                    KNotification::CloseOnTimeout, this);
+    notif->setTitle(title);
+    notif->setText(webNotification->message());
+    notif->setIconName(QStringLiteral("fiery"));
+
+    // Clicking the notification fires the page's Notification.onclick callback.
+    auto *action = notif->addAction(i18n("Open"));
+    connect(action, &KNotificationAction::activated,
+            this,   &FieryWebProfile::acceptNotification);
+
+    notif->sendEvent();
 }
 
 void FieryWebProfile::acceptNotification()

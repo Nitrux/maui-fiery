@@ -5,6 +5,7 @@
 #include <QQuickWebEngineProfile>
 #include <QWebEngineUrlRequestInterceptor>
 #include <QWebEngineDownloadRequest>
+#include <QElapsedTimer>
 
 using DownloadItem = QWebEngineDownloadRequest;
 
@@ -29,7 +30,6 @@ public:
 Q_SIGNALS:
     void urlInterceptorChanged();
     void downloadFinished(DownloadItem *download);
-    void notificationReceived(const QString &title, const QString &message);
 
 private:
 
@@ -43,6 +43,11 @@ private:
 
     // Kept alive for the duration of the notification so QML can call click().
     QWebEngineNotification *m_pendingNotification = nullptr;
+
+    // Rate limiting for download requests: max 5 per second.
+    QElapsedTimer m_downloadRateTimer;
+    int           m_downloadRateCount = 0;
+    static constexpr int kMaxDownloadsPerSecond = 5;
 
 };
 

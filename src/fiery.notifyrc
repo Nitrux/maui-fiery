@@ -1,0 +1,9 @@
+[Global]
+IconName=fiery
+Comment=Fiery Browser
+
+[Event/webNotification]
+Name=Web Notification
+Comment=A notification sent by a website
+Action=Popup
+Urgency=Normal
