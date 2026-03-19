@@ -24,7 +24,7 @@ Maui.Page
     property int count: activeView.count
     readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
-    property string _lastClosedUrl: ""
+    property var _closedTabsStack: []   // stack of url arrays, most-recent last
     onSearchFieldVisibleChanged:
     {
         if(!searchFieldVisible && control.currentBrowser)
@@ -104,8 +104,11 @@ Maui.Page
         enabled: activeView.count > 0
         onActivated:
         {
-            if (currentBrowser)
-                control._lastClosedUrl = currentBrowser.url.toString()
+            if (currentTab)
+            {
+                var entry = currentTab.urls.map(function(u) { return u.toString() })
+                control._closedTabsStack = control._closedTabsStack.concat([entry])
+            }
             activeView.closeTab(activeView.currentIndex)
         }
     }
@@ -137,10 +140,14 @@ Maui.Page
         sequence: "Ctrl+Shift+T"
         onActivated:
         {
-            if (control._lastClosedUrl.length > 0)
+            if (control._closedTabsStack.length > 0)
             {
-                openTab(control._lastClosedUrl)
-                control._lastClosedUrl = ""
+                var stack = control._closedTabsStack.slice()
+                var urls = stack.pop()
+                control._closedTabsStack = stack
+                openTab(urls[0])
+                if (urls.length > 1)
+                    Qt.callLater(function() { openSplit(urls[1]) })
             }
         }
     }
@@ -449,7 +456,16 @@ Maui.Page
         holder.body: i18n("Enter a new URL or open a recent site.")
 
         onNewTabClicked: openTab("")
-        onCloseTabClicked: (index) => _browserListView.closeTab(index)
+        onCloseTabClicked: (index) =>
+        {
+            var tab = _browserListView.tabAt(index)
+            if (tab)
+            {
+                var entry = tab.urls.map(function(u) { return u.toString() })
+                control._closedTabsStack = control._closedTabsStack.concat([entry])
+            }
+            _browserListView.closeTab(index)
+        }
 
         menuActions: [
             Action
@@ -538,7 +554,16 @@ Maui.Page
             holder.body: i18n("Enter a new URL or open a recent site.")
 
             onNewTabClicked: openTab("")
-            onCloseTabClicked: (index) => _privateTabView.closeTab(index)
+            onCloseTabClicked: (index) =>
+            {
+                var tab = _privateTabView.tabAt(index)
+                if (tab)
+                {
+                    var entry = tab.urls.map(function(u) { return u.toString() })
+                    control._closedTabsStack = control._closedTabsStack.concat([entry])
+                }
+                _privateTabView.closeTab(index)
+            }
 
             menuActions: [
                 Action
@@ -861,14 +886,15 @@ Maui.Page
 
     function openSplit(path)
     {
-        console.log(currentTab.count)
         if(currentTab.count === 1)
         {
             currentTab.split(path)
             return
         }
 
-        openTab(path)
+        // Split already open — load into the inactive pane instead of a new tab.
+        var inactiveIndex = currentTab.currentIndex === 0 ? 1 : 0
+        currentTab.model.get(inactiveIndex).url = path
     }
 
     function collectSessionUrls()

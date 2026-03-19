@@ -50,6 +50,7 @@ Item
 
         anchors.fill: parent
         orientation: Qt.Horizontal
+        background: null
 
         Component.onCompleted: split(control.url)
     }

@@ -19,6 +19,7 @@ Maui.SideBarView
 
     readonly property alias currentBrowser : _browserView.currentBrowser
     readonly property alias browserView : _browserView
+    property alias privateMode: _browserView.privateMode
 
     sideBar.autoShow: false
     sideBar.autoHide: true

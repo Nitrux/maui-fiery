@@ -133,12 +133,43 @@ Maui.ApplicationWindow
         anchors.fill: parent
     }
 
+    Dialog
+    {
+        id: _openDownloadDialog
+        property url pendingUrl
+
+        title: i18n("Open Downloaded File?")
+        standardButtons: Dialog.Open | Dialog.Cancel
+        anchors.centerIn: parent
+
+        Label
+        {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: i18n("This file may be executable. Opening it could run code on your system. Are you sure you want to open it?")
+        }
+
+        onAccepted: Qt.openUrlExternally(pendingUrl)
+    }
+
     Action
     {
         id: _openDownloadAction
         property url url
         text: i18n("Open")
-        onTriggered: ()=> { Qt.openUrlExternally(url)}
+        onTriggered: () =>
+        {
+            var dangerous = [".sh", ".bash", ".zsh", ".desktop", ".AppImage",
+                             ".run", ".bin", ".exe", ".py", ".pl", ".rb", ".command"]
+            var path = url.toString().toLowerCase()
+            if (dangerous.some(function(ext) { return path.endsWith(ext) }))
+            {
+                _openDownloadDialog.pendingUrl = url
+                _openDownloadDialog.open()
+            }
+            else
+                Qt.openUrlExternally(url)
+        }
     }
 
     Action
@@ -199,6 +230,10 @@ Maui.ApplicationWindow
 
         visible: true
 
+        // Set before the component completes so BrowserView.Component.onCompleted
+        // sees the correct mode and never touches the persistent profile.
+        property bool privateMode: false
+
         property WebEngineView webView: _delegate.currentBrowser
         readonly property alias appView : _delegate
 
@@ -206,6 +241,7 @@ Maui.ApplicationWindow
         {
             id: _delegate
             anchors.fill: parent
+            privateMode: parent.privateMode
         }
     }
 
@@ -214,7 +250,7 @@ Maui.ApplicationWindow
     // detached URLs are never written to disk with the persistent profile.
     function newWindow(urls, incognito)
     {
-        var win = windowComponent.createObject(root)
+        var win = windowComponent.createObject(root, { "privateMode": !!incognito })
 
         if (incognito)
         {

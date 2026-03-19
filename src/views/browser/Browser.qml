@@ -95,6 +95,26 @@ Maui.SplitViewItem
         onActivated: _webView.triggerWebAction(WebEngineView.ExitFullScreen)
     }
 
+    // Accept URLs and text dropped onto the browser pane (e.g. a link dragged
+    // from another app or from the browser itself).
+    DropArea
+    {
+        anchors.fill: parent
+        keys: ["text/uri-list", "text/plain"]
+
+        onDropped: (drop) =>
+        {
+            var url = ""
+            if (drop.hasUrls)
+                url = drop.urls[0].toString()
+            else
+                url = drop.text.trim()
+
+            if (url.length > 0)
+                _webView.url = url
+        }
+    }
+
     ActionsMenu
     {
         id: _menu
@@ -251,8 +271,7 @@ Maui.SplitViewItem
             if(!request.userInitiated)
                 return;
 
-            var newWindow = windowComponent.createObject(root)
-            request.openIn(newWindow.webView);
+            _appView.browserView.openTab(request.requestedUrl.toString())
         }
 
         onFullScreenRequested: function(request)

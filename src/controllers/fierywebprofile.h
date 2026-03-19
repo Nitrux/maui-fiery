@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWebEngineProfile>
 #include <QWebEngineUrlRequestInterceptor>
@@ -41,8 +42,9 @@ private:
          // so store a pointer ourselves
     QWebEngineUrlRequestInterceptor *m_urlInterceptor;
 
-    // Kept alive for the duration of the notification so QML can call click().
-    QWebEngineNotification *m_pendingNotification = nullptr;
+    // QPointer self-nulls if the engine destroys the notification before
+    // the user acts on the desktop KNotification, preventing a use-after-free.
+    QPointer<QWebEngineNotification> m_pendingNotification;
 
     // Rate limiting for download requests: max 5 per second.
     QElapsedTimer m_downloadRateTimer;
