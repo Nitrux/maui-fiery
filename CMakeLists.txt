@@ -4,8 +4,7 @@ cmake_minimum_required(VERSION 3.16)
 # (irrelevant for shared/dynamic builds, which is the only build type supported)
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS TRUE CACHE BOOL "" FORCE)
 
-set(FIERY_VERSION 2.0.2)
-add_compile_definitions(APP_COPYRIGHT_NOTICE="© 2022-2025 Maui Development Team")
+set(FIERY_VERSION 4.0.2)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

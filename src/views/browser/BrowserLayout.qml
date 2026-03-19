@@ -13,6 +13,7 @@ Item
     Maui.Controls.color: browserProfile.offTheRecord ? Maui.Theme.highlightColor : ""
 
     property url url
+    property bool pinned: false
     property WebEngineProfile browserProfile: root.profile
 
     property alias currentIndex : _splitView.currentIndex

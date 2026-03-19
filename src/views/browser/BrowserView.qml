@@ -214,21 +214,29 @@ Maui.Page
         onNewTabClicked: openTab("")
         onCloseTabClicked: (index) => _browserListView.closeTab(index)
 
-        menuActions: Action
-        {
-            text: i18n("Detach")
-            onTriggered:
+        menuActions: [
+            Action
             {
-                let index = _browserListView.menu.index
-                console.log("TAB INDEX CLICKED", index)
-                var urls = _browserListView.tabAt(index).urls
-                console.log("TAB URLS CLICKED", urls)
-
-                //                console.log("DEATCH TAB", urls)
-                newWindow(urls)
-                _browserListView.closeTab(index)
+                text: i18n("Detach")
+                onTriggered:
+                {
+                    let index = _browserListView.menu.index
+                    var urls = _browserListView.tabAt(index).urls
+                    newWindow(urls)
+                    _browserListView.closeTab(index)
+                }
+            },
+            Action
+            {
+                text: i18n("Pin")
+                onTriggered:
+                {
+                    let index = _browserListView.menu.index
+                    var tab = _browserListView.tabAt(index)
+                    tab.pinned = !tab.pinned
+                }
             }
-        }
+        ]
 
         tabViewButton : NavigationBar
         {
@@ -293,17 +301,29 @@ Maui.Page
             onNewTabClicked: openTab("")
             onCloseTabClicked: (index) => _privateTabView.closeTab(index)
 
-            menuActions: Action
-            {
-                text: i18n("Detach")
-                onTriggered:
+            menuActions: [
+                Action
                 {
-                    let index = _privateTabView.menu.index
-                    var urls = _privateTabView.tabAt(index).urls
-                    newWindow(urls)
-                    _privateTabView.closeTab(index)
+                    text: i18n("Detach")
+                    onTriggered:
+                    {
+                        let index = _privateTabView.menu.index
+                        var urls = _privateTabView.tabAt(index).urls
+                        newWindow(urls)
+                        _privateTabView.closeTab(index)
+                    }
+                },
+                Action
+                {
+                    text: i18n("Pin")
+                    onTriggered:
+                    {
+                        let index = _privateTabView.menu.index
+                        var tab = _privateTabView.tabAt(index)
+                        tab.pinned = !tab.pinned
+                    }
                 }
-            }
+            ]
 
             tabViewButton: NavigationBar
             {
@@ -401,7 +421,7 @@ Maui.Page
                 text: activeView.count
                 visible: activeView.count > 1
                 onClicked: activeView.openOverview()
-                icon.name: "view-group"
+                icon.name: "view-list-icons"
             }
         }
     }
@@ -466,7 +486,6 @@ Maui.Page
                 MenuItem
                 {
                     text: privateMode ? i18n("Exit Private Browsing") : i18n("Private Browsing")
-                    icon.name: "face-glasses"
                     checked: privateMode
                     onTriggered:
                     {
@@ -482,24 +501,19 @@ Maui.Page
                 MenuItem
                 {
                     text: i18n("Bookmarks")
-                    icon.name: "bookmarks"
                     onTriggered: openBookmarks()
                 }
 
                 MenuItem
                 {
                     text: i18n("History")
-                    icon.name: "deep-history"
                     onTriggered: openHistory()
-
                 }
 
                 MenuItem
                 {
                     text: i18n("Downloads")
-                    icon.name: "folder-downloads"
                     onTriggered: openDownloads()
-
                 }
 
                 MenuSeparator {}
@@ -507,7 +521,6 @@ Maui.Page
                 MenuItem
                 {
                     text: i18n("Find In Page")
-                    icon.name: "edit-find"
                     checked: control.searchFieldVisible
                     onTriggered: control.searchFieldVisible = !control.searchFieldVisible
                 }
@@ -517,14 +530,12 @@ Maui.Page
                 MenuItem
                 {
                     text: i18n("Settings")
-                    icon.name: "settings-configure"
                     onTriggered: _settingsDialog.open()
                 }
 
                 MenuItem
                 {
                     text: i18n("About")
-                    icon.name: "documentinfo"
                     onTriggered: Maui.App.aboutDialog()
                 }
             }

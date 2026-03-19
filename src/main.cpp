@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QCommandLineParser>
 #include <QQmlContext>
+#include <QDate>
 #include <QIcon>
 #include <QThread>
 
@@ -58,23 +59,23 @@ int main(int argc, char *argv[])
     QtWebEngineQuick::initialize();
     QApplication app(argc, argv);
 
-    app.setOrganizationName("Maui");
     app.setWindowIcon(QIcon(":/fiery.svg"));
-    
+
     KLocalizedString::setApplicationDomain("fiery");
     KAboutData about(QStringLiteral("fiery"),
-                     QStringLiteral("Fiery"), 
-                     FIERY_VERSION_STRING, 
+                     i18n("Fiery"),
+                     FIERY_VERSION_STRING,
                      i18n("Browse and organize the web."),
-                     KAboutLicense::LGPL_V3, 
-                     APP_COPYRIGHT_NOTICE, 
+                     KAboutLicense::LGPL_V3,
+                     i18n("© %1 Made by Nitrux | Built with MauiKit", QString::number(QDate::currentDate().year())),
                      QString(GIT_BRANCH) + "/" + QString(GIT_COMMIT_HASH));
-    
+
     about.addAuthor(QStringLiteral("Camilo Higuita"), i18n("Developer"), QStringLiteral("milo.h@aol.com"));
-    about.setHomepage("https://mauikit.org");
-    about.setProductName("maui/fiery");
-    about.setBugAddress("https://invent.kde.org/maui/fiery/-/issues");
+    about.addAuthor(QStringLiteral("Uri Herrera"), i18n("Developer"), QStringLiteral("uri_herrera@nxos.org"));
+    about.setHomepage("https://nxos.org");
+    about.setProductName("nitrux/fiery");
     about.setOrganizationDomain(FIERY_URI);
+    about.setDesktopFileName("org.maui.fiery");
     about.setProgramLogo(app.windowIcon());
 
     KAboutData::setApplicationData(about);

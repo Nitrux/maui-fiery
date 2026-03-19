@@ -15,8 +15,22 @@ Maui.TabViewButton
     property int position: control.TabBar.position
 
     readonly property WebEngineView webView : control.tabView.contentModel.get(control.mindex).browser.webView
+    readonly property bool _pinned: control.tabView.contentModel.get(control.mindex).pinned
 
-    text: control.tabView.contentModel.get(control.mindex).title
+    text: _pinned ? "" : control.tabView.contentModel.get(control.mindex).title
+
+    width: control.tabView.mobile
+           ? ListView.view.width
+           : (_pinned ? implicitHeight + Maui.Style.space.medium
+                      : Math.max(160, Math.min(260, implicitWidth)))
+
+    background: Rectangle
+    {
+        color: control.checked
+               ? Maui.Theme.alternateBackgroundColor
+               : (control.hovered || control.pressed ? Maui.Theme.hoverColor : "transparent")
+        radius: Maui.Style.radiusV
+    }
 
     onClicked:
     {
