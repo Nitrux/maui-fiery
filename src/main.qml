@@ -76,6 +76,7 @@ Maui.ApplicationWindow
 
         property string downloadsPath : root.profile.downloadPath
 
+        property bool forceDarkMode: false
         property bool restoreSession: true
         property bool switchToTab: false
         property double zoomFactor: 1.0
@@ -159,10 +160,7 @@ Maui.ApplicationWindow
         text: i18n("Open")
         onTriggered: () =>
         {
-            var dangerous = [".sh", ".bash", ".zsh", ".desktop", ".AppImage",
-                             ".run", ".bin", ".exe", ".py", ".pl", ".rb", ".command"]
-            var path = url.toString().toLowerCase()
-            if (dangerous.some(function(ext) { return path.endsWith(ext) }))
+            if (_surf.isDangerousFile(url.toString()))
             {
                 _openDownloadDialog.pendingUrl = url
                 _openDownloadDialog.open()
@@ -251,24 +249,11 @@ Maui.ApplicationWindow
     function newWindow(urls, incognito)
     {
         var win = windowComponent.createObject(root, { "privateMode": !!incognito })
-
-        if (incognito)
-        {
-            var bv = win.appView.browserView
-            // Close the initial tab that Component.onCompleted opened with the
-            // default (persistent) profile before we switch to private mode.
-            if (bv.activeView.count > 0)
-                bv.activeView.closeTab(0)
-            bv.privateMode = true
-            bv.openTab(urls[0])
-            if (urls[1])
-                bv.openSplit(urls[1])
-        }
-        else
-        {
-            win.webView.url = urls[0]
-            if (urls[1])
-                win.appView.browserView.openSplit(urls[1])
-        }
+        // privateMode is passed at construction time, so Component.onCompleted
+        // in BrowserView opens the initial tab in the correct view (private or
+        // not) from the start.  Simply navigate that tab to the requested URL.
+        win.webView.url = urls[0]
+        if (urls[1])
+            win.appView.browserView.openSplit(urls[1])
     }
 }

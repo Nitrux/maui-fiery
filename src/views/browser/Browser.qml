@@ -168,6 +168,19 @@ Maui.SplitViewItem
         }
     }
 
+    // Opaque backdrop for Chromium's built-in error pages. The transparent
+    // window compositing stack (background: null + WindowBlur) means any
+    // non-fully-opaque color bleeds through to the desktop. Force alpha=1
+    // so neither the Rectangle nor the WebEngineView backing are see-through.
+    Rectangle
+    {
+        anchors.fill: parent
+        color: Qt.rgba(Maui.Theme.backgroundColor.r,
+                       Maui.Theme.backgroundColor.g,
+                       Maui.Theme.backgroundColor.b, 1.0)
+        visible: control._loadFailed && appSettings.errorPageEnabled
+    }
+
     WebEngineView
     {
         id: _webView
@@ -176,7 +189,15 @@ Maui.SplitViewItem
 
         profile: control.browserProfile
         zoomFactor: appSettings.zoomFactor
-        backgroundColor: Maui.Theme.backgroundColor
+        // Chromium infers prefers-color-scheme from backgroundColor: a dark
+        // value signals dark mode to sites that support it. Default to white
+        // so sites render with their own theme; switch to the app's background
+        // color (forced opaque) when the user enables dark mode.
+        backgroundColor: appSettings.forceDarkMode
+                         ? Qt.rgba(Maui.Theme.backgroundColor.r,
+                                   Maui.Theme.backgroundColor.g,
+                                   Maui.Theme.backgroundColor.b, 1.0)
+                         : "white"
 
         onContextMenuRequested: (request) =>
         {
@@ -219,7 +240,10 @@ Maui.SplitViewItem
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
             {
-                control._loadFailed = true
+                // HTTP errors (4xx/5xx) still deliver the server's HTML to the
+                // renderer, so the page content is visible. Only raise _loadFailed
+                // for genuine network/system failures where nothing is rendered.
+                control._loadFailed = loadingInfo.errorDomain !== WebEngineView.HttpErrorDomain
             }
             else if(loadingInfo.status === WebEngineView.LoadStartedStatus)
             {
@@ -460,10 +484,10 @@ Maui.SplitViewItem
     Maui.Holder
     {
         anchors.fill: parent
-        visible: control.url.toString().length <= 0 || control._loadFailed
+        visible: control.url.toString().length <= 0
         emoji: "qrc:/internet.svg"
 
-        title: control._loadFailed ? i18n("Error") : i18n("Start Browsing")
+        title: i18n("Start Browsing")
         body: i18n("Enter a new URL or open a recent site.")
     }
 

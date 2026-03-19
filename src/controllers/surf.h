@@ -13,5 +13,6 @@ public Q_SLOTS:
     static bool isValidUrl(const QString &input);
     static bool hasProtocol(const QString &input);
     static QString safeDisplayUrl(const QString &urlStr);
+    static bool isDangerousFile(const QString &path);
 
 };

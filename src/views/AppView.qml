@@ -44,7 +44,7 @@ Maui.SideBarView
             Action
             {
                 text: i18n("Bookmarks")
-                icon.name: "bookmarks"
+                icon.name: "bookmark-new"
                 checked: _sidebarSwipeView.currentIndex === 0
                 onTriggered: _sidebarSwipeView.currentIndex = 0
             }
@@ -52,7 +52,7 @@ Maui.SideBarView
             Action
             {
                 text: i18n("Recent")
-                icon.name: "shallow-history"
+                icon.name: "view-calendar"
                 checked: _sidebarSwipeView.currentIndex === 1
                 onTriggered: _sidebarSwipeView.currentIndex = 1
             }
@@ -117,10 +117,7 @@ Maui.SideBarView
 
                     function openDownloadedFile(filePath)
                     {
-                        var dangerous = [".sh", ".bash", ".zsh", ".desktop", ".AppImage",
-                                         ".run", ".bin", ".exe", ".py", ".pl", ".rb", ".command"]
-                        var path = filePath.toString().toLowerCase()
-                        if (dangerous.some(function(ext) { return path.endsWith(ext) }))
+                        if (_surf.isDangerousFile(filePath.toString()))
                         {
                             _execWarningDialog.pendingPath = filePath
                             _execWarningDialog.open()

@@ -23,7 +23,6 @@ public:
     explicit FieryWebProfile(QObject *parent = nullptr);
 
     QWebEngineUrlRequestInterceptor *urlInterceptor() const;
-
     void setUrlInterceptor(QWebEngineUrlRequestInterceptor *newUrlInterceptor);
 
     Q_INVOKABLE void acceptNotification();

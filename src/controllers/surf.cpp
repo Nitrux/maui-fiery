@@ -80,6 +80,23 @@ QString surf::safeDisplayUrl(const QString &urlStr)
     return url.toString();
 }
 
+bool surf::isDangerousFile(const QString &path)
+{
+    static const QLatin1StringView extensions[] = {
+        QLatin1StringView(".sh"),      QLatin1StringView(".bash"),
+        QLatin1StringView(".zsh"),     QLatin1StringView(".desktop"),
+        QLatin1StringView(".AppImage"),QLatin1StringView(".run"),
+        QLatin1StringView(".bin"),     QLatin1StringView(".exe"),
+        QLatin1StringView(".py"),      QLatin1StringView(".pl"),
+        QLatin1StringView(".rb"),      QLatin1StringView(".command"),
+    };
+    const QString lower = path.toLower();
+    for (const auto &ext : extensions)
+        if (lower.endsWith(ext))
+            return true;
+    return false;
+}
+
 bool surf::hasProtocol(const QString &input)
 {
     // scheme().length() > 1 reuses the same guard as isValidUrl: it accepts any

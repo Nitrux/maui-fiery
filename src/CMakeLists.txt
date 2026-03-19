@@ -17,6 +17,25 @@ set(fiery_SRCS
     controllers/fierywebprofile.cpp
     controllers/requestinterceptor.cpp)
 
+# Download the Steven Black aggregated hosts blocklist at configure time.
+# The file is placed in the build tree to avoid polluting the source tree.
+# If the network is unavailable the built-in fallback list is copied instead.
+set(_blocklist "${CMAKE_CURRENT_BINARY_DIR}/blocklist.txt")
+if(NOT EXISTS "${_blocklist}")
+    message(STATUS "Downloading Steven Black aggregated hosts blocklist...")
+    file(DOWNLOAD
+        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+        "${_blocklist}"
+        SHOW_PROGRESS
+        TIMEOUT 30
+        STATUS _dl_status)
+    list(GET _dl_status 0 _dl_code)
+    if(NOT _dl_code EQUAL 0)
+        message(WARNING "Blocklist download failed (${_dl_status}); using built-in fallback.")
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/blocklist.txt" "${_blocklist}" COPYONLY)
+    endif()
+endif()
+
 qt_add_resources(fiery_ASSETS
     assets/img_assets.qrc
     assets.qrc)
@@ -24,6 +43,13 @@ qt_add_resources(fiery_ASSETS
 qt_add_executable(${PROJECT_NAME}
     ${fiery_SRCS}
     ${fiery_ASSETS})
+
+# Bundle the downloaded blocklist. The target form of qt_add_resources is used
+# here because the file lives in the build tree, not the source tree.
+qt_add_resources(${PROJECT_NAME} "blocklist"
+    PREFIX "/"
+    BASE "${CMAKE_CURRENT_BINARY_DIR}"
+    FILES "${_blocklist}")
 
 qt_policy(SET QTP0001 OLD) # keep :/app/maui/fiery/ resource prefix
 qt_policy(SET QTP0004 OLD) # no qmldir required for subdirectories

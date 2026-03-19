@@ -314,7 +314,7 @@ Maui.SettingsDialog
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Error Pages")
-                    label2.text: i18n("Show built-in error pages when a page fails to load.")
+                    label2.text: i18n("Show the browser's built-in error page when a site fails to load due to a network error.")
 
                     Switch
                     {
@@ -322,6 +322,20 @@ Maui.SettingsDialog
                         checkable: true
                         checked: appSettings.errorPageEnabled
                         onToggled: appSettings.errorPageEnabled = !appSettings.errorPageEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Dark Mode")
+                    label2.text: i18n("Signal a dark color scheme preference to web pages. Sites that support dark mode will switch automatically.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.forceDarkMode
+                        onToggled: appSettings.forceDarkMode = !appSettings.forceDarkMode
                     }
                 }
 
@@ -675,4 +689,5 @@ Maui.SettingsDialog
             }
         }
     }
+
 }
