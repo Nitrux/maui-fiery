@@ -164,41 +164,6 @@ Maui.ApplicationWindow
         anchors.fill: parent
     }
 
-    Dialog
-    {
-        id: _openDownloadDialog
-        property url pendingUrl
-
-        title: i18n("Open Downloaded File?")
-        standardButtons: Dialog.Open | Dialog.Cancel
-        anchors.centerIn: parent
-
-        Label
-        {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: i18n("This file may be executable. Opening it could run code on your system. Are you sure you want to open it?")
-        }
-
-        onAccepted: Qt.openUrlExternally(pendingUrl)
-    }
-
-    Action
-    {
-        id: _openDownloadAction
-        property url url
-        text: i18n("Open")
-        onTriggered: () =>
-        {
-            if (_surf.isDangerousFile(url.toString()))
-            {
-                _openDownloadDialog.pendingUrl = url
-                _openDownloadDialog.open()
-            }
-            else
-                Qt.openUrlExternally(url)
-        }
-    }
 
     Action
     {
@@ -253,14 +218,8 @@ Maui.ApplicationWindow
 
         onDownloadFinished: (download) =>
         {
-            switch(download.state)
-            {
-                case WebEngineDownloadRequest.DownloadCompleted:
-            {
-                _openDownloadAction.url = "file://"+download.downloadDirectory+"/"+download.downloadFileName
-                notify("dialog-warning", i18n("Download Finished"), i18n("File has been saved."), [_openDownloadAction])
-            }
-            }
+            if (download.state === WebEngineDownloadRequest.DownloadCompleted)
+                Fiery.DownloadsManager.notifyComplete(download.downloadFileName)
         }
 
     }

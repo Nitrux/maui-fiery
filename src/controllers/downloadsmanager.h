@@ -31,6 +31,7 @@ public Q_SLOTS:
     void remove(int index);
     void removeAndDeleteFile(int index);
     void cancelDownload(DownloadItem *download);
+    void notifyComplete(const QString &name);
 
     DownloadItem *item(int index);
     int count() const;

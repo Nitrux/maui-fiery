@@ -144,6 +144,8 @@ Maui.SideBarView
                         readonly property bool _isPaused: currentDownload !== null
                             && currentDownload.state === WebEngineDownloadRequest.DownloadInProgress
                             && currentDownload.isPaused
+                        readonly property bool _isInterrupted: currentDownload !== null
+                            && currentDownload.state === WebEngineDownloadRequest.DownloadInterrupted
 
                         MenuItem
                         {
@@ -166,6 +168,15 @@ Maui.SideBarView
                                 else
                                     _downloadMenu.currentDownload.pause()
                             }
+                        }
+
+                        MenuItem
+                        {
+                            text: i18n("Retry")
+                            icon.name: "view-refresh"
+                            visible: _downloadMenu._isInterrupted
+                            height: visible ? implicitHeight : 0
+                            onTriggered: _downloadMenu.currentDownload.resume()
                         }
 
                         MenuItem
@@ -209,11 +220,12 @@ Maui.SideBarView
                             id: _dlItem
 
                             width: ListView.view.width
-                            height: _del.implicitHeight + (_dlItem._inProgress || _dlItem._isPaused ? 6 + Maui.Style.space.small * 2 : 0)
+                            height: _del.implicitHeight + (_dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted ? 6 + Maui.Style.space.small * 2 : 0)
 
                             property var download: model.download
-                            readonly property bool _inProgress: download.state === WebEngineDownloadRequest.DownloadInProgress && !download.isPaused
-                            readonly property bool _isPaused:   download.state === WebEngineDownloadRequest.DownloadInProgress && download.isPaused
+                            readonly property bool _inProgress:    download.state === WebEngineDownloadRequest.DownloadInProgress && !download.isPaused
+                            readonly property bool _isPaused:      download.state === WebEngineDownloadRequest.DownloadInProgress && download.isPaused
+                            readonly property bool _isInterrupted: download.state === WebEngineDownloadRequest.DownloadInterrupted
 
                             property real _speedBps: 0
                             property real _lastBytes: 0
@@ -250,68 +262,31 @@ Maui.SideBarView
                                 anchors.right: parent.right
 
                                 label1.text: model.name
-                                label1.wrapMode: Text.NoWrap
-                                label1.clip: true
-
-                                label2.wrapMode: Text.NoWrap
-                                label2.clip: true
-
-                                // Force ElideNone so contentWidth reflects the full
-                                // text length — required for the marquee to work.
-                                // restoreMode: RestoreNone prevents MauiKit's internal
-                                // binding from reasserting ElideRight after us.
-                                Binding
-                                {
-                                    target: _del.label1
-                                    property: "elide"
-                                    value: Text.ElideNone
-                                    restoreMode: Binding.RestoreNone
-                                }
+                                label1.elide: Text.ElideMiddle
 
                                 Binding
                                 {
                                     target: _del.label2
                                     property: "elide"
-                                    value: Text.ElideNone
+                                    value: Text.ElideRight
                                     restoreMode: Binding.RestoreNone
-                                }
-
-                                // Reset scroll position when the item is not hovered.
-                                Binding { target: _del.label1; property: "contentX"; value: 0; when: !_del.hovered; restoreMode: Binding.RestoreNone }
-                                Binding { target: _del.label2; property: "contentX"; value: 0; when: !_del.hovered; restoreMode: Binding.RestoreNone }
-
-                                // Marquee scroll triggered by hovering the delegate.
-                                SequentialAnimation
-                                {
-                                    loops: Animation.Infinite
-                                    running: _del.hovered && _del.label1.contentWidth > _del.label1.width
-
-                                    PauseAnimation  { duration: 500 }
-                                    NumberAnimation { target: _del.label1; property: "contentX"; from: 0; to: _del.label1.contentWidth - _del.label1.width; duration: _del.label1.contentWidth * 18; easing.type: Easing.InOutQuad }
-                                    PauseAnimation  { duration: 500 }
-                                }
-
-                                SequentialAnimation
-                                {
-                                    loops: Animation.Infinite
-                                    running: _del.hovered && _del.label2.contentWidth > _del.label2.width
-
-                                    PauseAnimation  { duration: 500 }
-                                    NumberAnimation { target: _del.label2; property: "contentX"; from: 0; to: _del.label2.contentWidth - _del.label2.width; duration: _del.label2.contentWidth * 18; easing.type: Easing.InOutQuad }
-                                    PauseAnimation  { duration: 500 }
                                 }
 
                                 label2.text:
                                 {
-                                    if (_dlItem._inProgress || _dlItem._isPaused)
+                                    if (_dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted)
                                     {
                                         var host = ""
                                         try { host = new URL(_dlItem.download.url.toString()).hostname } catch(e) {}
                                         var sizeStr = _surf.formatBytes(download.receivedBytes) + " / " + _surf.formatBytes(download.totalBytes)
-                                        var suffix  = _dlItem._isPaused
-                                            ? i18n("Paused")
-                                            : (_dlItem._speedBps > 0 ? _surf.formatBytes(_dlItem._speedBps) + "/s" : "")
-                                        return (host.length > 0 ? host + " \u2022 " : "") + sizeStr + (suffix.length > 0 ? " \u2022 " + suffix : "")
+                                        var suffix
+                                        if (_dlItem._isInterrupted)
+                                            suffix = i18n("Interrupted")
+                                        else if (_dlItem._isPaused)
+                                            suffix = i18n("Paused")
+                                        else
+                                            suffix = _dlItem._speedBps > 0 ? _surf.formatBytes(_dlItem._speedBps) + "/s" : "--.-- /s"
+                                        return host + "\n" + sizeStr + (suffix.length > 0 ? "\n" + suffix : "")
                                     }
                                     return model.url
                                 }
@@ -354,7 +329,7 @@ Maui.SideBarView
                                 anchors.bottom: parent.bottom
                                 anchors.margins: Maui.Style.space.small
 
-                                visible: _dlItem._inProgress || _dlItem._isPaused
+                                visible: _dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted
                                 height: 6
                                 radius: height / 2
                                 color: Maui.Theme.alternateBackgroundColor
@@ -374,9 +349,11 @@ Maui.SideBarView
 
                                     height: parent.height
                                     radius: parent.radius
-                                    color: _dlItem._isPaused
-                                           ? Maui.Theme.disabledTextColor
-                                           : Maui.Theme.highlightColor
+                                    color: _dlItem._isInterrupted
+                                           ? Maui.Theme.negativeTextColor
+                                           : _dlItem._isPaused
+                                             ? Maui.Theme.disabledTextColor
+                                             : Maui.Theme.highlightColor
 
                                     width: _indeterminate ? parent.width * 0.25 : parent.width * _ratio
 

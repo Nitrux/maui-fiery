@@ -7,3 +7,9 @@ Name=Web Notification
 Comment=A notification sent by a website
 Action=Popup
 Urgency=Normal
+
+[Event/downloadComplete]
+Name=Download Finished
+Comment=A file download has completed
+Action=Popup
+Urgency=Normal

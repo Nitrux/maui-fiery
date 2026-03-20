@@ -2,6 +2,7 @@
 #include <QUrl>
 #include <QFile>
 #include <QDir>
+#include <KNotification>
 
 DownloadsManager::DownloadsManager(QObject *parent) : QObject(parent)
     ,m_model(new DownloadsModel(this))
@@ -81,6 +82,15 @@ DownloadItem *DownloadsManager::item(int index)
 int DownloadsManager::count() const
 {
     return m_downloads.count();
+}
+
+void DownloadsManager::notifyComplete(const QString &name)
+{
+    KNotification *n = new KNotification(QStringLiteral("downloadComplete"), KNotification::CloseOnTimeout);
+    n->setTitle(QStringLiteral("Download Finished"));
+    n->setText(name);
+    n->setIconName(QStringLiteral("folder-download"));
+    n->sendEvent();
 }
 
 DownloadsManager::~DownloadsManager()
