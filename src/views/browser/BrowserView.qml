@@ -765,7 +765,7 @@ Maui.Page
     // Fixes applied vs. first version:
     //   - body overflow hidden while active (eliminates the double scrollbar)
     //   - scoped CSS resets element colors, backgrounds, and image sizing
-    //   - column uses min(90vw, 760px) so it fills narrow viewports too
+    //   - column uses min(90vw, 1200px) so it fills wider viewports too
     readonly property string _readerScript: "(function(){" +
         "var ex=document.getElementById('fiery-reader');" +
         "if(ex){" +
@@ -793,7 +793,7 @@ Maui.Page
             "'#fiery-reader{font-family:Georgia,\"Times New Roman\",serif;line-height:1.8;font-size:18px;}'" +
             // Constrain and centre the inner column with generous padding
             "+'#fiery-reader-body{" +
-                "max-width:min(92vw,820px);width:100%;margin:0 auto;" +
+                "max-width:min(92vw,1200px);width:100%;margin:0 auto;" +
                 "padding:56px 40px 100px;box-sizing:border-box;}'" +
             // Force all text to reader colours — defeats inherited site stylesheets
             "+'#fiery-reader *{color:'+fg+'!important;background:transparent!important;" +

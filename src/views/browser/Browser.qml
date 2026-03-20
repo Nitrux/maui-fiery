@@ -231,11 +231,111 @@ Maui.SplitViewItem
             _menu.show()
         }
 
+        // Injects a <style> element that replaces Chromium's default scrollbar with a thin,
+        // rounded, floating style matching the active MauiKit theme. Colors are sampled from
+        // the theme at injection time and embedded directly in the CSS string.
+        readonly property string _scrollbarScript: {
+            var c  = Maui.Theme.textColor
+            var tr = Math.round(c.r * 255), tg = Math.round(c.g * 255), tb = Math.round(c.b * 255)
+            var h  = Maui.Theme.highlightColor
+            var hr = Math.round(h.r * 255), hg = Math.round(h.g * 255), hb = Math.round(h.b * 255)
+            var thumb       = "rgba(" + tr + "," + tg + "," + tb + ",1.0)"
+            var thumbHover  = "rgba(" + tr + "," + tg + "," + tb + ",1.0)"
+            var thumbActive = "rgba(" + hr + "," + hg + "," + hb + ",1.0)"
+            return "(function(){" +
+                "var s=document.getElementById('fiery-sb');" +
+                "if(!s){s=document.createElement('style');s.id='fiery-sb';document.head&&document.head.appendChild(s);}" +
+                "s.textContent=" +
+                "'::-webkit-scrollbar{width:6px;height:6px;}'" +
+                "+'::-webkit-scrollbar-track{background:transparent;}'" +
+                "+'::-webkit-scrollbar-thumb{background:" + thumb + ";border-radius:3px;}'" +
+                "+'::-webkit-scrollbar-thumb:hover{background:" + thumbHover + ";}'" +
+                "+'::-webkit-scrollbar-thumb:active{background:" + thumbActive + ";}'" +
+                "+'::-webkit-scrollbar-corner{background:transparent;}';" +
+                "})();"
+        }
+
         // The observer disconnects as soon as a banner is removed (success),
         // and unconditionally after 20 mutation callbacks as a failsafe for
         // highly dynamic single-page applications that would otherwise keep
         // running querySelectorAll against ~40 selectors indefinitely.
         readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];var o;var n=0;function r(){var f=false;s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}return f;}r();var t;o=new MutationObserver(function(){if(++n>20){o.disconnect();return;}if(t)clearTimeout(t);t=setTimeout(function(){if(r())o.disconnect();},500);});o.observe(document.documentElement,{childList:true,subtree:true});})();"
+
+        // Removes subscribe, newsletter, and ad-blocker-detection overlays and undoes CSS tricks
+        // (max-height clipping, gradient masks, blur filters) that inline paywalls use to obscure
+        // article content. Three-pass approach: (1) selector-based removal of elements matching
+        // known id/class patterns; (2) content-based heuristic fallback for elements with opaque
+        // or hashed class names; (3) CSS property stripping to reveal clipped content. Runs
+        // immediately on load and retries at fixed intervals via MutationObserver to catch
+        // elements injected after the initial page load.
+        readonly property string _subscribeBlockerScript: "(function(){'use strict';var s=[" +
+            "'#adblock-overlay','#adblock-modal','#adblock-notice','#adblock-wall'," +
+            "'#adblocker','#ad-blocker-overlay','.adblock-overlay','.adblock-modal'," +
+            "'.adblock-notice','.adblock-wall','[id*=\"adblock\"]','[class*=\"adblock\"]'," +
+            "'[id*=\"ad-block\"]','[class*=\"ad-block\"]','[id*=\"adblocker\"]','[class*=\"adblocker\"]'," +
+            "'#newsletter-modal','#newsletter-popup','#newsletter-overlay'," +
+            "'.newsletter-modal','.newsletter-popup','.newsletter-overlay'," +
+            "'[id*=\"newsletter\"]','[class*=\"newsletter\"]'," +
+            "'[id*=\"subscribe\"]','[class*=\"subscribe\"]'," +
+            "'[id*=\"subscription\"]','[class*=\"subscription\"]'," +
+            "'[id*=\"paywall\"]','[class*=\"paywall\"]'," +
+            "'[id*=\"piano-\"]','[class*=\"piano-id\"]','[class*=\"tp-modal\"]','[class*=\"tp-backdrop\"]'," +
+            "'[id*=\"regwall\"]','[class*=\"regwall\"]'," +
+            "'[id*=\"gate\"]','[class*=\"gate\"]'," +
+            "'[id*=\"metered\"]','[class*=\"metered\"]'," +
+            "'[class*=\"duet--cta\"]','[class*=\"duet--auth\"]','[class*=\"duet--paywall\"]'," +
+            "'[class*=\"c-cta\"]','[class*=\"p-welcome\"]'," +
+            "'#zephr-overlay'," +
+            "'[class*=\"paywall-overlay\"]','[class*=\"overlay--paywall\"]'," +
+            "'[id*=\"fusion-app\"] [class*=\"paywall\"]'," +
+            "'[aria-label*=\"subscribe\" i]','[aria-label*=\"newsletter\" i]'," +
+            "'[aria-label*=\"adblock\" i]','[aria-label*=\"sign in\" i]'" +
+            "];" +
+            "function reveal(){" +
+            "document.querySelectorAll('*').forEach(function(e){" +
+            "var cs=window.getComputedStyle(e);" +
+            "var st=e.style;" +
+            "if(cs.webkitMaskImage&&cs.webkitMaskImage!=='none'){" +
+            "st.setProperty('-webkit-mask-image','none','important');" +
+            "st.setProperty('mask-image','none','important');}" +
+            "if(cs.filter&&cs.filter.indexOf('blur')!==-1){" +
+            "st.setProperty('filter','none','important');}" +
+            "if(cs.overflow==='hidden'&&st.maxHeight&&st.maxHeight!=='none'){" +
+            "st.removeProperty('max-height');" +
+            "st.removeProperty('overflow');}});}" +
+            "function heuristic(){" +
+            "var roots=Array.from(document.querySelectorAll('main,article,body'));" +
+            "var pat=/continue reading|subscribe (to|for|now|and)|unlimited access|(\\$|€|£)[0-9]+(\\.[0-9]+)?\\s*\\/(month|year|mo|yr)|sign in to (read|continue)|create (a free )?account to/i;" +
+            "roots.forEach(function(root){" +
+            "Array.from(root.children).forEach(function(el){" +
+            "var words=(el.innerText||'').trim().split(/\\s+/).length;" +
+            "if(words>300)return;" +
+            "if(!pat.test(el.innerText||''))return;" +
+            "if(!el.querySelector('button,a[href*=\"subscri\"],a[href*=\"account\"],a[href*=\"signin\"],a[href*=\"sign-in\"],a[href*=\"register\"]'))return;" +
+            "el.remove();});});}" +
+            "var o;var n=0;" +
+            "function r(){var f=false;" +
+            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});" +
+            "heuristic();" +
+            "reveal();" +
+            "if(!document.getElementById('fiery-reader')){" +
+            "if(document.body){" +
+            "document.body.style.removeProperty('overflow');" +
+            "document.body.style.removeProperty('position');" +
+            "document.body.style.removeProperty('height');}" +
+            "if(document.documentElement){" +
+            "document.documentElement.style.removeProperty('overflow');}}" +
+            "return f;}" +
+            "r();" +
+            "setTimeout(r,1500);" +
+            "setTimeout(r,4000);" +
+            "setTimeout(r,8000);" +
+            "var t;o=new MutationObserver(function(){" +
+            "if(++n>100){o.disconnect();return;}" +
+            "if(t)clearTimeout(t);" +
+            "t=setTimeout(r,500);});" +
+            "o.observe(document.documentElement,{childList:true,subtree:true});" +
+            "})();"
 
         onLoadingChanged: function(loadingInfo)
         {
@@ -245,8 +345,12 @@ Maui.SplitViewItem
                 console.log("Load succeeded. offTheRecord:", _webView.profile.offTheRecord, "url:", control.url)
                 if (!_webView.profile.offTheRecord)
                     Fiery.History.appendUrl(control.url, control.title)
+                if (appSettings.showScrollBars)
+                    _webView.runJavaScript(_webView._scrollbarScript)
                 if (appSettings.cookieBannerBlocker)
                     _webView.runJavaScript(_webView._cookieBannerScript)
+                if (appSettings.subscribeBlockerEnabled)
+                    _webView.runJavaScript(_webView._subscribeBlockerScript)
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
             {

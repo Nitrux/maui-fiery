@@ -572,6 +572,20 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
+                    label1.text: i18n("Subscribe & Ad-Block Popup Blocker")
+                    label2.text: i18n("Automatically remove newsletter, subscription, and ad-blocker-detection overlays.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.subscribeBlockerEnabled
+                        onToggled: appSettings.subscribeBlockerEnabled = !appSettings.subscribeBlockerEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
                     label1.text: i18n("Cookie Banner Blocker")
                     label2.text: i18n("Automatically remove cookie consent popups and GDPR banners.")
 

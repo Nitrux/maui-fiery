@@ -103,6 +103,7 @@ Maui.ApplicationWindow
         // e.g. '["accounts.google.com","auth0.com"]'
         property string thirdPartyCookiesWhitelistJson: "[]"
         property bool cookieBannerBlocker: false
+        property bool subscribeBlockerEnabled: false
         property string customUserAgent: ""
 
         // Security
