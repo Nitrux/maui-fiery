@@ -137,6 +137,19 @@ Maui.SettingsDialog
         }
     }
 
+    Maui.FlexSectionItem
+    {
+        label1.text: i18n("Passwords")
+        label2.text: i18n("Manage saved login credentials.")
+
+        ToolButton
+        {
+            icon.name: "go-next"
+            checkable: true
+            onToggled: control.addPage(_passwordsComponent)
+        }
+    }
+
     // ── General ─────────────────────────────────────────────────────────────
 
     Component
@@ -813,6 +826,131 @@ Maui.SettingsDialog
                     {
                         text: i18n("Clear")
                         onClicked: root.profile.cookieStore.deleteAllCookies()
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Passwords ────────────────────────────────────────────────────────────
+
+    Component
+    {
+        id: _passwordsComponent
+
+        Maui.SettingsPage
+        {
+            title: i18n("Passwords")
+
+            Maui.SectionGroup
+            {
+                title: i18n("Saved Passwords")
+                description: i18n("Passwords are encrypted and stored in the system keyring.")
+
+                Maui.SectionItem
+                {
+                    visible: Fiery.PasswordManager.entries.length === 0
+                    label1.text: i18n("No saved passwords")
+                    label2.text: i18n("Passwords are offered for saving when you sign in to a site.")
+                }
+
+                Repeater
+                {
+                    model: Fiery.PasswordManager.entries
+
+                    delegate: Maui.SectionItem
+                    {
+                        required property var modelData
+
+                        label1.text: modelData.host
+                        label2.text: modelData.username
+
+                        ToolButton
+                        {
+                            id: _revealBtn
+                            checkable: true
+                            checked: false
+                            icon.name: checked ? "password-show-off" : "password-show-on"
+                            ToolTip.text: checked ? i18n("Hide password") : i18n("Show password")
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 1000
+
+                            // Fetched from the keyring on first reveal; cached afterwards.
+                            property string revealedPassword: ""
+
+                            onToggled:
+                            {
+                                if (checked && !revealedPassword)
+                                {
+                                    var creds = Fiery.PasswordManager.find(modelData.host)
+                                    for (var i = 0; i < creds.length; i++)
+                                    {
+                                        if (creds[i].username === modelData.username)
+                                        {
+                                            revealedPassword = creds[i].password
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Label
+                        {
+                            text: _revealBtn.checked ? (_revealBtn.revealedPassword || "••••••••") : "••••••••"
+                            font.family: _revealBtn.checked ? "monospace" : font.family
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        ToolButton
+                        {
+                            icon.name: "list-remove"
+                            ToolTip.text: i18n("Remove")
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 1000
+                            onClicked: Fiery.PasswordManager.remove(modelData.host, modelData.username)
+                        }
+                    }
+                }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Clear Passwords")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("All Saved Passwords")
+                    label2.text: i18n("Permanently delete all stored credentials.")
+
+                    Button
+                    {
+                        text: i18n("Clear")
+                        enabled: Fiery.PasswordManager.entries.length > 0
+                        onClicked: _clearPasswordsDialog.open()
+                    }
+
+                    Dialog
+                    {
+                        id: _clearPasswordsDialog
+                        title: i18n("Clear All Passwords?")
+                        standardButtons: Dialog.Ok | Dialog.Cancel
+                        anchors.centerIn: parent
+
+                        Label
+                        {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: i18n("This will permanently delete all saved credentials. This cannot be undone.")
+                        }
+
+                        onAccepted:
+                        {
+                            var all = Fiery.PasswordManager.entries
+                            for (var i = 0; i < all.length; i++)
+                                Fiery.PasswordManager.remove(all[i].host, all[i].username)
+                        }
                     }
                 }
             }

@@ -19,6 +19,7 @@
 #include "controllers/fierywebprofile.h"
 #include "controllers/downloadsmanager.h"
 #include "controllers/requestinterceptor.h"
+#include "controllers/passwordmanager.h"
 
 #include "../fiery_version.h"
 
@@ -147,6 +148,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<surf>(FIERY_URI, 1, 0, "Surf");
 
     qmlRegisterSingletonInstance<DownloadsManager>(FIERY_URI, 1, 0, "DownloadsManager", &DownloadsManager::instance());
+    qmlRegisterSingletonInstance<PasswordManager>(FIERY_URI, 1, 0, "PasswordManager", &PasswordManager::instance());
 
     qmlRegisterType<FieryWebProfile>(FIERY_URI, 1, 0, "FieryWebProfile");
     qmlRegisterType<RequestInterceptor>(FIERY_URI, 1, 0, "RequestInterceptor");

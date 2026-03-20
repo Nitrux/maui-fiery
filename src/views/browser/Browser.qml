@@ -231,6 +231,85 @@ Maui.SplitViewItem
             _menu.show()
         }
 
+        // Watches for password fields (including dynamically injected ones) and
+        // records the last user-typed credential in window._fieryLastCred.
+        // Only trusted input events are captured so auto-fill does not trigger saves.
+        // Username lookup searches the whole document and prefers email-type inputs
+        // to handle multi-step forms where the email field is outside the password form.
+        readonly property string _credentialWatcherScript:
+            "(function(){" +
+            "if(window._fieryWatcher)return;" +
+            "window._fieryWatcher=true;" +
+            "var sel='input:not([type=\"password\"]):not([type=\"hidden\"]):not([type=\"submit\"]):not([type=\"button\"]):not([type=\"checkbox\"]):not([type=\"radio\"])';" +
+            "function bestUsername(scope){" +
+            "var ins=Array.from(scope.querySelectorAll(sel)).filter(function(i){return i.value&&i.value.trim();});" +
+            "var em=ins.filter(function(i){return i.type==='email'||(i.name&&i.name.toLowerCase().indexOf('email')!==-1)||(i.id&&i.id.toLowerCase().indexOf('email')!==-1);});" +
+            "return em.length?em[em.length-1].value:ins.length?ins[ins.length-1].value:'';}" +
+            "function attach(pw){" +
+            "if(pw._fieryAttached)return;" +
+            "pw._fieryAttached=true;" +
+            "pw.addEventListener('input',function(e){" +
+            "if(!e.isTrusted)return;" +
+            "if(!pw.value)return;" +
+            "var f=pw.form||pw.closest('form');" +
+            "var un=bestUsername(f||document);" +
+            "if(!un&&f)un=bestUsername(document);" +
+            "window._fieryLastCred=JSON.stringify({h:location.hostname,u:un,p:pw.value});" +
+            "});}" +
+            "function scan(){" +
+            "document.querySelectorAll('input[type=\"password\"]').forEach(attach);}" +
+            "scan();" +
+            "new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});" +
+            "})()"
+
+        // Reads the last credential captured by the watcher. Called at LoadStartedStatus
+        // so the value is retrieved before the page context is destroyed.
+        readonly property string _credentialHarvestScript:
+            "(function(){var c=window._fieryLastCred||null;window._fieryLastCred=null;return c;})()"
+
+        // Builds an auto-fill script for the given credentials array [{username, password}].
+        // Uses the native HTMLInputElement value setter so React/Vue controlled inputs
+        // receive the change and their internal state stays in sync.
+        //
+        // Multi-step forms (e.g. email on step 1, password on step 2) are handled by a
+        // persistent MutationObserver: username fields are filled as soon as they appear,
+        // and the password field is filled when it appears (after the user advances to
+        // the next step). The observer disconnects once the password has been filled.
+        function buildFillerScript(creds) {
+            var json = JSON.stringify(creds)
+            return "(function(){" +
+                "var creds=" + json + ";" +
+                "if(!creds||!creds.length)return;" +
+                "var username=creds[0].username||'';" +
+                "var password=creds[0].password||'';" +
+                "var setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;" +
+                "var unSel='input[type=\"email\"],input[type=\"text\"],input[type=\"tel\"]';" +
+                "var pwSel='input[type=\"password\"]';" +
+                "function setVal(el,val){" +
+                "setter.call(el,val);" +
+                "el.dispatchEvent(new Event('input',{bubbles:true}));" +
+                "el.dispatchEvent(new Event('change',{bubbles:true}));}" +
+                "function tryFillUsername(){" +
+                "var un=document.querySelector(unSel);" +
+                "if(un&&!un._fieryFilled&&username){" +
+                "un._fieryFilled=true;" +
+                "setVal(un,username);}}" +
+                "function tryFillPassword(){" +
+                "var pw=document.querySelector(pwSel);" +
+                "if(pw&&!pw._fieryFilled&&password){" +
+                "pw._fieryFilled=true;" +
+                "setVal(pw,password);" +
+                "return true;}" +
+                "return false;}" +
+                "tryFillUsername();" +
+                "if(!tryFillPassword()){" +
+                "var obs=new MutationObserver(function(){" +
+                "tryFillUsername();" +
+                "if(tryFillPassword())obs.disconnect();});" +
+                "obs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['type','style','hidden']});}" +
+                "})()"
+        }
+
         // Injects a <style> element that replaces Chromium's default scrollbar with a thin,
         // rounded, floating style matching the active MauiKit theme. Colors are sampled from
         // the theme at injection time and embedded directly in the CSS string.
@@ -281,15 +360,17 @@ Maui.SplitViewItem
             "'[id*=\"paywall\"]','[class*=\"paywall\"]'," +
             "'[id*=\"piano-\"]','[class*=\"piano-id\"]','[class*=\"tp-modal\"]','[class*=\"tp-backdrop\"]'," +
             "'[id*=\"regwall\"]','[class*=\"regwall\"]'," +
-            "'[id*=\"gate\"]','[class*=\"gate\"]'," +
-            "'[id*=\"metered\"]','[class*=\"metered\"]'," +
+            "'[id*=\"paygate\"]','[class*=\"paygate\"]'," +
+            "'[id*=\"gate-\"]','[class*=\"gate-\"]'," +
+            "'[id*=\"-gate\"]','[class*=\"-gate\"]'," +
+            "'[id*=\"metered-\"]','[class*=\"metered-\"]'," +
             "'[class*=\"duet--cta\"]','[class*=\"duet--auth\"]','[class*=\"duet--paywall\"]'," +
             "'[class*=\"c-cta\"]','[class*=\"p-welcome\"]'," +
             "'#zephr-overlay'," +
             "'[class*=\"paywall-overlay\"]','[class*=\"overlay--paywall\"]'," +
             "'[id*=\"fusion-app\"] [class*=\"paywall\"]'," +
             "'[aria-label*=\"subscribe\" i]','[aria-label*=\"newsletter\" i]'," +
-            "'[aria-label*=\"adblock\" i]','[aria-label*=\"sign in\" i]'" +
+            "'[aria-label*=\"adblock\" i]'" +
             "];" +
             "function reveal(){" +
             "document.querySelectorAll('*').forEach(function(e){" +
@@ -301,8 +382,10 @@ Maui.SplitViewItem
             "if(cs.filter&&cs.filter.indexOf('blur')!==-1){" +
             "st.setProperty('filter','none','important');}" +
             "if(cs.overflow==='hidden'&&st.maxHeight&&st.maxHeight!=='none'){" +
+            "var mh=st.maxHeight;" +
+            "if(mh.indexOf('calc')===-1&&mh.indexOf('vh')===-1&&mh.indexOf('vw')===-1&&mh.indexOf('%')===-1){" +
             "st.removeProperty('max-height');" +
-            "st.removeProperty('overflow');}});}" +
+            "st.removeProperty('overflow');}}});}" +
             "function heuristic(){" +
             "var roots=Array.from(document.querySelectorAll('main,article,body'));" +
             "var pat=/continue reading|subscribe (to|for|now|and)|unlimited access|(\\$|€|£)[0-9]+(\\.[0-9]+)?\\s*\\/(month|year|mo|yr)|sign in to (read|continue)|create (a free )?account to/i;" +
@@ -342,7 +425,6 @@ Maui.SplitViewItem
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
             {
                 control._loadFailed = false
-                console.log("Load succeeded. offTheRecord:", _webView.profile.offTheRecord, "url:", control.url)
                 if (!_webView.profile.offTheRecord)
                     Fiery.History.appendUrl(control.url, control.title)
                 if (appSettings.showScrollBars)
@@ -351,6 +433,34 @@ Maui.SplitViewItem
                     _webView.runJavaScript(_webView._cookieBannerScript)
                 if (appSettings.subscribeBlockerEnabled)
                     _webView.runJavaScript(_webView._subscribeBlockerScript)
+
+                if (!_webView.profile.offTheRecord) {
+                    // Prompt to save credentials captured from the previous page.
+                    if (control._pendingCredPass) {
+                        Fiery.PasswordManager.requestSave(control._pendingCredHost,
+                                                          control._pendingCredUser,
+                                                          control._pendingCredPass)
+                        control._pendingCredHost = ""
+                        control._pendingCredUser = ""
+                        control._pendingCredPass = ""
+                    }
+
+                    // Install the credential watcher for this page.
+                    _webView.runJavaScript(_webView._credentialWatcherScript)
+
+                    // Prompt the user to fill saved credentials if any exist for this host.
+                    // hasCredentials() checks SQLite only — the keyring is never touched here.
+                    try {
+                        var host = new URL(_webView.url.toString()).hostname
+                        if (host && Fiery.PasswordManager.hasCredentials(host)) {
+                            _fillPasswordAction.host = host
+                            root.notify("dialog-password",
+                                        i18n("Saved Password"),
+                                        i18n("Fill credentials for %1?", host),
+                                        [_fillPasswordAction, _dismissFillAction])
+                        }
+                    } catch(e) {}
+                }
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
             {
@@ -362,6 +472,21 @@ Maui.SplitViewItem
             else if(loadingInfo.status === WebEngineView.LoadStartedStatus)
             {
                 control._loadFailed = false
+
+                // Harvest any credential the watcher recorded before the page unloads.
+                if (!_webView.profile.offTheRecord) {
+                    _webView.runJavaScript(_webView._credentialHarvestScript, function(result) {
+                        if (!result) return
+                        try {
+                            var cred = JSON.parse(result)
+                            if (cred && cred.p) {
+                                control._pendingCredHost = cred.h
+                                control._pendingCredUser = cred.u || ""
+                                control._pendingCredPass = cred.p
+                            }
+                        } catch(e) {}
+                    })
+                }
             }
         }
 
@@ -464,10 +589,7 @@ Maui.SplitViewItem
             _webView.grantFeaturePermission(securityOrigin, feature, granted)
         }
 
-        onNavigationRequested: (request) =>
-        {
-            console.log("Navigation requested",  request.navigationType)
-        }
+        onNavigationRequested: (request) => {}
 
         settings.accelerated2dCanvasEnabled : true
         settings.allowGeolocationOnInsecureOrigins : false
@@ -499,6 +621,34 @@ Maui.SplitViewItem
     }
 
     property bool _loadFailed: false
+
+    // Credentials captured at LoadStartedStatus from the previous page.
+    // Held in QML (not web storage) so they survive cross-origin redirects.
+    property string _pendingCredHost: ""
+    property string _pendingCredUser: ""
+    property string _pendingCredPass: ""
+
+    // Actions shown in the "fill credentials?" notification prompt.
+    // find() is called only here — at the moment the user taps Fill — so the
+    // keyring unlock prompt (if any) appears in direct response to user intent.
+    Action
+    {
+        id: _fillPasswordAction
+        property string host: ""
+        text: i18n("Fill")
+        onTriggered:
+        {
+            var creds = Fiery.PasswordManager.find(_fillPasswordAction.host)
+            if (creds.length > 0)
+                _webView.runJavaScript(_webView.buildFillerScript(creds))
+        }
+    }
+
+    Action
+    {
+        id: _dismissFillAction
+        text: i18n("Not Now")
+    }
 
     // Workaround for QtWebEngine GPU surface not repainting after a
     // Wayland compositor workspace switch (e.g. Hyprland).

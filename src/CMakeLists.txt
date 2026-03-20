@@ -15,7 +15,8 @@ set(fiery_SRCS
     models/bookmarksmodel.cpp
     controllers/surf.cpp
     controllers/fierywebprofile.cpp
-    controllers/requestinterceptor.cpp)
+    controllers/requestinterceptor.cpp
+    controllers/passwordmanager.cpp)
 
 # Download the Steven Black aggregated hosts blocklist at configure time.
 # The file is placed in the build tree to avoid polluting the source tree.
@@ -68,6 +69,9 @@ qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     views/home/HomeView.qml
     views/AppView.qml)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1)
+
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     MauiKit4
@@ -80,4 +84,5 @@ target_link_libraries(${PROJECT_NAME}
     KF6::Notifications
 
     Qt::WebEngineCore
-    Qt::WebEngineQuick)
+    Qt::WebEngineQuick
+    PkgConfig::libsecret)

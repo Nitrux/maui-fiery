@@ -216,6 +216,36 @@ Maui.ApplicationWindow
         onTriggered: () => { Fiery.DownloadsManager.cancelDownload(_cancelDownloadAction.download) }
     }
 
+    Action
+    {
+        id: _savePasswordAction
+        property string host
+        property string username
+        property string password
+        text: i18n("Save")
+        onTriggered: () => { Fiery.PasswordManager.save(_savePasswordAction.host, _savePasswordAction.username, _savePasswordAction.password) }
+    }
+
+    Action
+    {
+        id: _dismissPasswordAction
+        text: i18n("Not Now")
+    }
+
+    Connections
+    {
+        target: Fiery.PasswordManager
+        function onSaveRequested(host, username, password)
+        {
+            _savePasswordAction.host     = host
+            _savePasswordAction.username = username
+            _savePasswordAction.password = password
+            root.notify("dialog-password", i18n("Save Password?"),
+                        i18n("Save credentials for %1?", host),
+                        [_savePasswordAction, _dismissPasswordAction])
+        }
+    }
+
     property WebEngineProfile profile: Fiery.FieryWebProfile
     {
         downloadPath: appSettings.downloadsPath
