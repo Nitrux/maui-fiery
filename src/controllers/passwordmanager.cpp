@@ -127,6 +127,10 @@ void PasswordManager::migrateFromPlainText()
     for (const Row &row : rows) {
         if (row.password.isEmpty())
             continue;
+        // libsecret attribute values are C strings; a null byte would silently
+        // truncate the value and corrupt the keyring entry.
+        if (row.host.contains(QChar(0)) || row.username.contains(QChar(0)))
+            continue;
 
         GError *error = nullptr;
         const QString label = QStringLiteral("Fiery: %1 @ %2").arg(row.username, row.host);
@@ -171,6 +175,13 @@ void PasswordManager::migrateFromPlainText()
 
 void PasswordManager::save(const QString &host, const QString &username, const QString &password)
 {
+    // libsecret attribute values are null-terminated C strings; reject any
+    // credential where host or username contains a null byte.
+    if (host.contains(QChar(0)) || username.contains(QChar(0))) {
+        qWarning() << "PasswordManager::save: null byte in host or username, rejecting";
+        return;
+    }
+
     // Metadata in SQLite.
     {
         QSqlQuery q(m_db);

@@ -237,9 +237,9 @@ Maui.ContextualMenu
                 onValueModified: {
                     control.playbackRate = value
                     const js = '(function(id,rate){' +
-                               '  var e=document.querySelector("[data-fiery-ctx=\'"+id+"\']");' +
+                               '  var e=document.querySelector("[data-fiery-ctx="+JSON.stringify(id)+"]");' +
                                '  if(e) e.playbackRate=rate;' +
-                               '})("' + control.contextElemId + '",' + control.playbackRate / 100 + ')'
+                               '})(' + JSON.stringify(control.contextElemId) + ',' + (control.playbackRate / 100) + ')'
                     webView.runJavaScript(js)
                 }
                 textFromValue: function(value, locale) {
@@ -267,9 +267,9 @@ Maui.ContextualMenu
             const js = webView.isFullScreen
                 ? 'document.exitFullscreen()'
                 : '(function(id){' +
-                  '  var e=document.querySelector("[data-fiery-ctx=\'"+id+"\']");' +
+                  '  var e=document.querySelector("[data-fiery-ctx="+JSON.stringify(id)+"]");' +
                   '  if(e) e.requestFullscreen();' +
-                  '})("' + control.contextElemId + '")'
+                  '})(' + JSON.stringify(control.contextElemId) + ')'
             webView.runJavaScript(js)
         }
     }

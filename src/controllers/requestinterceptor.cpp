@@ -37,7 +37,7 @@ void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
         // an O(1) QSet lookup at each level.  This supports both exact matches
         // ("ads.example.com") and wildcard subdomain blocking ("example.com")
         // without an O(N) loop over the entire block list.
-        QString h = info.requestUrl().host();
+        QString h = info.requestUrl().host().toLower();
         while (!h.isEmpty()) {
             if (m_blockedHosts.contains(h)) {
                 info.block(true);
@@ -94,7 +94,7 @@ static void loadHostsFile(const QString &path, QSet<QString> &out)
             continue;
         // Support both "domain.com" and hosts-file "0.0.0.0 domain.com"
         const QStringList parts = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
-        out.insert(parts.size() >= 2 ? parts.at(1) : parts.at(0));
+        out.insert((parts.size() >= 2 ? parts.at(1) : parts.at(0)).toLower());
     }
 }
 

@@ -680,12 +680,27 @@ Maui.Page
         {
             try
             {
-                var urls = JSON.parse(appSettings.sessionUrlsJson)
-                if (urls && urls.length > 0)
-                {
-                    urls.forEach(url => openTab(url))
+                var entries = JSON.parse(appSettings.sessionUrlsJson)
+                if (!Array.isArray(entries))
+                    throw new Error("not an array")
+                // Cap at 50 tabs to prevent a crafted session from opening hundreds of tabs.
+                var slice = entries.slice(0, 50)
+                var opened = 0
+                slice.forEach(function(entry) {
+                    if (!entry) return
+                    // Support both old format (plain string) and new format ({url, pinned}).
+                    var url    = typeof entry === "string" ? entry : (entry.url || "")
+                    var pinned = typeof entry === "object" && entry.pinned === true
+                    if (typeof url !== "string" || url.length === 0 || url.length > 2048) return
+                    openTab(url)
+                    opened++
+                    if (pinned) {
+                        var tab = _browserListView.contentModel.get(_browserListView.count - 1)
+                        if (tab) tab.pinned = true
+                    }
+                })
+                if (opened > 0)
                     return
-                }
             }
             catch (e) {}
         }
@@ -1043,7 +1058,7 @@ Maui.Page
 
     function collectSessionUrls()
     {
-        var urls = []
+        var tabs = []
         for (var i = 0; i < _browserListView.count; i++)
         {
             const tab = _browserListView.contentModel.get(i)
@@ -1056,11 +1071,11 @@ Maui.Page
                 {
                     const u = browser.url.toString()
                     if (u.length > 0 && u !== "about:blank")
-                        urls.push(u)
+                        tabs.push({url: u, pinned: tab.pinned || false})
                 }
             }
         }
-        return urls
+        return tabs
     }
 
     function openUrl(path)
@@ -1068,8 +1083,11 @@ Maui.Page
         if(!control.currentBrowser)
             return
 
-        // Block javascript: pseudo-protocol to prevent Self-XSS via the address bar.
-        if(path.toString().trim().toLowerCase().startsWith("javascript:"))
+        const pathStr = path.toString().trim()
+
+        // Block dangerous pseudo-protocols and data URIs typed into the address bar.
+        const lower = pathStr.toLowerCase()
+        if (lower.startsWith("javascript:") || lower.startsWith("data:"))
             return
 
         if(_surf.isValidUrl(path))
@@ -1080,7 +1098,12 @@ Maui.Page
                 control.currentBrowser.url = 'https://' + path
         } else
         {
-            control.currentBrowser.url = appSettings.searchEnginePage + encodeURIComponent(path)
+            // Validate the configured search engine URL starts with https:// so a
+            // misconfigured or tampered setting cannot become a javascript: navigation.
+            const engine = appSettings.searchEnginePage
+            if (!engine.toLowerCase().startsWith("https://"))
+                return
+            control.currentBrowser.url = engine + encodeURIComponent(pathStr)
         }
 
         control.currentTab.forceActiveFocus()

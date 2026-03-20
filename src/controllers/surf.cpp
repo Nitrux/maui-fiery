@@ -85,13 +85,35 @@ QString surf::safeDisplayUrl(const QString &urlStr)
 bool surf::isDangerousFile(const QString &path)
 {
     static const QLatin1StringView extensions[] = {
+        // Shell / scripting
         QLatin1StringView(".sh"),      QLatin1StringView(".bash"),
-        QLatin1StringView(".zsh"),     QLatin1StringView(".desktop"),
-        QLatin1StringView(".AppImage"),QLatin1StringView(".run"),
-        QLatin1StringView(".bin"),     QLatin1StringView(".exe"),
+        QLatin1StringView(".zsh"),     QLatin1StringView(".fish"),
+        QLatin1StringView(".ksh"),     QLatin1StringView(".csh"),
+        QLatin1StringView(".command"),
+        // Interpreted languages
         QLatin1StringView(".py"),      QLatin1StringView(".pl"),
-        QLatin1StringView(".rb"),      QLatin1StringView(".command"),
+        QLatin1StringView(".rb"),      QLatin1StringView(".lua"),
+        QLatin1StringView(".tcl"),     QLatin1StringView(".php"),
+        // JVM / managed runtimes
+        QLatin1StringView(".jar"),     QLatin1StringView(".class"),
+        // Native executables / libraries
+        QLatin1StringView(".exe"),     QLatin1StringView(".dll"),
+        QLatin1StringView(".so"),      QLatin1StringView(".bin"),
+        QLatin1StringView(".run"),
+        // Linux packaging / desktop integration
+        QLatin1StringView(".appimage"),QLatin1StringView(".deb"),
+        QLatin1StringView(".rpm"),
+        // Desktop entry (can exec arbitrary commands)
+        QLatin1StringView(".desktop"),
+        // Windows packaging
+        QLatin1StringView(".msi"),     QLatin1StringView(".bat"),
+        QLatin1StringView(".cmd"),     QLatin1StringView(".ps1"),
+        QLatin1StringView(".vbs"),     QLatin1StringView(".wsf"),
+        // macOS
+        QLatin1StringView(".pkg"),     QLatin1StringView(".dmg"),
     };
+    // toLower() is called once here; all extension literals above are already
+    // lowercase so the comparison is inherently case-insensitive.
     const QString lower = path.toLower();
     for (const auto &ext : extensions)
         if (lower.endsWith(ext))

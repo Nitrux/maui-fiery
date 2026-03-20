@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QDir>
 #include <KNotification>
+#include <QRegularExpression>
 
 DownloadsManager::DownloadsManager(QObject *parent) : QObject(parent)
     ,m_model(new DownloadsModel(this))
@@ -86,9 +87,12 @@ int DownloadsManager::count() const
 
 void DownloadsManager::notifyComplete(const QString &name)
 {
+    static const QRegularExpression controlChars(QStringLiteral("[\\x00-\\x1F\\x7F]"));
+    const QString safeName = name.left(200).remove(controlChars);
+
     KNotification *n = new KNotification(QStringLiteral("downloadComplete"), KNotification::CloseOnTimeout);
     n->setTitle(QStringLiteral("Download Finished"));
-    n->setText(name);
+    n->setText(safeName);
     n->setIconName(QStringLiteral("folder-download"));
     n->sendEvent();
 }

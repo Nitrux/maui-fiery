@@ -225,7 +225,7 @@ Maui.SplitViewItem
                 '(function(x,y,id){' +
                 '  var e=document.elementFromPoint(x,y);' +
                 '  if(e) e.setAttribute("data-fiery-ctx",id);' +
-                '})(' + request.x + ',' + request.y + ',"' + elemId + '")'
+                '})(' + Math.max(0, Math.floor(request.x) || 0) + ',' + Math.max(0, Math.floor(request.y) || 0) + ',' + JSON.stringify(elemId) + ')'
             )
 
             _menu.show()
@@ -236,25 +236,29 @@ Maui.SplitViewItem
         // Only trusted input events are captured so auto-fill does not trigger saves.
         // Username lookup searches the whole document and prefers email-type inputs
         // to handle multi-step forms where the email field is outside the password form.
+        // Credential storage uses a non-enumerable Symbol key so page scripts cannot
+        // enumerate or predict the property name, reducing the TOCTOU exposure window.
         readonly property string _credentialWatcherScript:
             "(function(){" +
-            "if(window._fieryWatcher)return;" +
-            "window._fieryWatcher=true;" +
+            "var _k=window._fieryCK||(window._fieryCK=Symbol('fieryCredKey'));" +
+            "if(window[_k])return;" +
+            "window[_k]=true;" +
             "var sel='input:not([type=\"password\"]):not([type=\"hidden\"]):not([type=\"submit\"]):not([type=\"button\"]):not([type=\"checkbox\"]):not([type=\"radio\"])';" +
             "function bestUsername(scope){" +
             "var ins=Array.from(scope.querySelectorAll(sel)).filter(function(i){return i.value&&i.value.trim();});" +
             "var em=ins.filter(function(i){return i.type==='email'||(i.name&&i.name.toLowerCase().indexOf('email')!==-1)||(i.id&&i.id.toLowerCase().indexOf('email')!==-1);});" +
             "return em.length?em[em.length-1].value:ins.length?ins[ins.length-1].value:'';}" +
+            "var _ck=Symbol('fieryCred');" +
             "function attach(pw){" +
-            "if(pw._fieryAttached)return;" +
-            "pw._fieryAttached=true;" +
+            "if(pw[_ck])return;" +
+            "pw[_ck]=true;" +
             "pw.addEventListener('input',function(e){" +
             "if(!e.isTrusted)return;" +
             "if(!pw.value)return;" +
             "var f=pw.form||pw.closest('form');" +
             "var un=bestUsername(f||document);" +
             "if(!un&&f)un=bestUsername(document);" +
-            "window._fieryLastCred=JSON.stringify({h:location.hostname,u:un,p:pw.value});" +
+            "window[_k]=JSON.stringify({h:location.hostname,u:un,p:pw.value});" +
             "});}" +
             "function scan(){" +
             "document.querySelectorAll('input[type=\"password\"]').forEach(attach);}" +
@@ -262,10 +266,16 @@ Maui.SplitViewItem
             "new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});" +
             "})()"
 
-        // Reads the last credential captured by the watcher. Called at LoadStartedStatus
-        // so the value is retrieved before the page context is destroyed.
+        // Reads and clears the credential captured by the watcher via its Symbol key.
+        // The key itself is stored under a second Symbol so page code cannot guess it.
         readonly property string _credentialHarvestScript:
-            "(function(){var c=window._fieryLastCred||null;window._fieryLastCred=null;return c;})()"
+            "(function(){" +
+            "var _k=window._fieryCK;" +
+            "if(!_k)return null;" +
+            "var c=typeof window[_k]==='string'?window[_k]:null;" +
+            "window[_k]=true;" +
+            "return c;" +
+            "})()"
 
         // Builds an auto-fill script for the given credentials array [{username, password}].
         // Uses the native HTMLInputElement value setter so React/Vue controlled inputs
@@ -289,14 +299,15 @@ Maui.SplitViewItem
                 "setter.call(el,val);" +
                 "el.dispatchEvent(new Event('input',{bubbles:true}));" +
                 "el.dispatchEvent(new Event('change',{bubbles:true}));}" +
+                "function sameOrigin(el){try{return el.ownerDocument===document;}catch(e){return false;}}" +
                 "function tryFillUsername(){" +
                 "var un=document.querySelector(unSel);" +
-                "if(un&&!un._fieryFilled&&username){" +
+                "if(un&&sameOrigin(un)&&!un._fieryFilled&&username){" +
                 "un._fieryFilled=true;" +
                 "setVal(un,username);}}" +
                 "function tryFillPassword(){" +
                 "var pw=document.querySelector(pwSel);" +
-                "if(pw&&!pw._fieryFilled&&password){" +
+                "if(pw&&sameOrigin(pw)&&!pw._fieryFilled&&password){" +
                 "pw._fieryFilled=true;" +
                 "setVal(pw,password);" +
                 "return true;}" +
@@ -314,10 +325,11 @@ Maui.SplitViewItem
         // rounded, floating style matching the active MauiKit theme. Colors are sampled from
         // the theme at injection time and embedded directly in the CSS string.
         readonly property string _scrollbarScript: {
+            function clamp(v) { return Math.max(0, Math.min(255, Math.round(v * 255))) }
             var c  = Maui.Theme.textColor
-            var tr = Math.round(c.r * 255), tg = Math.round(c.g * 255), tb = Math.round(c.b * 255)
+            var tr = clamp(c.r), tg = clamp(c.g), tb = clamp(c.b)
             var h  = Maui.Theme.highlightColor
-            var hr = Math.round(h.r * 255), hg = Math.round(h.g * 255), hb = Math.round(h.b * 255)
+            var hr = clamp(h.r), hg = clamp(h.g), hb = clamp(h.b)
             var thumb       = "rgba(" + tr + "," + tg + "," + tb + ",1.0)"
             var thumbHover  = "rgba(" + tr + "," + tg + "," + tb + ",1.0)"
             var thumbActive = "rgba(" + hr + "," + hg + "," + hb + ",1.0)"
@@ -338,7 +350,7 @@ Maui.SplitViewItem
         // and unconditionally after 20 mutation callbacks as a failsafe for
         // highly dynamic single-page applications that would otherwise keep
         // running querySelectorAll against ~40 selectors indefinitely.
-        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];var o;var n=0;function r(){var f=false;s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}return f;}r();var t;o=new MutationObserver(function(){if(++n>20){o.disconnect();return;}if(t)clearTimeout(t);t=setTimeout(function(){if(r())o.disconnect();},500);});o.observe(document.documentElement,{childList:true,subtree:true});})();"
+        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];var o;var n=0;function r(){var f=false;s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}return f;}r();var t;o=new MutationObserver(function(){if(++n>20){o.disconnect();return;}if(t)clearTimeout(t);t=setTimeout(function(){if(r())o.disconnect();},500);});o.observe(document.documentElement,{childList:true,subtree:true});setTimeout(function(){o.disconnect();},30000);})();"
 
         // Removes subscribe, newsletter, and ad-blocker-detection overlays and undoes CSS tricks
         // (max-height clipping, gradient masks, blur filters) that inline paywalls use to obscure
@@ -418,6 +430,7 @@ Maui.SplitViewItem
             "if(t)clearTimeout(t);" +
             "t=setTimeout(r,500);});" +
             "o.observe(document.documentElement,{childList:true,subtree:true});" +
+            "setTimeout(function(){o.disconnect();},30000);" +
             "})();"
 
         onLoadingChanged: function(loadingInfo)
@@ -589,7 +602,12 @@ Maui.SplitViewItem
             _webView.grantFeaturePermission(securityOrigin, feature, granted)
         }
 
-        onNavigationRequested: (request) => {}
+        onNavigationRequested: (request) =>
+        {
+            const scheme = request.url.toString().trim().toLowerCase()
+            if (scheme.startsWith("javascript:") || scheme.startsWith("data:"))
+                request.action = WebEngineNavigationRequest.IgnoreRequest
+        }
 
         settings.accelerated2dCanvasEnabled : true
         settings.allowGeolocationOnInsecureOrigins : false

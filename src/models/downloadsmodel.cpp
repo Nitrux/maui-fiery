@@ -60,8 +60,12 @@ QVariant DownloadsModel::data(const QModelIndex &index, int role) const
     }
     case Roles::FilePath:
     {
-        return QUrl::fromLocalFile(item->downloadDirectory() + QDir::separator() + item->downloadFileName());
-
+        const QString dirCanon  = QFileInfo(item->downloadDirectory()).canonicalFilePath();
+        const QString fullPath  = item->downloadDirectory() + QDir::separator() + item->downloadFileName();
+        const QString fileCanon = QFileInfo(fullPath).canonicalFilePath();
+        if (dirCanon.isEmpty() || fileCanon.isEmpty() || !fileCanon.startsWith(dirCanon + QDir::separator()))
+            return QVariant();
+        return QUrl::fromLocalFile(fileCanon);
     }
     default: return QVariant();
     }
