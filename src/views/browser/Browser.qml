@@ -190,14 +190,24 @@ Maui.SplitViewItem
         profile: control.browserProfile
         zoomFactor: appSettings.zoomFactor
         // Chromium infers prefers-color-scheme from backgroundColor: a dark
-        // value signals dark mode to sites that support it. Default to white
-        // so sites render with their own theme; switch to the app's background
-        // color (forced opaque) when the user enables dark mode.
-        backgroundColor: appSettings.forceDarkMode
-                         ? Qt.rgba(Maui.Theme.backgroundColor.r,
-                                   Maui.Theme.backgroundColor.g,
-                                   Maui.Theme.backgroundColor.b, 1.0)
-                         : "white"
+        // value signals dark mode to sites that support it.
+        //
+        // - Blank tab (about:blank / empty): use the theme background so the
+        //   empty-tab state matches the window instead of flashing white.
+        // - Loaded page, force dark mode on: use the dark theme background to
+        //   signal prefers-color-scheme: dark to supporting sites.
+        // - Loaded page, force dark mode off: use white so pages that lack a
+        //   native dark theme are not broken by the system color scheme.
+        backgroundColor:
+        {
+            const u = _webView.url.toString()
+            const isBlank = u === "" || u === "about:blank"
+            if (isBlank || appSettings.forceDarkMode)
+                return Qt.rgba(Maui.Theme.backgroundColor.r,
+                               Maui.Theme.backgroundColor.g,
+                               Maui.Theme.backgroundColor.b, 1.0)
+            return "white"
+        }
 
         onContextMenuRequested: (request) =>
         {
@@ -357,7 +367,6 @@ Maui.SplitViewItem
 
         settings.accelerated2dCanvasEnabled : true
         settings.allowGeolocationOnInsecureOrigins : false
-        settings.allowRunningInsecureContent : appSettings.allowRunningInsecureContent
         settings.allowWindowActivationFromJavaScript : false
         settings.autoLoadImages : appSettings.autoLoadImages
         settings.dnsPrefetchEnabled : appSettings.dnsPrefetchEnabled

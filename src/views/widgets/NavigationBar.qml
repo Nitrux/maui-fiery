@@ -103,11 +103,4 @@ Maui.TabViewButton
         }
     }
 
-    Maui.ProgressIndicator
-    {
-        id: _progress
-        width: parent.width
-        anchors.bottom: parent.bottom
-        visible: webView ? webView.loading : false
-    }
 }

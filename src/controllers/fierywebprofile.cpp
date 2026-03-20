@@ -7,6 +7,7 @@
 
 #include <QWebEngineUrlRequestInterceptor>
 #include <QWebEngineDownloadRequest>
+#include <QWebEngineCookieStore>
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <QDir>
@@ -121,6 +122,49 @@ void FieryWebProfile::acceptNotification()
 {
     if (m_pendingNotification)
         m_pendingNotification->click();
+}
+
+void FieryWebProfile::updateCookieFilter()
+{
+    if (!m_blockThirdPartyCookies) {
+        cookieStore()->setCookieFilter(nullptr);
+        return;
+    }
+    // Capture whitelist by value so the lambda stays valid after the property changes.
+    const QStringList whitelist = m_thirdPartyCookiesWhitelist;
+    cookieStore()->setCookieFilter([whitelist](const QWebEngineCookieStore::FilterRequest &req) -> bool {
+        if (!req.thirdParty)
+            return true;
+        // Allow third-party cookies when the page's host matches a whitelisted domain.
+        const QString host = req.firstPartyUrl.host();
+        for (const QString &allowed : whitelist) {
+            if (!allowed.isEmpty() && (host == allowed || host.endsWith(QLatin1Char('.') + allowed)))
+                return true;
+        }
+        return false;
+    });
+}
+
+bool FieryWebProfile::blockThirdPartyCookies() const { return m_blockThirdPartyCookies; }
+
+void FieryWebProfile::setBlockThirdPartyCookies(bool block)
+{
+    if (m_blockThirdPartyCookies == block)
+        return;
+    m_blockThirdPartyCookies = block;
+    updateCookieFilter();
+    Q_EMIT blockThirdPartyCookiesChanged();
+}
+
+QStringList FieryWebProfile::thirdPartyCookiesWhitelist() const { return m_thirdPartyCookiesWhitelist; }
+
+void FieryWebProfile::setThirdPartyCookiesWhitelist(const QStringList &whitelist)
+{
+    if (m_thirdPartyCookiesWhitelist == whitelist)
+        return;
+    m_thirdPartyCookiesWhitelist = whitelist;
+    updateCookieFilter();   // reinstall filter with the new whitelist
+    Q_EMIT thirdPartyCookiesWhitelistChanged();
 }
 
 void FieryWebProfile::setUrlInterceptor(QWebEngineUrlRequestInterceptor *newUrlInterceptor)

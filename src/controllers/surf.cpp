@@ -1,5 +1,7 @@
 #include "surf.h"
 
+#include <KFormat>
+
 surf::surf(QObject *parent) : QObject(parent)
 {
 
@@ -95,6 +97,13 @@ bool surf::isDangerousFile(const QString &path)
         if (lower.endsWith(ext))
             return true;
     return false;
+}
+
+QString surf::formatBytes(qint64 bytes)
+{
+    if (bytes < 0)
+        return QStringLiteral("?");
+    return KFormat().formatByteSize(bytes);
 }
 
 bool surf::hasProtocol(const QString &input)

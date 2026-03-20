@@ -618,6 +618,56 @@ Maui.Page
         }
     }
 
+    // Full-width loading indicator at the edge of the tab bar, like Chrome on mobile.
+    // Spans the window width; sits below the tab bar when it is at the top,
+    // or above it when it is at the bottom (altTabBar / mobile layout).
+    Rectangle
+    {
+        id: _loadingBar
+
+        z: 99
+        anchors.left:  parent.left
+        anchors.right: parent.right
+        height: 3
+
+        // activeView fills control, so its tabBar.y is in the same coordinate space.
+        y: activeView.altTabBar
+           ? activeView.tabBar.y                             // bar just above bottom tab bar
+           : activeView.tabBar.y + activeView.tabBar.height  // bar just below top tab bar
+
+        visible: currentBrowser !== null && currentBrowser.loading && activeView.tabBar.visible
+
+        // No background track — thin accent line only, Chrome mobile style.
+        color: "transparent"
+
+        Rectangle
+        {
+            id: _loadFill
+
+            readonly property bool _indeterminate: currentBrowser
+                && currentBrowser.loading
+                && (currentBrowser.loadProgress <= 0 || currentBrowser.loadProgress >= 100)
+
+            readonly property real _ratio: currentBrowser
+                ? currentBrowser.loadProgress / 100.0
+                : 0
+
+            anchors.top:    parent.top
+            anchors.bottom: parent.bottom
+            color:  Maui.Theme.highlightColor
+            width:  _indeterminate ? parent.width * 0.30 : parent.width * _ratio
+
+            SequentialAnimation on x
+            {
+                loops: Animation.Infinite
+                running: _loadFill._indeterminate
+
+                NumberAnimation { from: 0;                                             to: _loadingBar.width - _loadFill.width; duration: 800; easing.type: Easing.InOutQuad }
+                NumberAnimation { from: _loadingBar.width - _loadFill.width; to: 0;   duration: 800; easing.type: Easing.InOutQuad }
+            }
+        }
+    }
+
     WebEngineProfile
     {
         id: _incognitoProfile
@@ -706,6 +756,92 @@ Maui.Page
             }
         }
     }
+
+    // Inline article extraction script for Reader Mode.
+    // Searches semantic landmarks for the main content, then overlays the page
+    // with a clean, distraction-free reading view.  A close button restores
+    // the original page.  Subsequent calls toggle the overlay off.
+    //
+    // Fixes applied vs. first version:
+    //   - body overflow hidden while active (eliminates the double scrollbar)
+    //   - scoped CSS resets element colors, backgrounds, and image sizing
+    //   - column uses min(90vw, 760px) so it fills narrow viewports too
+    readonly property string _readerScript: "(function(){" +
+        "var ex=document.getElementById('fiery-reader');" +
+        "if(ex){" +
+            "ex.remove();" +
+            "document.documentElement.style.overflow='';" +
+            "document.body.style.overflow='';" +
+            "return;" +
+        "}" +
+        "var sel=['article','[role=\"main\"]','main','.post-content','.article-content'," +
+            "'.entry-content','.post-body','.article-body','.content-body','#content','#main'];" +
+        "var el=null;" +
+        "for(var i=0;i<sel.length;i++){el=document.querySelector(sel[i]);if(el)break;}" +
+        "if(!el)el=document.body;" +
+        "var dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;" +
+        "var bg=dark?'#1a1a1a':'#f8f6f1';" +
+        "var fg=dark?'#e0e0e0':'#1e1e1e';" +
+        "var link=dark?'#7ab8ff':'#0055cc';" +
+        "var ov=document.createElement('div');" +
+        "ov.id='fiery-reader';" +
+        "ov.style.cssText='position:fixed;inset:0;z-index:2147483647;overflow-y:scroll;" +
+            "background:'+bg+';color:'+fg+';';" +
+        "var css=document.createElement('style');" +
+        // Base typography and scrollbar
+        "css.textContent=" +
+            "'#fiery-reader{font-family:Georgia,\"Times New Roman\",serif;line-height:1.8;font-size:18px;}'" +
+            // Constrain and centre the inner column with generous padding
+            "+'#fiery-reader-body{" +
+                "max-width:min(92vw,820px);width:100%;margin:0 auto;" +
+                "padding:56px 40px 100px;box-sizing:border-box;}'" +
+            // Force all text to reader colours — defeats inherited site stylesheets
+            "+'#fiery-reader *{color:'+fg+'!important;background:transparent!important;" +
+                "border-color:rgba(128,128,128,0.3)!important;}'" +
+            // Headings: reset size, weight, and spacing so site CSS can't interfere
+            "+'#fiery-reader h1{font-size:1.9em;line-height:1.25;margin:0 0 0.75em;}'" +
+            "+'#fiery-reader h2{font-size:1.45em;line-height:1.3;margin:1.8em 0 0.5em;}'" +
+            "+'#fiery-reader h3{font-size:1.2em;line-height:1.35;margin:1.5em 0 0.4em;}'" +
+            "+'#fiery-reader h4,#fiery-reader h5,#fiery-reader h6{font-size:1em;margin:1.2em 0 0.4em;}'" +
+            // Paragraph and list spacing
+            "+'#fiery-reader p{margin:0 0 1.1em;}'" +
+            "+'#fiery-reader ul,#fiery-reader ol{margin:0 0 1.1em;padding-left:1.8em;}'" +
+            "+'#fiery-reader li{margin-bottom:0.3em;}'" +
+            // Images: fill the column, never overflow
+            "+'#fiery-reader img{max-width:100%!important;width:auto!important;" +
+                "height:auto!important;display:block;margin:1.4em auto;}'" +
+            // Links
+            "+'#fiery-reader a{color:'+link+'!important;text-decoration:underline;}'" +
+            // Blockquote
+            "+'#fiery-reader blockquote{margin:1.2em 0;padding:0.6em 1.2em;" +
+                "border-left:3px solid rgba(128,128,128,0.4);font-style:italic;}'" +
+            // Tables
+            "+'#fiery-reader table{width:100%;border-collapse:collapse;margin:1em 0;}'" +
+            "+'#fiery-reader td,#fiery-reader th{padding:0.5em;text-align:left;" +
+                "border:1px solid rgba(128,128,128,0.3);}'; " +
+        "ov.appendChild(css);" +
+        "var body=document.createElement('div');" +
+        "body.id='fiery-reader-body';" +
+        "body.innerHTML='<h1>'+document.title+'</h1>'+el.innerHTML;" +
+        "var btn=document.createElement('button');" +
+        "btn.textContent='\u2715  Exit Reader View';" +
+        "btn.style.cssText='display:block;margin:40px auto 0;padding:10px 24px;" +
+            "background:transparent!important;border:1px solid rgba(128,128,128,0.5)!important;" +
+            "border-radius:6px;font:inherit;cursor:pointer;opacity:0.65;';" +
+        "btn.onclick=function(){" +
+            "ov.remove();" +
+            "document.documentElement.style.overflow='';" +
+            "document.body.style.overflow='';" +
+        "};" +
+        "body.appendChild(btn);" +
+        "ov.appendChild(body);" +
+        "document.body.appendChild(ov);" +
+        // Hide scrollbar on BOTH html and body — Chromium uses <html> for the
+        // browser-chrome-level scrollbar; hiding only <body> leaves one behind.
+        "document.documentElement.style.overflow='hidden';" +
+        "document.body.style.overflow='hidden';" +
+        "ov.scrollTo(0,0);" +
+        "})();"
 
     Component
     {
@@ -798,6 +934,14 @@ Maui.Page
                 }
 
                 MenuSeparator {}
+
+                MenuItem
+                {
+                    text: i18n("Reader View")
+                    icon.name: "view-readermode"
+                    enabled: currentBrowser !== null && currentBrowser.url.toString() !== "" && currentBrowser.url.toString() !== "about:blank"
+                    onTriggered: currentBrowser.runJavaScript(_readerScript)
+                }
 
                 MenuItem
                 {

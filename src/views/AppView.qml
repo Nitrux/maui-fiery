@@ -23,7 +23,9 @@ Maui.SideBarView
 
     sideBar.autoShow: false
     sideBar.autoHide: true
-    sideBar.preferredWidth: 400
+    // Scale with the window up to a comfortable maximum so long filenames
+    // are not clipped; on narrow/portrait layouts give it most of the width.
+    sideBar.preferredWidth: Math.min(root.width * (root.isWide ? 0.38 : 0.88), 520)
 
     sideBar.content: Maui.Page
     {
@@ -136,12 +138,42 @@ Maui.SideBarView
                         property url currentFilePath
                         property var currentDownload: null
 
+                        readonly property bool _isActive: currentDownload !== null
+                            && currentDownload.state === WebEngineDownloadRequest.DownloadInProgress
+                            && !currentDownload.isPaused
+                        readonly property bool _isPaused: currentDownload !== null
+                            && currentDownload.state === WebEngineDownloadRequest.DownloadInProgress
+                            && currentDownload.isPaused
+
                         MenuItem
                         {
                             text: i18n("Open")
+                            icon.name: "document-open"
                             enabled: _downloadMenu.currentDownload !== null
                                      && _downloadMenu.currentDownload.state === WebEngineDownloadRequest.DownloadCompleted
                             onTriggered: openDownloadedFile(_downloadMenu.currentFilePath)
+                        }
+
+                        MenuItem
+                        {
+                            text: _downloadMenu._isPaused ? i18n("Resume") : i18n("Pause")
+                            icon.name: _downloadMenu._isPaused ? "media-playback-start" : "media-playback-pause"
+                            enabled: _downloadMenu._isActive || _downloadMenu._isPaused
+                            onTriggered:
+                            {
+                                if (_downloadMenu._isPaused)
+                                    _downloadMenu.currentDownload.resume()
+                                else
+                                    _downloadMenu.currentDownload.pause()
+                            }
+                        }
+
+                        MenuItem
+                        {
+                            text: i18n("Copy Download URL")
+                            icon.name: "edit-copy"
+                            enabled: _downloadMenu.currentDownload !== null
+                            onTriggered: Maui.Handy.copyTextToClipboard(_downloadMenu.currentDownload.url.toString())
                         }
 
                         MenuSeparator {}
@@ -149,12 +181,14 @@ Maui.SideBarView
                         MenuItem
                         {
                             text: i18n("Remove from Downloads")
+                            icon.name: "list-remove"
                             onTriggered: Fiery.DownloadsManager.remove(_downloadMenu.rowIndex)
                         }
 
                         MenuItem
                         {
                             text: i18n("Delete File")
+                            icon.name: "edit-delete"
                             onTriggered: Fiery.DownloadsManager.removeAndDeleteFile(_downloadMenu.rowIndex)
                         }
                     }
@@ -162,6 +196,7 @@ Maui.SideBarView
                     Maui.ListBrowser
                     {
                         anchors.fill: parent
+                        spacing: Maui.Style.space.medium
                         model: Fiery.DownloadsManager.model
 
                         holder.title: i18n("Downloads")
@@ -174,30 +209,112 @@ Maui.SideBarView
                             id: _dlItem
 
                             width: ListView.view.width
-                            height: _del.implicitHeight
+                            height: _del.implicitHeight + (_dlItem._inProgress || _dlItem._isPaused ? 6 + Maui.Style.space.small * 2 : 0)
 
                             property var download: model.download
-                            readonly property bool _inProgress: download.state === WebEngineDownloadRequest.DownloadInProgress
+                            readonly property bool _inProgress: download.state === WebEngineDownloadRequest.DownloadInProgress && !download.isPaused
+                            readonly property bool _isPaused:   download.state === WebEngineDownloadRequest.DownloadInProgress && download.isPaused
 
-                            // Format a byte count into a human-readable string.
-                            function formatBytes(bytes)
+                            property real _speedBps: 0
+                            property real _lastBytes: 0
+                            property real _lastTime:  0
+
+                            Timer
                             {
-                                if (bytes < 0)            return "?"
-                                if (bytes < 1024)         return bytes + " B"
-                                if (bytes < 1048576)      return (bytes / 1024).toFixed(1) + " KB"
-                                if (bytes < 1073741824)   return (bytes / 1048576).toFixed(1) + " MB"
-                                return (bytes / 1073741824).toFixed(2) + " GB"
+                                interval: 1000
+                                running:  _dlItem._inProgress
+                                repeat:   true
+
+                                onTriggered:
+                                {
+                                    var now   = Date.now()
+                                    var bytes = _dlItem.download.receivedBytes
+                                    var secs  = _dlItem._lastTime > 0 ? (now - _dlItem._lastTime) / 1000 : 1
+                                    _dlItem._speedBps  = secs > 0 ? (bytes - _dlItem._lastBytes) / secs : 0
+                                    _dlItem._lastBytes = bytes
+                                    _dlItem._lastTime  = now
+                                }
+
+                                Component.onCompleted:
+                                {
+                                    _dlItem._lastBytes = _dlItem.download.receivedBytes
+                                    _dlItem._lastTime  = Date.now()
+                                }
                             }
 
                             Maui.ListBrowserDelegate
                             {
                                 id: _del
-                                anchors.fill: parent
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
 
                                 label1.text: model.name
-                                label2.text: _dlItem._inProgress
-                                             ? _dlItem.formatBytes(download.receivedBytes) + " / " + _dlItem.formatBytes(download.totalBytes)
-                                             : model.url
+                                label1.wrapMode: Text.NoWrap
+                                label1.clip: true
+
+                                label2.wrapMode: Text.NoWrap
+                                label2.clip: true
+
+                                // Force ElideNone so contentWidth reflects the full
+                                // text length — required for the marquee to work.
+                                // restoreMode: RestoreNone prevents MauiKit's internal
+                                // binding from reasserting ElideRight after us.
+                                Binding
+                                {
+                                    target: _del.label1
+                                    property: "elide"
+                                    value: Text.ElideNone
+                                    restoreMode: Binding.RestoreNone
+                                }
+
+                                Binding
+                                {
+                                    target: _del.label2
+                                    property: "elide"
+                                    value: Text.ElideNone
+                                    restoreMode: Binding.RestoreNone
+                                }
+
+                                // Reset scroll position when the item is not hovered.
+                                Binding { target: _del.label1; property: "contentX"; value: 0; when: !_del.hovered; restoreMode: Binding.RestoreNone }
+                                Binding { target: _del.label2; property: "contentX"; value: 0; when: !_del.hovered; restoreMode: Binding.RestoreNone }
+
+                                // Marquee scroll triggered by hovering the delegate.
+                                SequentialAnimation
+                                {
+                                    loops: Animation.Infinite
+                                    running: _del.hovered && _del.label1.contentWidth > _del.label1.width
+
+                                    PauseAnimation  { duration: 500 }
+                                    NumberAnimation { target: _del.label1; property: "contentX"; from: 0; to: _del.label1.contentWidth - _del.label1.width; duration: _del.label1.contentWidth * 18; easing.type: Easing.InOutQuad }
+                                    PauseAnimation  { duration: 500 }
+                                }
+
+                                SequentialAnimation
+                                {
+                                    loops: Animation.Infinite
+                                    running: _del.hovered && _del.label2.contentWidth > _del.label2.width
+
+                                    PauseAnimation  { duration: 500 }
+                                    NumberAnimation { target: _del.label2; property: "contentX"; from: 0; to: _del.label2.contentWidth - _del.label2.width; duration: _del.label2.contentWidth * 18; easing.type: Easing.InOutQuad }
+                                    PauseAnimation  { duration: 500 }
+                                }
+
+                                label2.text:
+                                {
+                                    if (_dlItem._inProgress || _dlItem._isPaused)
+                                    {
+                                        var host = ""
+                                        try { host = new URL(_dlItem.download.url.toString()).hostname } catch(e) {}
+                                        var sizeStr = _surf.formatBytes(download.receivedBytes) + " / " + _surf.formatBytes(download.totalBytes)
+                                        var suffix  = _dlItem._isPaused
+                                            ? i18n("Paused")
+                                            : (_dlItem._speedBps > 0 ? _surf.formatBytes(_dlItem._speedBps) + "/s" : "")
+                                        return (host.length > 0 ? host + " \u2022 " : "") + sizeStr + (suffix.length > 0 ? " \u2022 " + suffix : "")
+                                    }
+                                    return model.url
+                                }
 
                                 iconSource: download.state === WebEngineDownloadRequest.DownloadCompleted
                                             ? model.filePath
@@ -205,7 +322,7 @@ Maui.SideBarView
 
                                 onClicked:
                                 {
-                                    if (!_dlItem._inProgress)
+                                    if (!_dlItem._inProgress && !_dlItem._isPaused)
                                         openDownloadedFile(model.filePath)
                                 }
 
@@ -226,21 +343,64 @@ Maui.SideBarView
                                 }
                             }
 
-                            // Thin progress strip anchored to the bottom of the
-                            // delegate, visible only while the download is running.
-                            // Matches the indeterminate style used in NavigationBar
-                            // for page-load progress, but shows real byte progress
-                            // when the server reports a Content-Length.
-                            Maui.ProgressIndicator
+                            // Progress bar with background track and fill.
+                            // Indeterminate (no Content-Length): animated sliding
+                            // block. Determinate: fill proportional to bytes received.
+                            // Frozen at current position when paused.
+                            Rectangle
                             {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.bottom: parent.bottom
-                                visible: _dlItem._inProgress
-                                indeterminate: _dlItem.download.totalBytes <= 0
-                                value: _dlItem.download.totalBytes > 0
-                                       ? _dlItem.download.receivedBytes / _dlItem.download.totalBytes
-                                       : 0
+                                anchors.margins: Maui.Style.space.small
+
+                                visible: _dlItem._inProgress || _dlItem._isPaused
+                                height: 6
+                                radius: height / 2
+                                color: Maui.Theme.alternateBackgroundColor
+                                border.color: Maui.Theme.separatorColor
+                                border.width: 1
+
+                                clip: true
+
+                                Rectangle
+                                {
+                                    id: _progressFill
+
+                                    readonly property bool _indeterminate: _dlItem._inProgress && _dlItem.download.totalBytes <= 0
+                                    readonly property real _ratio: _dlItem.download.totalBytes > 0
+                                                                   ? _dlItem.download.receivedBytes / _dlItem.download.totalBytes
+                                                                   : 0
+
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: _dlItem._isPaused
+                                           ? Maui.Theme.disabledTextColor
+                                           : Maui.Theme.highlightColor
+
+                                    width: _indeterminate ? parent.width * 0.25 : parent.width * _ratio
+
+                                    SequentialAnimation on x
+                                    {
+                                        loops: Animation.Infinite
+                                        running: _progressFill._indeterminate
+
+                                        NumberAnimation
+                                        {
+                                            from: 0
+                                            to: _progressFill.parent.width - _progressFill.width
+                                            duration: 900
+                                            easing.type: Easing.InOutQuad
+                                        }
+                                        NumberAnimation
+                                        {
+                                            from: _progressFill.parent.width - _progressFill.width
+                                            to: 0
+                                            duration: 900
+                                            easing.type: Easing.InOutQuad
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

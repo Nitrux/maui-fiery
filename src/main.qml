@@ -57,7 +57,6 @@ Maui.ApplicationWindow
         property url searchEnginePage: "https://duckduckgo.com/?q="
         property color backgroundColor : root.Maui.Theme.backgroundColor
 
-        property bool allowRunningInsecureContent : false
         property bool autoLoadIconsForPage : true
         property bool autoLoadImages : true
         property bool dnsPrefetchEnabled : false
@@ -99,8 +98,19 @@ Maui.ApplicationWindow
         // Privacy
         property bool doNotTrack: false
         property bool adBlockEnabled: false
+        property bool blockThirdPartyCookies: false
+        // JSON array of hostnames exempt from third-party cookie blocking.
+        // e.g. '["accounts.google.com","auth0.com"]'
+        property string thirdPartyCookiesWhitelistJson: "[]"
         property bool cookieBannerBlocker: false
         property string customUserAgent: ""
+
+        // Security
+        property bool httpsOnly: false
+
+        // DNS-over-HTTPS (applied at startup via Chromium flags — requires restart)
+        property bool dohEnabled: false
+        property string dohUrl: "https://cloudflare-dns.com/dns-query"
     }
 
     Fiery.RequestInterceptor
@@ -108,6 +118,25 @@ Maui.ApplicationWindow
         id: _requestInterceptor
         doNotTrack: appSettings.doNotTrack
         adBlockEnabled: appSettings.adBlockEnabled
+        httpsOnly: appSettings.httpsOnly
+    }
+
+    Binding
+    {
+        target: root.profile
+        property: "blockThirdPartyCookies"
+        value: appSettings.blockThirdPartyCookies
+    }
+
+    Binding
+    {
+        target: root.profile
+        property: "thirdPartyCookiesWhitelist"
+        value:
+        {
+            try { return JSON.parse(appSettings.thirdPartyCookiesWhitelistJson) }
+            catch(e) { return [] }
+        }
     }
 
     Binding

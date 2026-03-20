@@ -14,5 +14,6 @@ public Q_SLOTS:
     static bool hasProtocol(const QString &input);
     static QString safeDisplayUrl(const QString &urlStr);
     static bool isDangerousFile(const QString &path);
+    Q_INVOKABLE static QString formatBytes(qint64 bytes);
 
 };

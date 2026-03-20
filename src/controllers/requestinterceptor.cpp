@@ -23,6 +23,15 @@ void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
     if (m_doNotTrack)
         info.setHttpHeader("DNT", "1");
 
+    if (m_httpsOnly) {
+        QUrl url = info.requestUrl();
+        if (url.scheme() == QLatin1String("http")) {
+            url.setScheme(QStringLiteral("https"));
+            info.redirect(url);
+            return;
+        }
+    }
+
     if (m_adBlockEnabled) {
         // Walk from the full hostname up to the registrable domain, performing
         // an O(1) QSet lookup at each level.  This supports both exact matches
@@ -60,6 +69,16 @@ void RequestInterceptor::setAdBlockEnabled(bool enabled)
         return;
     m_adBlockEnabled = enabled;
     Q_EMIT adBlockEnabledChanged();
+}
+
+bool RequestInterceptor::httpsOnly() const { return m_httpsOnly; }
+
+void RequestInterceptor::setHttpsOnly(bool enabled)
+{
+    if (m_httpsOnly == enabled)
+        return;
+    m_httpsOnly = enabled;
+    Q_EMIT httpsOnlyChanged();
 }
 
 static void loadHostsFile(const QString &path, QSet<QString> &out)

@@ -583,6 +583,92 @@ Maui.SettingsDialog
                         onToggled: appSettings.cookieBannerBlocker = !appSettings.cookieBannerBlocker
                     }
                 }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Block Third-Party Cookies")
+                    label2.text: i18n("Prevent sites from setting cookies on behalf of domains other than the one you are visiting. Breaks some login flows on sites that delegate authentication to a third party.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.blockThirdPartyCookies
+                        onToggled: appSettings.blockThirdPartyCookies = !appSettings.blockThirdPartyCookies
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    visible: appSettings.blockThirdPartyCookies
+                    label1.text: i18n("Cookie Exceptions")
+                    label2.text: i18n("Sites listed here may set third-party cookies even when blocking is enabled. Enter the domain only (e.g. accounts.google.com).")
+
+                    Button
+                    {
+                        text: i18n("Add Site")
+                        onClicked: _whitelistDialog.open()
+                    }
+                }
+
+                // One row per whitelisted domain, visible only while blocking is on.
+                Repeater
+                {
+                    model: appSettings.blockThirdPartyCookies
+                           ? (function() { try { return JSON.parse(appSettings.thirdPartyCookiesWhitelistJson) } catch(e) { return [] } })()
+                           : []
+
+                    Maui.FlexSectionItem
+                    {
+                        required property string modelData
+                        required property int    index
+
+                        label1.text: modelData
+                        label2.text: ""
+
+                        ToolButton
+                        {
+                            icon.name: "list-remove"
+                            onClicked:
+                            {
+                                var list = (function() { try { return JSON.parse(appSettings.thirdPartyCookiesWhitelistJson) } catch(e) { return [] } })()
+                                list.splice(index, 1)
+                                appSettings.thirdPartyCookiesWhitelistJson = JSON.stringify(list)
+                            }
+                        }
+                    }
+                }
+
+                // Add-domain dialog, shared with the "Add Site" button above.
+                Dialog
+                {
+                    id: _whitelistDialog
+                    title: i18n("Add Cookie Exception")
+                    standardButtons: Dialog.Ok | Dialog.Cancel
+                    anchors.centerIn: parent
+
+                    TextField
+                    {
+                        id: _whitelistField
+                        width: parent.width
+                        placeholderText: "accounts.example.com"
+                        Keys.onReturnPressed: _whitelistDialog.accept()
+                    }
+
+                    onOpened: { _whitelistField.text = ""; _whitelistField.forceActiveFocus() }
+
+                    onAccepted:
+                    {
+                        var domain = _whitelistField.text.trim().toLowerCase()
+                        if (!domain) return
+                        var list = (function() { try { return JSON.parse(appSettings.thirdPartyCookiesWhitelistJson) } catch(e) { return [] } })()
+                        if (list.indexOf(domain) < 0)
+                        {
+                            list.push(domain)
+                            appSettings.thirdPartyCookiesWhitelistJson = JSON.stringify(list)
+                        }
+                    }
+                }
             }
 
             Maui.SectionGroup
@@ -591,15 +677,44 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Allow Mixed Content")
-                    label2.text: i18n("Allow HTTPS pages to load resources over HTTP. Disable for stricter security.")
+                    label1.text: i18n("HTTPS-Only Mode")
+                    label2.text: i18n("Automatically upgrade all HTTP requests to HTTPS. Pages that do not support HTTPS will fail to load.")
 
                     Switch
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked: appSettings.allowRunningInsecureContent
-                        onToggled: appSettings.allowRunningInsecureContent = !appSettings.allowRunningInsecureContent
+                        checked: appSettings.httpsOnly
+                        onToggled: appSettings.httpsOnly = !appSettings.httpsOnly
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("DNS over HTTPS")
+                    label2.text: i18n("Encrypt DNS lookups to prevent snooping and tampering. Takes effect after restart.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.dohEnabled
+                        onToggled: appSettings.dohEnabled = !appSettings.dohEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    visible: appSettings.dohEnabled
+                    label1.text: i18n("DoH Resolver URL")
+                    label2.text: i18n("HTTPS endpoint for the DNS resolver. Leave blank for Cloudflare (default).")
+
+                    TextField
+                    {
+                        Layout.fillWidth: true
+                        text: appSettings.dohUrl
+                        placeholderText: "https://cloudflare-dns.com/dns-query"
+                        onEditingFinished: appSettings.dohUrl = text
                     }
                 }
 

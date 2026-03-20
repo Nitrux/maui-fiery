@@ -6,6 +6,7 @@
 #include <QIcon>
 #include <QThread>
 #include <QSurfaceFormat>
+#include <QSettings>
 
 #include <MauiKit4/Core/mauiapp.h>
 
@@ -41,13 +42,18 @@ int main(int argc, char *argv[])
     // Append performance flags to whatever the user may have set in the
     // environment. These must be set before QtWebEngineQuick::initialize().
     //
+    // --disable-frame-rate-limit      Remove Chromium's internal 60 FPS cap so
+    //                                 the renderer can run at the display's full
+    //                                 refresh rate (e.g. 144 Hz, 165 Hz).
     // --ignore-gpu-blocklist          Force GPU rasterization even when
     //                                 Chromium's internal blocklist would
     //                                 fall back to software (common on Linux).
     // --enable-gpu-rasterization      Rasterize tiles on the GPU.
     // --enable-oop-rasterization      Rasterize in the GPU process, freeing
     // --canvas-oop-rasterization      the renderer thread for JS work.
-    // --num-raster-threads=4          Parallelise tile rasterization.
+    // --enable-accelerated-2d-canvas  GPU-accelerated HTML5 canvas (critical for
+    //                                 canvas-based benchmarks and games).
+    // --num-raster-threads=N          Parallelise tile rasterization.
     QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     if (!chromiumFlags.isEmpty())
         chromiumFlags += ' ';
@@ -55,13 +61,32 @@ int main(int argc, char *argv[])
     // Avoids unnecessary context switching on low-end devices while allowing
     // high-end hardware to fully utilise available cores.
     const int rasterThreads = qMax(2, QThread::idealThreadCount());
-    chromiumFlags += "--ignore-gpu-blocklist "
+    chromiumFlags += "--disable-frame-rate-limit "
+                     "--ignore-gpu-blocklist "
                      "--enable-gpu-rasterization "
                      "--enable-oop-rasterization "
                      "--canvas-oop-rasterization "
+                     "--enable-accelerated-2d-canvas "
+                     "--enable-zero-copy "
                      "--ozone-platform-hint=auto "
                      "--disable-features=OverlayScrollbar "
+                     "--enable-features=VaapiVideoDecoder "
                      "--num-raster-threads=" + QByteArray::number(rasterThreads);
+
+    // DNS-over-HTTPS: read user preference from persistent settings before
+    // initialising the engine — Chromium only picks up these flags at startup.
+    {
+        QSettings s(QStringLiteral("Maui"), QStringLiteral("fiery"));
+        s.beginGroup(QStringLiteral("Browser"));
+        if (s.value(QStringLiteral("dohEnabled"), false).toBool()) {
+            const QString dohUrl = s.value(
+                QStringLiteral("dohUrl"),
+                QStringLiteral("https://cloudflare-dns.com/dns-query")).toString();
+            chromiumFlags += " --dns-over-https-mode=secure"
+                             " --dns-over-https-templates=" + dohUrl.toUtf8();
+        }
+        s.endGroup();
+    }
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", chromiumFlags);
 
     QtWebEngineQuick::initialize();
