@@ -99,7 +99,7 @@ Maui.ContextualMenu
         visible: control.isValidUrl
         onTriggered:
         {
-            webView.url = control.request.linkUrl
+            openUrl(control.request.linkUrl)
         }
     }
 

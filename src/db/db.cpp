@@ -64,6 +64,10 @@ void DB::openDB(const QString &name)
         if (!this->m_db.open())
             qCritical() << "Failed to open database:" << this->m_db.lastError().text() << m_db.connectionName();
     }
+    // WAL mode: writers never block readers and readers never block writers,
+    // giving better throughput for the reads-heavy history/bookmarks access.
+    auto walQuery = this->getQuery("PRAGMA journal_mode=WAL");
+    walQuery.exec();
     auto query = this->getQuery("PRAGMA synchronous=NORMAL");
     query.exec();
 }

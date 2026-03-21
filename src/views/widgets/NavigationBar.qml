@@ -27,8 +27,27 @@ Maui.TabViewButton
         return item ? (item.pinned || false) : false
     }
 
+    readonly property bool _audible: webView !== null && (webView.recentlyAudible || webView.audioMuted)
+
     // Hide close button on pinned tabs, matching browser convention.
     closeButtonVisible: !_pinned
+
+    // Speaker / mute indicator — visible whenever the tab is producing audio
+    // or has been explicitly muted. Click toggles mute.
+    rightContent: ToolButton
+    {
+        visible: control._audible
+        height: 16
+        width:  16
+        padding: 0
+        icon.width:  12
+        icon.height: 12
+        icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
+        onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+        ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
+        ToolTip.visible: hovered
+        ToolTip.delay: 1000
+    }
 
     // Override text to empty only when pinned; let the base class binding
     // handle the non-pinned case so tabInfo is never accessed from here.
@@ -89,6 +108,15 @@ Maui.TabViewButton
                 var tab = control.tabView.tabAt(control.mindex)
                 tab.pinned = !tab.pinned
             }
+        }
+
+        MenuItem
+        {
+            visible: control._audible
+            height: visible ? implicitHeight : 0
+            text: (control.webView && control.webView.audioMuted) ? i18n("Unmute Tab") : i18n("Mute Tab")
+            icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
+            onTriggered: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
         }
 
         // Close is only useful for pinned tabs: unpinned tabs already have a

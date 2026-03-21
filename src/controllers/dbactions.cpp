@@ -11,12 +11,10 @@ void DBActions::addToHistory(const UrlData &data)
 {
     auto mData = data.toMap();
     mData.insert("adddate", QDateTime::currentDateTime().toString(Qt::ISODate));
-    qInfo() << "addToHistory:" << data.url << "insert result:";
     // INSERT OR REPLACE updates adddate on revisit so the signal always fires
     // and the model stays current regardless of whether the URL is new or repeat.
     if (this->insert("HISTORY", mData, /*orReplace=*/true))
     {
-        qInfo() << "  -> insert OK, emitting historyUrlInserted";
         Q_EMIT this->historyUrlInserted(data);
     }
 }

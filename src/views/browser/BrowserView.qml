@@ -65,23 +65,13 @@ Maui.Page
             Action
             {
                 icon.name: "go-up"
-                onTriggered:
-                {
-                    console.log("Find previous")
-                    control.currentBrowser.findText(_searchField.text, WebEngineView.FindBackward)
-                }
+                onTriggered: control.currentBrowser.findText(_searchField.text, WebEngineView.FindBackward)
             },
 
             Action
             {
                 icon.name: "go-down"
-                onTriggered:
-                {
-
-                    console.log("Find next")
-
-                    control.currentBrowser.findText(_searchField.text)
-                }
+                onTriggered: control.currentBrowser.findText(_searchField.text)
             }
         ]
     }
@@ -331,6 +321,8 @@ Maui.Page
 
             onAccepted:
             {
+                // Fallback for environments where Keys.onPressed does not
+                // intercept Return before TextField emits accepted().
                 if(text.length > 0)
                     control.openUrl(text)
                 else if(_historyListView.currentItem)
@@ -341,10 +333,28 @@ Maui.Page
                 _navigationPopup.close()
             }
 
-            // Ctrl+Enter: append .com to the typed word and navigate.
-            // Alt+Enter: open the typed URL / query in a new tab.
+            // Handle all Enter variants and Up/Down history navigation here
+            // so that the key events are never forwarded to _historyListView.
+            // Qt Quick's default Keys.BeforeItem priority means Keys.onPressed
+            // runs before the TextField's own handling; accepting the event
+            // here prevents it from reaching the list view (which would consume
+            // it silently when no history item is selected).
             Keys.onPressed: (event) =>
             {
+                // Up/Down: navigate history suggestion list.
+                if (event.key === Qt.Key_Down) {
+                    if (_historyListView.currentIndex < _historyListView.count - 1)
+                        _historyListView.currentIndex++
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Up) {
+                    if (_historyListView.currentIndex > -1)
+                        _historyListView.currentIndex--
+                    event.accepted = true
+                    return
+                }
+
                 const isReturn = event.key === Qt.Key_Return || event.key === Qt.Key_Enter
                 if (!isReturn)
                     return
@@ -368,9 +378,18 @@ Maui.Page
                     }
                     event.accepted = true
                 }
+                else
+                {
+                    // Plain Enter — navigate and close before the event can
+                    // be forwarded to _historyListView and silently consumed.
+                    if (_entryField.text.length > 0)
+                        control.openUrl(_entryField.text)
+                    else if (_historyListView.currentItem)
+                        control.openUrl(_historyListView.currentItem.url)
+                    _navigationPopup.close()
+                    event.accepted = true
+                }
             }
-
-            Keys.forwardTo: _historyListView
         }
 
 
@@ -1045,6 +1064,10 @@ Maui.Page
 
     function openSplit(path)
     {
+        const s = path.toString().trim().toLowerCase()
+        if (s.startsWith("javascript:") || s.startsWith("data:"))
+            return
+
         if(currentTab.count === 1)
         {
             currentTab.split(path)
@@ -1053,7 +1076,7 @@ Maui.Page
 
         // Split already open — load into the inactive pane instead of a new tab.
         var inactiveIndex = currentTab.currentIndex === 0 ? 1 : 0
-        currentTab.model.get(inactiveIndex).url = path
+        openUrl(path)
     }
 
     function collectSessionUrls()
@@ -1100,7 +1123,7 @@ Maui.Page
         {
             // Validate the configured search engine URL starts with https:// so a
             // misconfigured or tampered setting cannot become a javascript: navigation.
-            const engine = appSettings.searchEnginePage
+            const engine = appSettings.searchEnginePage.toString()
             if (!engine.toLowerCase().startsWith("https://"))
                 return
             control.currentBrowser.url = engine + encodeURIComponent(pathStr)

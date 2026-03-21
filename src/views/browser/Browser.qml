@@ -111,7 +111,7 @@ Maui.SplitViewItem
                 url = drop.text.trim()
 
             if (url.length > 0)
-                _webView.url = url
+                control.openUrl(url)
         }
     }
 
@@ -514,11 +514,6 @@ Maui.SplitViewItem
             control._hoveredUrl = url
         }
 
-        onFindTextFinished: {
-            //                   findInPageResultIndex = result.activeMatch;
-            //                   findInPageResultCount = result.numberOfMatches;
-        }
-
         onFileDialogRequested: (request) =>
         {
             request.accepted = true
@@ -711,19 +706,77 @@ Maui.SplitViewItem
         )
     }
 
-    onVisibleChanged:
+    // Delayed retry: the initial kick may fire before Wayland re-enables
+    // wl_surface.frame callbacks after a workspace switch, leaving Viz idle
+    // again. A second kick ~800 ms later catches that window.
+    Timer
     {
-        if (visible && Window.window.active)
-            _kickVizCompositor()
+        id: _vizRetryTimer
+        interval: 800
+        repeat: false
+        onTriggered:
+        {
+            if (control.visible && Window.window.active)
+            {
+                _webView.lifecycleState = WebEngineView.Active
+                _webView.runJavaScript(
+                    "(function(){" +
+                    "  requestAnimationFrame(function(){requestAnimationFrame(function(){});});" +
+                    "})()")
+            }
+        }
     }
 
+    onVisibleChanged:
+    {
+        if (visible)
+        {
+            // Restore full rendering when the tab is brought to the foreground.
+            _webView.lifecycleState = WebEngineView.Active
+            if (Window.window.active)
+            {
+                _kickVizCompositor()
+                _vizRetryTimer.restart()
+            }
+        }
+        else if (!_webView.recentlyAudible)
+        {
+            // Freeze the renderer while the tab is hidden: JavaScript timers,
+            // animations, and GPU compositing are paused, cutting CPU/GPU load
+            // for background tabs to near-zero.  Pages stay in memory and resume
+            // instantly when the tab is selected again.
+            // Skip if the tab is playing audio so background media keeps running.
+            _webView.lifecycleState = WebEngineView.Frozen
+        }
+    }
+
+    // Window.window.active covers focus changes within a workspace.
     Connections
     {
         target: Window.window
         function onActiveChanged()
         {
             if (Window.window.active && control.visible)
+            {
                 _kickVizCompositor()
+                _vizRetryTimer.restart()
+            }
+        }
+    }
+
+    // Qt.application.state catches workspace switches on Hyprland/Wayland:
+    // the compositor changes the application state when its workspace is
+    // shown or hidden, even if Window.window.active does not toggle.
+    Connections
+    {
+        target: Qt.application
+        function onStateChanged()
+        {
+            if (Qt.application.state === Qt.ApplicationActive && control.visible)
+            {
+                _kickVizCompositor()
+                _vizRetryTimer.restart()
+            }
         }
     }
 

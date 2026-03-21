@@ -7,6 +7,7 @@
 #include <QThread>
 #include <QSurfaceFormat>
 #include <QSettings>
+#include <sys/sysinfo.h>
 
 #include <MauiKit4/Core/mauiapp.h>
 
@@ -43,9 +44,6 @@ int main(int argc, char *argv[])
     // Append performance flags to whatever the user may have set in the
     // environment. These must be set before QtWebEngineQuick::initialize().
     //
-    // --disable-frame-rate-limit      Remove Chromium's internal 60 FPS cap so
-    //                                 the renderer can run at the display's full
-    //                                 refresh rate (e.g. 144 Hz, 165 Hz).
     // --ignore-gpu-blocklist          Force GPU rasterization even when
     //                                 Chromium's internal blocklist would
     //                                 fall back to software (common on Linux).
@@ -55,6 +53,15 @@ int main(int argc, char *argv[])
     // --enable-accelerated-2d-canvas  GPU-accelerated HTML5 canvas (critical for
     //                                 canvas-based benchmarks and games).
     // --num-raster-threads=N          Parallelise tile rasterization.
+    // --enable-checker-imaging        Decode images asynchronously on a worker
+    //                                 thread; the main/compositor thread gets a
+    //                                 checkerboard placeholder until decoding
+    //                                 completes, keeping scrolling smooth even on
+    //                                 image-heavy pages.
+    // VaapiVideoDecoder               VA-API hardware video decoding.
+    // VaapiVideoEncoder               VA-API hardware video encoding (WebRTC etc).
+    // AcceleratedVideoDecodeLinuxGL   OpenGL-based hardware decode fallback for
+    //                                 GPUs that expose GL but not DMA-BUF.
     QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     if (!chromiumFlags.isEmpty())
         chromiumFlags += ' ';
@@ -62,16 +69,32 @@ int main(int argc, char *argv[])
     // Avoids unnecessary context switching on low-end devices while allowing
     // high-end hardware to fully utilise available cores.
     const int rasterThreads = qMax(2, QThread::idealThreadCount());
-    chromiumFlags += "--disable-frame-rate-limit "
-                     "--ignore-gpu-blocklist "
+    // Compute a GPU tile-memory budget from system RAM.
+    // Chromium's default on Linux is often as low as 64 MB (GPU VRAM detection
+    // fails under Wayland), which causes the tile manager to exhaust its budget
+    // on complex pages, stall the GPU process, and — because Qt Quick shares the
+    // same GL context via AA_ShareOpenGLContexts — freeze the entire UI.
+    // Budget: 1/8 of total RAM, clamped to [256, 1024] MB.
+    {
+        struct sysinfo si{};
+        sysinfo(&si);
+        const long long totalMb = static_cast<long long>(si.totalram) * si.mem_unit / (1024 * 1024);
+        const int gpuBudgetMb   = static_cast<int>(qBound(256LL, totalMb / 8, 1024LL));
+        chromiumFlags += "--force-gpu-mem-available-mb=" + QByteArray::number(gpuBudgetMb) + ' ';
+    }
+
+    chromiumFlags += "--ignore-gpu-blocklist "
                      "--enable-gpu-rasterization "
                      "--enable-oop-rasterization "
                      "--canvas-oop-rasterization "
                      "--enable-accelerated-2d-canvas "
+                     "--enable-checker-imaging "
                      "--enable-zero-copy "
                      "--ozone-platform-hint=auto "
                      "--disable-features=OverlayScrollbar "
-                     "--enable-features=VaapiVideoDecoder "
+                     "--enable-features=VaapiVideoDecoder,"
+                                        "VaapiVideoEncoder,"
+                                        "AcceleratedVideoDecodeLinuxGL "
                      "--num-raster-threads=" + QByteArray::number(rasterThreads);
 
     // DNS-over-HTTPS: read user preference from persistent settings before

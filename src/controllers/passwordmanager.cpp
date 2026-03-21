@@ -73,6 +73,7 @@ void PasswordManager::openDB()
     QFile::setPermissions(dbPath, QFile::ReadOwner | QFile::WriteOwner);
 
     QSqlQuery pragma(m_db);
+    pragma.exec(QStringLiteral("PRAGMA journal_mode=WAL"));
     pragma.exec(QStringLiteral("PRAGMA synchronous=NORMAL"));
 }
 
