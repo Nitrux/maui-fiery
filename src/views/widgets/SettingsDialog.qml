@@ -599,6 +599,20 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
+                    label1.text: i18n("Ad-Blocker Detection Bypass")
+                    label2.text: i18n("Suppress \"please disable your ad blocker\" walls by spoofing ad-presence signals and removing detection overlays.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.adblockDetectionBlockerEnabled
+                        onToggled: appSettings.adblockDetectionBlockerEnabled = !appSettings.adblockDetectionBlockerEnabled
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
                     label1.text: i18n("Cookie Banner Blocker")
                     label2.text: i18n("Automatically remove cookie consent popups and GDPR banners.")
 

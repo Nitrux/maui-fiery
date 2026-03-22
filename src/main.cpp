@@ -74,22 +74,23 @@ int main(int argc, char *argv[])
     // fails under Wayland), which causes the tile manager to exhaust its budget
     // on complex pages, stall the GPU process, and — because Qt Quick shares the
     // same GL context via AA_ShareOpenGLContexts — freeze the entire UI.
-    // Budget: 1/8 of total RAM, clamped to [256, 1024] MB.
+    // Budget: 1/8 of total RAM, clamped to [256, 2048] MB.
+    // The upper bound was previously 1024 MB, which under-allocated on ≥16 GB
+    // systems and caused Chromium's tile manager to evict GPU tiles on complex
+    // pages, stalling the GPU process and hurting rendering benchmarks.
     {
         struct sysinfo si{};
         sysinfo(&si);
         const long long totalMb = static_cast<long long>(si.totalram) * si.mem_unit / (1024 * 1024);
-        const int gpuBudgetMb   = static_cast<int>(qBound(256LL, totalMb / 8, 1024LL));
+        const int gpuBudgetMb   = static_cast<int>(qBound(256LL, totalMb / 8, 2048LL));
         chromiumFlags += "--force-gpu-mem-available-mb=" + QByteArray::number(gpuBudgetMb) + ' ';
     }
 
     chromiumFlags += "--ignore-gpu-blocklist "
                      "--enable-gpu-rasterization "
                      "--enable-oop-rasterization "
-                     "--canvas-oop-rasterization "
                      "--enable-accelerated-2d-canvas "
                      "--enable-checker-imaging "
-                     "--enable-zero-copy "
                      "--ozone-platform-hint=auto "
                      "--disable-features=OverlayScrollbar "
                      "--enable-features=VaapiVideoDecoder,"

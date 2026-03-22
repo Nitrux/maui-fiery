@@ -263,7 +263,20 @@ Maui.SplitViewItem
             "function scan(){" +
             "document.querySelectorAll('input[type=\"password\"]').forEach(attach);}" +
             "scan();" +
-            "new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});" +
+            // Debounced observer: schedule a single scan 500 ms after DOM activity
+            // settles.  The flag prevents stacking timers during rapid mutations
+            // (e.g. JS-framework re-renders, benchmark DOM churning) so the full-
+            // document querySelectorAll runs at most once per burst of changes.
+            "var _t=null;" +
+            "new MutationObserver(function(muts){" +
+            "if(_t)return;" +
+            "for(var i=0;i<muts.length;i++){" +
+            "var ns=muts[i].addedNodes;" +
+            "for(var j=0;j<ns.length;j++){" +
+            "if(ns[j].nodeType===1){" +
+            "_t=setTimeout(function(){_t=null;scan();},500);" +
+            "return;}}}" +
+            "}).observe(document.documentElement,{childList:true,subtree:true});" +
             "})()"
 
         // Reads and clears the credential captured by the watcher via its Symbol key.
@@ -433,6 +446,77 @@ Maui.SplitViewItem
             "setTimeout(function(){o.disconnect();},30000);" +
             "})();"
 
+        // Defeats "please disable your ad blocker" detection walls. Two-pronged:
+        // (1) DOM spoofing — define window.canRunAds and inject a visible bait <div>
+        //     so scripts that measure ad-element dimensions think ads are running;
+        // (2) Selector + heuristic removal — remove overlay elements by known
+        //     id/class patterns and, as a fallback, by scanning modal-like elements
+        //     whose text matches a broad set of detection phrases.
+        // A MutationObserver retries for up to 30 s to catch dynamically injected walls.
+        readonly property string _adblockDetectionScript: "(function(){'use strict';" +
+            "try{" +
+            "Object.defineProperty(window,'canRunAds',{value:true,writable:false,configurable:false});" +
+            "if(!document.getElementById('fiery-adsbait')){" +
+            "var b=document.createElement('div');" +
+            "b.id='fiery-adsbait';" +
+            "b.className='ad-banner adsbygoogle adsbox pub_300x250 pub_728x90 text-ad textAd textad';" +
+            "b.style.cssText='height:1px!important;width:1px!important;position:absolute!important;left:-9999px!important;top:-9999px!important;display:block!important;visibility:visible!important';" +
+            "document.documentElement.appendChild(b);}}" +
+            "catch(e){}" +
+            "var s=[" +
+            "'#adblock-overlay','#adblock-modal','#adblock-notice','#adblock-wall','#adblock-banner'," +
+            "'#adblocker','#ad-blocker','#ad-blocker-overlay','#ad-blocker-modal','#ad-blocker-notice'," +
+            "'#adDetect','#adBlockDetect','#adBlockOverlay','#adBlockMessage','#adBlockModal'," +
+            "'#anti-adblock','#antiAdblock','#antiadblock','#ab-notice','#ab-overlay'," +
+            "'.adblock-overlay','.adblock-modal','.adblock-notice','.adblock-wall','.adblock-banner'," +
+            "'.adblocker','.ad-blocker','.ad-blocker-overlay','.ad-blocker-modal'," +
+            "'.anti-adblock','.antiAdblock','.ab-notice','.ab-overlay'," +
+            "'[id*=\"adblock\"]','[class*=\"adblock\"]'," +
+            "'[id*=\"ad-block\"]','[class*=\"ad-block\"]'," +
+            "'[id*=\"adblocker\"]','[class*=\"adblocker\"]'," +
+            "'[id*=\"ad_block\"]','[class*=\"ad_block\"]'," +
+            "'[id*=\"adDetect\"]','[class*=\"adDetect\"]'," +
+            "'[id*=\"anti-adblock\"]','[class*=\"anti-adblock\"]'," +
+            "'[id*=\"antiAdblock\"]','[class*=\"antiAdblock\"]'," +
+            "'[id*=\"antiadblock\"]','[class*=\"antiadblock\"]'," +
+            "'[id*=\"ab-detection\"]','[class*=\"ab-detection\"]'," +
+            "'[aria-label*=\"adblock\" i]','[aria-label*=\"ad blocker\" i]','[aria-label*=\"adblocker\" i]'" +
+            "];" +
+            "var adPat=/ad[\\s\\-_]?block(er)?|adblocker|disable\\s+(your\\s+)?(ad|blocker)|turn\\s+off\\s+(your\\s+)?(ad|blocker)|we(\\s*('ve|(\\s+have)))\\s+noticed|you(\\s*('re|(\\s+are)))\\s+using\\s+(an?\\s+)?ad|using\\s+(an?\\s+)?ad[\\s\\-_]?block|please\\s+(support|whitelist|allowlist|disable|turn\\s+off)|support\\s+us\\s+(by|and)/i;" +
+            "function heuristic(){" +
+            "var cands=document.querySelectorAll(" +
+            "'body>div,body>section,body>aside,body>article," +
+            "body>div>div,body>div>section," +
+            "[role=\"dialog\"],[role=\"alertdialog\"]," +
+            "div[class*=\"modal\"],div[class*=\"overlay\"],div[class*=\"popup\"],div[class*=\"banner\"]," +
+            "div[id*=\"modal\"],div[id*=\"overlay\"],div[id*=\"popup\"]');" +
+            "cands.forEach(function(el){" +
+            "try{" +
+            "var txt=el.innerText||'';" +
+            "if(txt.length>2000||txt.length<10)return;" +
+            "if(!adPat.test(txt))return;" +
+            "var cs=window.getComputedStyle(el);" +
+            "var pos=cs.position;" +
+            "var z=parseInt(cs.zIndex,10);" +
+            "if(pos==='fixed'||pos==='absolute'||pos==='sticky'||(pos==='relative'&&!isNaN(z)&&z>0)||el.getAttribute('role')){" +
+            "el.remove();}" +
+            "}catch(e){}});}" +
+            "function r(){" +
+            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});" +
+            "heuristic();" +
+            "if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}" +
+            "if(document.documentElement)document.documentElement.style.removeProperty('overflow');}" +
+            "r();" +
+            "setTimeout(r,1500);setTimeout(r,4000);setTimeout(r,8000);" +
+            "var o;var n=0;var t;" +
+            "o=new MutationObserver(function(){" +
+            "if(++n>100){o.disconnect();return;}" +
+            "if(t)clearTimeout(t);" +
+            "t=setTimeout(r,500);});" +
+            "o.observe(document.documentElement,{childList:true,subtree:true});" +
+            "setTimeout(function(){o.disconnect();},30000);" +
+            "})();"
+
         onLoadingChanged: function(loadingInfo)
         {
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
@@ -446,6 +530,8 @@ Maui.SplitViewItem
                     _webView.runJavaScript(_webView._cookieBannerScript)
                 if (appSettings.subscribeBlockerEnabled)
                     _webView.runJavaScript(_webView._subscribeBlockerScript)
+                if (appSettings.adblockDetectionBlockerEnabled)
+                    _webView.runJavaScript(_webView._adblockDetectionScript)
 
                 if (!_webView.profile.offTheRecord) {
                     // Prompt to save credentials captured from the previous page.
@@ -685,7 +771,7 @@ Maui.SplitViewItem
     // so we also trigger on onVisibleChanged.
     function _kickVizCompositor()
     {
-        _webView.lifecycleState = WebEngineView.Active
+        _webView.lifecycleState = 0 // WebEngineView.Active
         _webView.runJavaScript(
             "(function(){" +
             "  var old=document.getElementById('fiery-viz-kick');" +
@@ -718,7 +804,7 @@ Maui.SplitViewItem
         {
             if (control.visible && Window.window.active)
             {
-                _webView.lifecycleState = WebEngineView.Active
+                _webView.lifecycleState = 0 // WebEngineView.Active
                 _webView.runJavaScript(
                     "(function(){" +
                     "  requestAnimationFrame(function(){requestAnimationFrame(function(){});});" +
@@ -732,7 +818,7 @@ Maui.SplitViewItem
         if (visible)
         {
             // Restore full rendering when the tab is brought to the foreground.
-            _webView.lifecycleState = WebEngineView.Active
+            _webView.lifecycleState = 0 // WebEngineView.Active
             if (Window.window.active)
             {
                 _kickVizCompositor()
@@ -746,7 +832,7 @@ Maui.SplitViewItem
             // for background tabs to near-zero.  Pages stay in memory and resume
             // instantly when the tab is selected again.
             // Skip if the tab is playing audio so background media keeps running.
-            _webView.lifecycleState = WebEngineView.Frozen
+            _webView.lifecycleState = 1 // WebEngineView.Frozen
         }
     }
 

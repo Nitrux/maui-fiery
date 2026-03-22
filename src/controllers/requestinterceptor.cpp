@@ -20,6 +20,12 @@ RequestInterceptor::RequestInterceptor(QObject *parent)
 
 void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
 {
+    // Fast exit: skip all processing when every feature is disabled.
+    // The interceptor is always registered once set; this avoids the overhead
+    // of slot invocation + per-request work when nothing is enabled.
+    if (!m_doNotTrack && !m_httpsOnly && !m_adBlockEnabled)
+        return;
+
     if (m_doNotTrack)
         info.setHttpHeader("DNT", "1");
 

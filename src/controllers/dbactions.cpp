@@ -89,14 +89,26 @@ const QVariantList DBActions::get(const QString &queryTxt, std::function<bool(QV
     if (query.exec()) {
         const auto keys = FMH::MODEL_NAME.keys();
 
+        // Build a column-name → column-index map once per query instead of
+        // calling query.record() (which constructs a QSqlRecord) on every key
+        // of every row.  For a history of N rows with K model keys this reduces
+        // QSqlRecord constructions from N×K to K.
+        QVector<QPair<QString, int>> presentCols;
+        presentCols.reserve(keys.size());
+        {
+            const QSqlRecord rec = query.record();
+            for (const auto &key : keys) {
+                const QString colName = FMH::MODEL_NAME[key];
+                const int idx = rec.indexOf(colName);
+                if (idx > -1)
+                    presentCols.append({colName, idx});
+            }
+        }
+
         while (query.next()) {
             QVariantMap data;
-            for (const auto &key : keys) {
-
-                if (query.record().indexOf(FMH::MODEL_NAME[key]) > -1) {
-                    data[FMH::MODEL_NAME[key]] = query.value(FMH::MODEL_NAME[key]).toString();
-                }
-            }
+            for (const auto &[colName, colIdx] : presentCols)
+                data[colName] = query.value(colIdx).toString();
 
             if (modifier) {
                 if (!modifier(data))

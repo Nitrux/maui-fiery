@@ -104,6 +104,7 @@ Maui.ApplicationWindow
         property string thirdPartyCookiesWhitelistJson: "[]"
         property bool cookieBannerBlocker: false
         property bool subscribeBlockerEnabled: false
+        property bool adblockDetectionBlockerEnabled: false
         property string customUserAgent: ""
 
         // Security
@@ -214,7 +215,15 @@ Maui.ApplicationWindow
     property WebEngineProfile profile: Fiery.FieryWebProfile
     {
         downloadPath: appSettings.downloadsPath
-        urlInterceptor: _requestInterceptor
+        // Only register the interceptor when at least one feature needs it.
+        // A registered interceptor adds an IPC round-trip for every network request
+        // even when interceptRequest() returns immediately — suspending the request,
+        // crossing to the browser process, and resuming it.  With all features off
+        // (the default) the overhead is pure waste; setting null unregisters it entirely.
+        urlInterceptor: (_requestInterceptor.doNotTrack
+                         || _requestInterceptor.adBlockEnabled
+                         || _requestInterceptor.httpsOnly)
+                        ? _requestInterceptor : null
 
         onDownloadFinished: (download) =>
         {
