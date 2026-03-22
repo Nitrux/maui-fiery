@@ -236,8 +236,10 @@ Maui.SplitViewItem
         // Only trusted input events are captured so auto-fill does not trigger saves.
         // Username lookup searches the whole document and prefers email-type inputs
         // to handle multi-step forms where the email field is outside the password form.
-        // Credential storage uses a non-enumerable Symbol key so page scripts cannot
-        // enumerate or predict the property name, reducing the TOCTOU exposure window.
+        // Credential storage uses a Symbol key stored at window._fieryCK.  The Symbol
+        // prevents accidental property collisions; however, same-origin page scripts
+        // can read window._fieryCK and therefore the stored value.  This is acceptable:
+        // same-origin scripts already have direct access to the password field value.
         readonly property string _credentialWatcherScript:
             "(function(){" +
             "var _k=window._fieryCK||(window._fieryCK=Symbol('fieryCredKey'));" +
