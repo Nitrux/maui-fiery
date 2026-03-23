@@ -45,6 +45,8 @@ qt_add_executable(${PROJECT_NAME}
     ${fiery_SRCS}
     ${fiery_ASSETS})
 
+set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
+
 # Bundle the downloaded blocklist. The target form of qt_add_resources is used
 # here because the file lives in the build tree, not the source tree.
 qt_add_resources(${PROJECT_NAME} "blocklist"
@@ -71,6 +73,14 @@ qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1)
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE
+    <QObject>
+    <QString>
+    <QUrl>
+    <QVariantMap>
+    <QSqlQuery>
+    <QtWebEngineQuick/QQuickWebEngineProfile>)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
