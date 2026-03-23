@@ -107,8 +107,20 @@ int main(int argc, char *argv[])
             const QString dohUrl = s.value(
                 QStringLiteral("dohUrl"),
                 QStringLiteral("https://cloudflare-dns.com/dns-query")).toString();
-            chromiumFlags += " --dns-over-https-mode=secure"
-                             " --dns-over-https-templates=" + dohUrl.toUtf8();
+            // Guard against Chromium flag injection: QTWEBENGINE_CHROMIUM_FLAGS is
+            // space-separated, so a URL containing a space would be treated as
+            // additional flags (e.g. "https://x.com --disable-web-security").
+            // Valid HTTPS URLs never contain literal spaces; reject anything that does.
+            // Also enforce HTTPS — DoH over plain HTTP is meaningless for privacy.
+            const QUrl parsedDoh(dohUrl);
+            if (parsedDoh.isValid()
+                    && parsedDoh.scheme() == QStringLiteral("https")
+                    && !dohUrl.contains(QLatin1Char(' '))) {
+                chromiumFlags += " --dns-over-https-mode=secure"
+                                 " --dns-over-https-templates=" + dohUrl.toUtf8();
+            } else {
+                qWarning() << "DoH URL rejected (invalid, non-HTTPS, or contains spaces):" << dohUrl;
+            }
         }
         s.endGroup();
     }
