@@ -16,6 +16,9 @@ Maui.ContextualMenu
     property bool isAudio: request && request.mediaType === ContextMenuRequest.MediaTypeAudio
     property bool isImage: request && request.mediaType === ContextMenuRequest.MediaTypeImage
     property bool isVideo: request && request.mediaType === ContextMenuRequest.MediaTypeVideo
+    // WebEngineView has no isFullScreen property; the fullscreen state is tracked
+    // on the Browser wrapper item and passed in here explicitly.
+    property bool webFullScreen: false
 
     // Unique attribute value stamped onto the target element the moment the
     // context menu opens.  All JS actions use querySelector on this attribute
@@ -262,9 +265,9 @@ Maui.ContextualMenu
     {
         height: visible? implicitHeight : 0 - control.spacing
         visible: webView.settings.javascriptEnabled && control.isVideo
-        text: webView.isFullScreen ? i18n("Exit fullscreen") : i18n("Fullscreen")
+        text: control.webFullScreen ? i18n("Exit fullscreen") : i18n("Fullscreen")
         onTriggered: {
-            const js = webView.isFullScreen
+            const js = control.webFullScreen
                 ? 'document.exitFullscreen()'
                 : '(function(id){' +
                   '  var e=document.querySelector("[data-fiery-ctx="+JSON.stringify(id)+"]");' +

@@ -119,6 +119,7 @@ Maui.SplitViewItem
     {
         id: _menu
         webView: _webView
+        webFullScreen: control._webFullScreen
     }
 
     // File-chooser / save-as dialog shown in response to onFileDialogRequested.

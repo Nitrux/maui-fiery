@@ -575,12 +575,8 @@ Maui.Page
             onNewTabClicked: openTab("")
             onCloseTabClicked: (index) =>
             {
-                var tab = _privateTabView.tabAt(index)
-                if (tab)
-                {
-                    var entry = tab.urls.map(function(u) { return u.toString() })
-                    control._closedTabsStack = control._closedTabsStack.concat([entry])
-                }
+                // Private tab URLs must NOT be added to the restore stack:
+                // restoring them via Ctrl+Shift+T would leak private browsing history.
                 _privateTabView.closeTab(index)
             }
 
@@ -1074,8 +1070,10 @@ Maui.Page
             return
         }
 
-        // Split already open — load into the inactive pane instead of a new tab.
+        // Split already open — switch to the inactive pane and navigate there
+        // so the URL loads in the other half rather than the one already active.
         var inactiveIndex = currentTab.currentIndex === 0 ? 1 : 0
+        currentTab.currentIndex = inactiveIndex
         openUrl(path)
     }
 

@@ -94,7 +94,7 @@ Item
         destroyItem(index)
     }
 
-    function destroyItem(index) //deestroys a split view withouth warning
+    function destroyItem(index) //destroys a split view without warning
     {
         _splitView.closeSplit(index)
     }

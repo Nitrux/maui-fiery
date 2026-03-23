@@ -33,17 +33,18 @@ void DBActions::removeBookmark(const QUrl &url)
 {
     if (this->remove("BOOKMARKS", {{FMH::MODEL_KEY::URL, url.toString()}}))
     {
+        // Remove the cached icon if this URL no longer appears in history either,
+        // to avoid orphaned rows in the ICONS table.
+        if (!this->checkExistance("HISTORY", "url", url.toString()))
+            this->remove("ICONS", {{FMH::MODEL_KEY::URL, url.toString()}});
+
         Q_EMIT this->bookmarkRemoved(url);
     }
 }
 
 void DBActions::urlIcon(const QUrl &url, const QString &icon)
 {
-    if(!this->insert("ICONS", {{"url", url.toString()}, {"icon", icon}}))
-    {
-        this->update("ICONS", {{FMH::MODEL_KEY::ICON, icon}}, {{"url", url}});
-    }
-
+    this->insert("ICONS", {{"url", url.toString()}, {"icon", icon}}, /*orReplace=*/true);
     Q_EMIT this->iconInserted(url, icon);
 }
 
@@ -66,7 +67,9 @@ void DBActions::clearHistory()
 {
     auto query = this->getQuery("DELETE FROM HISTORY");
     query.exec();
-    auto query2 = this->getQuery("DELETE FROM ICONS");
+    // Only remove icons for URLs that are no longer referenced by bookmarks,
+    // so bookmarked-page favicons are preserved across a history clear.
+    auto query2 = this->getQuery("DELETE FROM ICONS WHERE url NOT IN (SELECT url FROM BOOKMARKS)");
     query2.exec();
     Q_EMIT this->historyCleared();
 }

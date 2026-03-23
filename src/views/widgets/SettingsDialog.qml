@@ -231,7 +231,10 @@ Maui.SettingsDialog
                         {
                             if(paths.length > 0)
                             {
-                                const path = paths[0].toString().replace("file://", "")
+                                // Decode percent-encoded characters (e.g. %20 → space)
+                                // so the stored path is a real filesystem path, not a URL.
+                                var s = paths[0].toString()
+                                const path = decodeURIComponent(s.startsWith("file://") ? s.slice(7) : s)
                                 appSettings.downloadsPath = path
                                 _downloadsPathField.text = path
                             }

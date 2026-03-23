@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QObject>
-#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWebEngineProfile>
 #include <QWebEngineUrlRequestInterceptor>
@@ -33,8 +32,6 @@ public:
     QStringList thirdPartyCookiesWhitelist() const;
     void setThirdPartyCookiesWhitelist(const QStringList &whitelist);
 
-    Q_INVOKABLE void acceptNotification();
-
 Q_SIGNALS:
     void urlInterceptorChanged();
     void blockThirdPartyCookiesChanged();
@@ -54,10 +51,6 @@ private:
     QStringList m_thirdPartyCookiesWhitelist;
 
     void updateCookieFilter();
-
-    // QPointer self-nulls if the engine destroys the notification before
-    // the user acts on the desktop KNotification, preventing a use-after-free.
-    QPointer<QWebEngineNotification> m_pendingNotification;
 
     // Rate limiting for download requests: max 5 per second.
     QElapsedTimer m_downloadRateTimer;

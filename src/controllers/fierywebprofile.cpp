@@ -5,6 +5,7 @@
 #include <KNotification>
 #include <KLocalizedString>
 
+#include <QPointer>
 #include <QWebEngineUrlRequestInterceptor>
 #include <QWebEngineDownloadRequest>
 #include <QWebEngineCookieStore>
@@ -94,7 +95,6 @@ void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
 
     // Registers the notification with the browser engine (fires Notification.onshow).
     webNotification->show();
-    m_pendingNotification = webNotification;
 
     // Forward the notification to the desktop notification system via KNotification
     // so it appears in the system tray / notification centre rather than as an
@@ -110,18 +110,20 @@ void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
     notif->setText(webNotification->message());
     notif->setIconName(QStringLiteral("fiery"));
 
-    // Clicking the notification fires the page's Notification.onclick callback.
+    // Capture the specific notification in the lambda so that clicking "Open" on
+    // this KNotification always fires the correct page callback, even when multiple
+    // web notifications arrive in quick succession (previously m_pendingNotification
+    // was overwritten by each new notification, causing earlier "Open" buttons to
+    // click the wrong — or a destroyed — web notification).
+    QPointer<QWebEngineNotification> notifPtr = webNotification;
     auto *action = notif->addAction(i18n("Open"));
     connect(action, &KNotificationAction::activated,
-            this,   &FieryWebProfile::acceptNotification);
+            this, [notifPtr]() {
+                if (notifPtr)
+                    notifPtr->click();
+            });
 
     notif->sendEvent();
-}
-
-void FieryWebProfile::acceptNotification()
-{
-    if (m_pendingNotification)
-        m_pendingNotification->click();
 }
 
 void FieryWebProfile::updateCookieFilter()
