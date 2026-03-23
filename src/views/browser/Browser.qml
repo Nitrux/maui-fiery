@@ -364,8 +364,50 @@ Maui.SplitViewItem
         // The observer disconnects as soon as a banner is removed (success),
         // and unconditionally after 20 mutation callbacks as a failsafe for
         // highly dynamic single-page applications that would otherwise keep
-        // running querySelectorAll against ~40 selectors indefinitely.
-        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]'];var o;var n=0;function r(){var f=false;s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}return f;}r();var t;o=new MutationObserver(function(){if(++n>20){o.disconnect();return;}if(t)clearTimeout(t);t=setTimeout(function(){if(r())o.disconnect();},500);});o.observe(document.documentElement,{childList:true,subtree:true});setTimeout(function(){o.disconnect();},30000);})();"
+        // running querySelectorAll against the selector list indefinitely.
+        readonly property string _cookieBannerScript: "(function(){'use strict';var s=['#cookiebanner','#cookie-banner','#cookie-notice','#cookie-bar','#cookie-consent','#cookie-popup','#gdpr-banner','#gdpr-consent','#gdpr-popup','#consent-banner','#consent-notice','#CybotCookiebotDialog','#onetrust-banner-sdk','#onetrust-consent-sdk','#qc-cmp2-container','#sp_message_container','#didomi-popup','#didomi-host','#usercentrics-root','.cookie-banner','.cookie-notice','.cookie-consent','.cookie-popup','.cookie-bar','.cookie-wall','.gdpr','.gdpr-banner','.gdpr-notice','.gdpr-popup','.consent-banner','.consent-notice','.cc-window','.cc-banner','.cc-overlay','.cookieconsent','[id^=\"cookie\"]','[class*=\"CookieBanner\"]','[aria-label*=\"cookie\" i]','[aria-label*=\"consent\" i]','[aria-label*=\"privacy\" i]','#real-cookie-banner','[id*=\"real-cookie\"]','#BorlabsCookie','[id*=\"borlabs-cookie\"]','[class*=\"borlabs-cookie\"]','#cmplz-cookiebanner','[id*=\"cmplz\"]','[class*=\"cmplz-\"]','#cky-consent','#cky-overlay','[class*=\"cky-consent\"]','#termly-code-snippet-support','[id*=\"termly\"]','[class*=\"termly\"]','#iubenda-cs-banner','[class*=\"iubenda-cs\"]','#moove_gdpr_cookie_modal','#moove_gdpr_cookie_info_bar','[id*=\"moove_gdpr\"]','#cookiescript_injected','[id*=\"cookiescript\"]','#cookie-law-info-bar','[id*=\"cookie-law-info\"]','[class*=\"cookie-law\"]','.klaro','#klaro','#cookieConsentContainer','#cookieConsent','[id*=\"cookieConsent\"]','[class*=\"cookieConsent\"]','[id*=\"cookie_consent\"]','[class*=\"cookie_consent\"]','[id*=\"cookie-agree\"]','[class*=\"cookie-agree\"]','[id*=\"truste-consent\"]','[class*=\"truste\"]','[id*=\"consent-manager\"]','[class*=\"consent-manager\"]'];" +
+            // Content-based heuristic: find consent modals by text + CSS position so
+            // unknown plugins (hundreds of WordPress CMPs etc.) are caught without
+            // needing a specific selector entry for each one.
+            // Selector-only pass — no getComputedStyle, no innerText, safe to run
+            // from the MutationObserver on every DOM mutation burst.
+            "function unlock(){" +
+            "if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');document.body.style.removeProperty('height');}" +
+            "if(document.documentElement)document.documentElement.style.removeProperty('overflow');}" +
+            "function quick(){var f=false;" +
+            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});" +
+            "unlock();return f;}" +
+            // Heavy pass — calls getComputedStyle + innerText (layout-forcing).
+            // Run only 3 times at fixed intervals after page load; never from the
+            // MutationObserver so benchmark-style DOM churn doesn't trigger it.
+            "var pat=/cookie|consent|gdpr|privacy pref|personal data|data protection/i;" +
+            "function heuristic(){" +
+            "document.querySelectorAll('[role=\"dialog\"],[role=\"alertdialog\"],div[class*=\"modal\"],div[class*=\"popup\"],div[id*=\"modal\"],div[id*=\"popup\"],body>div,body>section,body>aside').forEach(function(el){" +
+            "try{if(!el.isConnected)return;" +
+            "var cs=window.getComputedStyle(el);var pos=cs.position;" +
+            "if(pos!=='fixed'&&pos!=='absolute'&&pos!=='sticky')return;" +
+            "var txt=el.innerText||'';" +
+            "if(txt.length<20||txt.length>3000)return;" +
+            "if(pat.test(txt))el.remove();}catch(e){}});}" +
+            "function backdrops(){" +
+            "document.querySelectorAll('body>*').forEach(function(el){" +
+            "try{if(!el.isConnected)return;" +
+            "var cs=window.getComputedStyle(el);" +
+            "if(cs.position!=='fixed')return;" +
+            "if((el.innerText||'').trim().length>30)return;" +
+            "var bg=cs.backgroundColor;" +
+            "if(bg&&bg!=='transparent'&&bg!=='rgba(0, 0, 0, 0)'){el.remove();return;}" +
+            "if(parseFloat(cs.opacity)<0.1)el.remove();}catch(e){}});}" +
+            "function full(){quick();heuristic();backdrops();}" +
+            "full();setTimeout(full,1500);setTimeout(full,4000);" +
+            "var o;var n=0;var t;" +
+            "o=new MutationObserver(function(){" +
+            "if(++n>20){o.disconnect();return;}" +
+            "if(t)clearTimeout(t);" +
+            "t=setTimeout(function(){if(quick())o.disconnect();},500);});" +
+            "o.observe(document.documentElement,{childList:true,subtree:true});" +
+            "setTimeout(function(){o.disconnect();},30000);" +
+            "})();"
 
         // Removes subscribe, newsletter, and ad-blocker-detection overlays and undoes CSS tricks
         // (max-height clipping, gradient masks, blur filters) that inline paywalls use to obscure
@@ -418,14 +460,22 @@ Maui.SplitViewItem
             "var pat=/continue reading|subscribe (to|for|now|and)|unlimited access|(\\$|€|£)[0-9]+(\\.[0-9]+)?\\s*\\/(month|year|mo|yr)|sign in to (read|continue)|create (a free )?account to/i;" +
             "roots.forEach(function(root){" +
             "Array.from(root.children).forEach(function(el){" +
-            "var words=(el.innerText||'').trim().split(/\\s+/).length;" +
+            "var txt=el.textContent||'';" +
+            "var words=txt.trim().split(/\\s+/).length;" +
             "if(words>300)return;" +
-            "if(!pat.test(el.innerText||''))return;" +
+            "if(!pat.test(txt))return;" +
             "if(!el.querySelector('button,a[href*=\"subscri\"],a[href*=\"account\"],a[href*=\"signin\"],a[href*=\"sign-in\"],a[href*=\"register\"]'))return;" +
             "el.remove();});});}" +
-            "var o;var n=0;" +
-            "function r(){var f=false;" +
-            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();f=true;});}catch(e){}});" +
+            // cheap: selector removal only — no innerText, no getComputedStyle.
+            // Called by the MutationObserver so DOM churn on JS-heavy pages does
+            // not trigger layout-forcing operations on every mutation burst.
+            "var o;" +
+            "function cheap(){" +
+            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});}" +
+            // heavy: full scan including heuristic (innerText + getComputedStyle).
+            // Only called at fixed post-load intervals, never from the observer.
+            "function r(){" +
+            "cheap();" +
             "heuristic();" +
             "reveal();" +
             "if(!document.getElementById('fiery-reader')){" +
@@ -435,17 +485,17 @@ Maui.SplitViewItem
             "document.body.style.removeProperty('height');}" +
             "if(document.documentElement){" +
             "document.documentElement.style.removeProperty('overflow');}}" +
-            "return f;}" +
+            "}" +
+            // On load: full scan (paywalls are typically in the DOM at parse time).
+            // 1.5s: cheap selector-only pass for late-hydrated frameworks.
+            // 8s: final full scan then disconnect — catches late-injected walls.
             "r();" +
-            "setTimeout(r,1500);" +
-            "setTimeout(r,4000);" +
-            "setTimeout(r,8000);" +
+            "setTimeout(cheap,1500);" +
+            "setTimeout(function(){r();o.disconnect();},8000);" +
             "var t;o=new MutationObserver(function(){" +
-            "if(++n>100){o.disconnect();return;}" +
             "if(t)clearTimeout(t);" +
-            "t=setTimeout(r,500);});" +
+            "t=setTimeout(cheap,500);});" +
             "o.observe(document.documentElement,{childList:true,subtree:true});" +
-            "setTimeout(function(){o.disconnect();},30000);" +
             "})();"
 
         // Defeats "please disable your ad blocker" detection walls. Two-pronged:
@@ -494,29 +544,43 @@ Maui.SplitViewItem
             "div[id*=\"modal\"],div[id*=\"overlay\"],div[id*=\"popup\"]');" +
             "cands.forEach(function(el){" +
             "try{" +
-            "var txt=el.innerText||'';" +
+            "var txt=el.textContent||'';" +
             "if(txt.length>2000||txt.length<10)return;" +
             "if(!adPat.test(txt))return;" +
-            "var cs=window.getComputedStyle(el);" +
-            "var pos=cs.position;" +
-            "var z=parseInt(cs.zIndex,10);" +
-            "if(pos==='fixed'||pos==='absolute'||pos==='sticky'||(pos==='relative'&&!isNaN(z)&&z>0)||el.getAttribute('role')){" +
+            // Avoid getComputedStyle (forces layout reflow). The candidate selector
+            // already targets body children, modal/overlay classes, and dialog roles,
+            // so most overlays are already pre-filtered. Check inline style position
+            // (no layout cost) and role attribute as the final confirmation.
+            "var pos=el.style.position;" +
+            "if(pos==='fixed'||pos==='absolute'||pos==='sticky'||el.getAttribute('role')){" +
             "el.remove();}" +
             "}catch(e){}});}" +
+            // cheap: selector removal only — safe to call from the MutationObserver.
+            "function cheap(){" +
+            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});}" +
+            // heavy: selectors + conditional heuristic.
+            // The heuristic (textContent scan) is guarded by a fast querySelector:
+            // if the page has no modal/overlay/dialog elements at all it is skipped
+            // entirely, avoiding DOM traversal cost on pages like benchmarks.
             "function r(){" +
-            "s.forEach(function(q){try{document.querySelectorAll(q).forEach(function(e){e.remove();});}catch(e){}});" +
-            "heuristic();" +
+            "cheap();" +
+            "if(document.querySelector('[role=\"dialog\"],[role=\"alertdialog\"],div[class*=\"modal\"],div[class*=\"overlay\"],div[class*=\"popup\"],div[id*=\"adblock\"]')){" +
+            "heuristic();}" +
             "if(document.body){document.body.style.removeProperty('overflow');document.body.style.removeProperty('position');}" +
             "if(document.documentElement)document.documentElement.style.removeProperty('overflow');}" +
-            "r();" +
-            "setTimeout(r,1500);setTimeout(r,4000);setTimeout(r,8000);" +
-            "var o;var n=0;var t;" +
+            // Detection walls appear after page JS runs, not at parse time.
+            // 1.5s: cheap pass for early async scripts.
+            // 8s: full scan then disconnect. r() guards the heuristic behind a
+            //     fast querySelector so it is skipped entirely on pages with no
+            //     modal/overlay elements (benchmarks, simple pages, etc.).
+            "cheap();" +
+            "setTimeout(cheap,1500);" +
+            "var o;var t;" +
             "o=new MutationObserver(function(){" +
-            "if(++n>100){o.disconnect();return;}" +
             "if(t)clearTimeout(t);" +
-            "t=setTimeout(r,500);});" +
+            "t=setTimeout(cheap,500);});" +
             "o.observe(document.documentElement,{childList:true,subtree:true});" +
-            "setTimeout(function(){o.disconnect();},30000);" +
+            "setTimeout(function(){r();o.disconnect();},8000);" +
             "})();"
 
         onLoadingChanged: function(loadingInfo)
