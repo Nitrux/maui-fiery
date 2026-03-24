@@ -643,6 +643,48 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
+                    label1.text: i18n("Strip Tracking Parameters")
+                    label2.text: i18n("Remove UTM, fbclid, gclid, and other tracking tokens from URLs before the request is sent.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.stripTrackingParams
+                        onToggled: appSettings.stripTrackingParams = !appSettings.stripTrackingParams
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Global Privacy Control")
+                    label2.text: i18n("Send a Sec-GPC header asking sites not to sell or share your data. Legally binding in some jurisdictions.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.globalPrivacyControl
+                        onToggled: appSettings.globalPrivacyControl = !appSettings.globalPrivacyControl
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Block AMP Links")
+                    label2.text: i18n("Redirect Google AMP pages to the original publisher URL, preventing Google from tracking your reading habits.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.blockAmpLinks
+                        onToggled: appSettings.blockAmpLinks = !appSettings.blockAmpLinks
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
                     label1.text: i18n("Subscribe & Ad-Block Popup Blocker")
                     label2.text: i18n("Automatically remove newsletter, subscription, and ad-blocker-detection overlays.")
 

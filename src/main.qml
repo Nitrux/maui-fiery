@@ -99,6 +99,9 @@ Maui.ApplicationWindow
         // Privacy
         property bool doNotTrack: false
         property bool adBlockEnabled: false
+        property bool stripTrackingParams: false
+        property bool globalPrivacyControl: false
+        property bool blockAmpLinks: false
         property bool blockThirdPartyCookies: false
         // JSON array of hostnames exempt from third-party cookie blocking.
         // e.g. '["accounts.google.com","auth0.com"]'
@@ -125,9 +128,12 @@ Maui.ApplicationWindow
     Fiery.RequestInterceptor
     {
         id: _requestInterceptor
-        doNotTrack: appSettings.doNotTrack
-        adBlockEnabled: appSettings.adBlockEnabled
-        httpsOnly: appSettings.httpsOnly
+        doNotTrack:          appSettings.doNotTrack
+        adBlockEnabled:      appSettings.adBlockEnabled
+        httpsOnly:           appSettings.httpsOnly
+        stripTrackingParams: appSettings.stripTrackingParams
+        globalPrivacyControl: appSettings.globalPrivacyControl
+        blockAmpLinks:       appSettings.blockAmpLinks
     }
 
     Binding
@@ -240,7 +246,10 @@ Maui.ApplicationWindow
         // (the default) the overhead is pure waste; setting null unregisters it entirely.
         urlInterceptor: (_requestInterceptor.doNotTrack
                          || _requestInterceptor.adBlockEnabled
-                         || _requestInterceptor.httpsOnly)
+                         || _requestInterceptor.httpsOnly
+                         || _requestInterceptor.stripTrackingParams
+                         || _requestInterceptor.globalPrivacyControl
+                         || _requestInterceptor.blockAmpLinks)
                         ? _requestInterceptor : null
 
         onDownloadFinished: (download) =>

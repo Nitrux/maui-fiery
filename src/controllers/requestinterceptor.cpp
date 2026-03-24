@@ -4,7 +4,37 @@
 #include <QStandardPaths>
 #include <QFile>
 #include <QTextStream>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QDebug>
+
+static const QSet<QString> TRACKING_PARAMS = {
+    // Google Analytics / UTM
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+    // Google Ads
+    "gclid", "gclsrc", "dclid",
+    // Google Analytics client ID (appended by gtag.js)
+    "_ga", "_gl",
+    // Facebook
+    "fbclid", "fb_action_ids", "fb_action_types",
+    // Instagram
+    "igshid",
+    // Microsoft Ads
+    "msclkid",
+    // Yandex
+    "yclid",
+    // Twitter / X
+    "twclid",
+    // LinkedIn
+    "li_fat_id",
+    // Mailchimp
+    "mc_eid",
+    // Marketo
+    "mkt_tok",
+    // HubSpot
+    "hsa_acc", "hsa_cam", "hsa_grp", "hsa_ad", "hsa_src", "hsa_tgt", "hsa_kw",
+    "hsa_mt", "hsa_net", "hsa_ver",
+};
 
 // Built-in block list is embedded as a Qt resource (:/blocklist.txt).
 // To override it, place a hosts-format file at:
@@ -20,30 +50,61 @@ RequestInterceptor::RequestInterceptor(QObject *parent)
 
 void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
 {
-    // Fast exit: skip all processing when every feature is disabled.
-    // The interceptor is always registered once set; this avoids the overhead
-    // of slot invocation + per-request work when nothing is enabled.
-    if (!m_doNotTrack && !m_httpsOnly && !m_adBlockEnabled)
+    if (!m_doNotTrack && !m_httpsOnly && !m_adBlockEnabled
+            && !m_stripTrackingParams && !m_globalPrivacyControl && !m_blockAmpLinks)
         return;
 
     if (m_doNotTrack)
         info.setHttpHeader("DNT", "1");
 
-    if (m_httpsOnly) {
-        QUrl url = info.requestUrl();
-        if (url.scheme() == QLatin1String("http")) {
-            url.setScheme(QStringLiteral("https"));
+    if (m_globalPrivacyControl)
+        info.setHttpHeader("Sec-GPC", "1");
+
+    QUrl url = info.requestUrl();
+
+    if (m_blockAmpLinks
+            && info.resourceType() == QWebEngineUrlRequestInfo::ResourceTypeMainFrame) {
+        const QString host = url.host();
+        const QString path = url.path();
+        // Google AMP proxy: google.com/amp/s/<canonical-url>
+        if ((host == QLatin1String("www.google.com") || host == QLatin1String("google.com"))
+                && path.startsWith(QLatin1String("/amp/s/"))) {
+            info.redirect(QUrl(QStringLiteral("https://") + path.mid(7)));
+            return;
+        }
+        // AMP subdomain: amp.example.com → example.com
+        if (host.startsWith(QLatin1String("amp."))) {
+            QUrl canonical = url;
+            canonical.setHost(host.mid(4));
+            info.redirect(canonical);
+            return;
+        }
+    }
+
+    if (m_httpsOnly && url.scheme() == QLatin1String("http")) {
+        url.setScheme(QStringLiteral("https"));
+        info.redirect(url);
+        return;
+    }
+
+    if (m_stripTrackingParams && url.hasQuery()) {
+        QUrlQuery query(url);
+        bool changed = false;
+        for (const QString &param : TRACKING_PARAMS) {
+            if (query.hasQueryItem(param)) {
+                query.removeQueryItem(param);
+                changed = true;
+            }
+        }
+        if (changed) {
+            url.setQuery(query);
             info.redirect(url);
             return;
         }
     }
 
     if (m_adBlockEnabled) {
-        // Walk from the full hostname up to the registrable domain, performing
-        // an O(1) QSet lookup at each level.  This supports both exact matches
-        // ("ads.example.com") and wildcard subdomain blocking ("example.com")
-        // without an O(N) loop over the entire block list.
-        QString h = info.requestUrl().host().toLower();
+        QString h = url.host().toLower();
         while (!h.isEmpty()) {
             if (m_blockedHosts.contains(h)) {
                 info.block(true);
@@ -81,10 +142,36 @@ bool RequestInterceptor::httpsOnly() const { return m_httpsOnly; }
 
 void RequestInterceptor::setHttpsOnly(bool enabled)
 {
-    if (m_httpsOnly == enabled)
-        return;
+    if (m_httpsOnly == enabled) return;
     m_httpsOnly = enabled;
     Q_EMIT httpsOnlyChanged();
+}
+
+bool RequestInterceptor::stripTrackingParams() const { return m_stripTrackingParams; }
+
+void RequestInterceptor::setStripTrackingParams(bool enabled)
+{
+    if (m_stripTrackingParams == enabled) return;
+    m_stripTrackingParams = enabled;
+    Q_EMIT stripTrackingParamsChanged();
+}
+
+bool RequestInterceptor::globalPrivacyControl() const { return m_globalPrivacyControl; }
+
+void RequestInterceptor::setGlobalPrivacyControl(bool enabled)
+{
+    if (m_globalPrivacyControl == enabled) return;
+    m_globalPrivacyControl = enabled;
+    Q_EMIT globalPrivacyControlChanged();
+}
+
+bool RequestInterceptor::blockAmpLinks() const { return m_blockAmpLinks; }
+
+void RequestInterceptor::setBlockAmpLinks(bool enabled)
+{
+    if (m_blockAmpLinks == enabled) return;
+    m_blockAmpLinks = enabled;
+    Q_EMIT blockAmpLinksChanged();
 }
 
 static void loadHostsFile(const QString &path, QSet<QString> &out)
