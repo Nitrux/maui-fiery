@@ -27,6 +27,33 @@ Maui.SplitViewItem
     property string _hoveredUrl: ""
     property var _pendingFileRequest: null
 
+    // Tab sleep: discard the page after tabSleepDelay minutes in the background
+    // to free GPU/CPU/memory.  Restores automatically when the tab is activated.
+    property bool _isSleeping: false
+
+    // Suppresses duplicate DRM notifications within a single page load.
+    // Reset at LoadStartedStatus so each new navigation can notify once.
+    property bool _drmNotified: false
+
+    // Widevine prompt — shown when the page requests EME and the CDM is absent.
+    WidevinePrompt { id: _widevinePrompt }
+
+    Timer
+    {
+        id: _sleepTimer
+        repeat: false
+        interval: Math.max(1, appSettings.tabSleepDelay) * 60000
+        onTriggered:
+        {
+            const u = _webView.url.toString()
+            if (u.length > 0 && u !== "about:blank" && !_webView.loading)
+            {
+                _webView.lifecycleState = 2 // WebEngineView.Discarded — frees GPU+CPU memory
+                control._isSleeping = true
+            }
+        }
+    }
+
     // Exit-fullscreen button shown in the top-right corner while the page
     // is in web-requested fullscreen. Pressing Escape or clicking it calls
     // ExitFullScreen, which triggers onFullScreenRequested(toggleOn=false).
@@ -584,6 +611,38 @@ Maui.SplitViewItem
             "setTimeout(function(){r();o.disconnect();},8000);" +
             "})();"
 
+        // Intercepts navigator.requestMediaKeySystemAccess calls for Widevine and
+        // emits a sentinel console.warn so the Qt side can react without polling.
+        // The hook is re-injected on every page load so SPAs that navigate without
+        // a full reload are also covered.  It is intentionally narrow: only
+        // "com.widevine.alpha" is intercepted; all other key systems pass through.
+        readonly property string _drmDetectionScript:
+            "(function(){" +
+            "if(window.__fieryDrmHooked)return;" +
+            "window.__fieryDrmHooked=true;" +
+            "var _orig=navigator.requestMediaKeySystemAccess.bind(navigator);" +
+            "navigator.requestMediaKeySystemAccess=function(ks,cfg){" +
+            "if(ks==='com.widevine.alpha')" +
+            "console.warn('__FIERY_DRM_REQUIRED__');" +
+            "return _orig(ks,cfg);" +
+            "};" +
+            "})()"
+
+        onJavaScriptConsoleMessage: function(level, message, lineNumber, sourceId)
+        {
+            if (message === "__FIERY_DRM_REQUIRED__"
+                    && !_webView.profile.offTheRecord
+                    && !Fiery.WidevineInstaller.isInstalled
+                    && !control._drmNotified)
+            {
+                control._drmNotified = true
+                root.notify("dialog-information",
+                            i18n("DRM Content"),
+                            i18n("This page requires Widevine DRM. Enable it in Settings → Features."),
+                            [])
+            }
+        }
+
         onLoadingChanged: function(loadingInfo)
         {
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
@@ -599,6 +658,8 @@ Maui.SplitViewItem
                     _webView.runJavaScript(_webView._subscribeBlockerScript)
                 if (appSettings.adblockDetectionBlockerEnabled)
                     _webView.runJavaScript(_webView._adblockDetectionScript)
+                if (!_webView.profile.offTheRecord)
+                    _webView.runJavaScript(_webView._drmDetectionScript)
 
                 if (!_webView.profile.offTheRecord) {
                     // Prompt to save credentials captured from the previous page.
@@ -638,6 +699,7 @@ Maui.SplitViewItem
             else if(loadingInfo.status === WebEngineView.LoadStartedStatus)
             {
                 control._loadFailed = false
+                control._drmNotified = false
 
                 // Harvest any credential the watcher recorded before the page unloads.
                 if (!_webView.profile.offTheRecord) {
@@ -869,7 +931,7 @@ Maui.SplitViewItem
         repeat: false
         onTriggered:
         {
-            if (control.visible && Window.window.active)
+            if (control.visible && Window.window && Window.window.active)
             {
                 _webView.lifecycleState = 0 // WebEngineView.Active
                 _webView.runJavaScript(
@@ -884,9 +946,12 @@ Maui.SplitViewItem
     {
         if (visible)
         {
+            // Cancel any pending sleep countdown and clear the sleeping flag.
+            _sleepTimer.stop()
+            _isSleeping = false
             // Restore full rendering when the tab is brought to the foreground.
             _webView.lifecycleState = 0 // WebEngineView.Active
-            if (Window.window.active)
+            if (Window.window && Window.window.active)
             {
                 _kickVizCompositor()
                 _vizRetryTimer.restart()
@@ -900,6 +965,10 @@ Maui.SplitViewItem
             // instantly when the tab is selected again.
             // Skip if the tab is playing audio so background media keeps running.
             _webView.lifecycleState = 1 // WebEngineView.Frozen
+            // Start the sleep countdown: if the tab stays hidden long enough,
+            // the timer will discard the page entirely to reclaim more memory.
+            if (appSettings.tabSleepEnabled)
+                _sleepTimer.restart()
         }
     }
 
@@ -909,7 +978,7 @@ Maui.SplitViewItem
         target: Window.window
         function onActiveChanged()
         {
-            if (Window.window.active && control.visible)
+            if (Window.window && Window.window.active && control.visible)
             {
                 _kickVizCompositor()
                 _vizRetryTimer.restart()

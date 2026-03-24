@@ -6,6 +6,8 @@ import org.mauikit.controls as Maui
 import org.mauikit.filebrowsing as FB
 import org.maui.fiery as Fiery
 
+import "../browser"
+
 Maui.SettingsDialog
 {
     id: control
@@ -382,7 +384,60 @@ Maui.SettingsDialog
                         onToggled: appSettings.playbackRequiresUserGesture = !appSettings.playbackRequiresUserGesture
                     }
                 }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Tab Sleep")
+                    label2.text: i18n("Automatically discard background tabs to free memory. The tab reloads when you switch back to it.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.tabSleepEnabled
+                        onToggled: appSettings.tabSleepEnabled = !appSettings.tabSleepEnabled
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    visible: appSettings.tabSleepEnabled
+                    label1.text: i18n("Sleep After (minutes)")
+                    label2.text: i18n("How long a tab must be inactive before it is put to sleep.")
+
+                    SpinBox
+                    {
+                        from: 1
+                        to: 480
+                        value: appSettings.tabSleepDelay
+                        onValueModified: appSettings.tabSleepDelay = value
+                    }
+                }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Widevine DRM")
+                    label2.text: Fiery.WidevineInstaller.isInstalled
+                                 ? i18n("Widevine CDM is installed. DRM playback is active after restart.")
+                                 : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
+
+                    Switch
+                    {
+                        id: _widevineSwitch
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.widevineEnabled
+                        onToggled:
+                        {
+                            appSettings.widevineEnabled = !appSettings.widevineEnabled
+                            if (appSettings.widevineEnabled && !Fiery.WidevineInstaller.isInstalled)
+                                _widevinePrompt.open()
+                        }
+                    }
+                }
             }
+
+            WidevinePrompt { id: _widevinePrompt }
         }
     }
 

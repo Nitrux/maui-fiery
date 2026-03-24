@@ -70,6 +70,12 @@ void DB::openDB(const QString &name)
     walQuery.exec();
     auto query = this->getQuery("PRAGMA synchronous=NORMAL");
     query.exec();
+
+    // Enable foreign-key enforcement (off by default in SQLite).
+    auto fkQuery = this->getQuery("PRAGMA foreign_keys=ON");
+    fkQuery.exec();
+
+    migrateSchema();
 }
 
 void DB::prepareCollectionDB() const
@@ -122,7 +128,7 @@ void DB::prepareCollectionDB() const
     file.close();
 }
 
-bool DB::checkExistance(const QString &tableName, const QString &searchId, const QString &search)
+bool DB::checkExistance(const QString &tableName, const QString &searchId, const QString &search) const
 {
     const QString queryStr = QString("SELECT %1 FROM %2 WHERE %3 = ?").arg(searchId, tableName, searchId);
     QSqlQuery query(this->m_db);
@@ -134,7 +140,7 @@ bool DB::checkExistance(const QString &tableName, const QString &searchId, const
     return false;
 }
 
-bool DB::checkExistance(const QString &queryStr)
+bool DB::checkExistance(const QString &queryStr) const
 {
     auto query = this->getQuery(queryStr);
 
@@ -245,6 +251,67 @@ bool DB::update(const QString &table, const QString &column, const QVariant &new
         return false;
     }
     return true;
+}
+
+bool DB::runQuery(const QString &queryTxt, const QVariantList &bindings)
+{
+    QSqlQuery query(this->m_db);
+    query.prepare(queryTxt);
+    for (int i = 0; i < bindings.size(); ++i)
+        query.addBindValue(bindings.at(i));
+    if (!query.exec()) {
+        qWarning() << "DB::runQuery failed:" << query.lastError().text() << "|" << queryTxt;
+        return false;
+    }
+    return true;
+}
+
+void DB::migrateSchema()
+{
+    // ── New tables (safe no-ops on a fresh DB created from script.sql) ────────
+    runQuery(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS HISTORY_URLS ("
+        "  url TEXT NOT NULL,"
+        "  title TEXT,"
+        "  visit_count INTEGER NOT NULL DEFAULT 1,"
+        "  last_visit TEXT NOT NULL,"
+        "  PRIMARY KEY(url)"
+        ")"));
+
+    runQuery(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS HISTORY_VISITS ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  url TEXT NOT NULL,"
+        "  visit_time TEXT NOT NULL"
+        ")"));
+
+    runQuery(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS RECENTLY_CLOSED ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  urls TEXT NOT NULL,"
+        "  closeddate TEXT NOT NULL"
+        ")"));
+
+    // ── One-time migration from the legacy HISTORY table ─────────────────────
+    // Run only when HISTORY_URLS is empty and the old HISTORY table still exists,
+    // so it fires exactly once and is a no-op on every subsequent open.
+    {
+        auto countNew = getQuery(QStringLiteral("SELECT COUNT(*) FROM HISTORY_URLS"));
+        if (countNew.exec() && countNew.next() && countNew.value(0).toInt() == 0) {
+            auto hasOld = getQuery(
+                QStringLiteral("SELECT COUNT(*) FROM sqlite_master "
+                               "WHERE type='table' AND name='HISTORY'"));
+            if (hasOld.exec() && hasOld.next() && hasOld.value(0).toInt() > 0) {
+                runQuery(QStringLiteral(
+                    "INSERT OR IGNORE INTO HISTORY_URLS(url, title, visit_count, last_visit) "
+                    "SELECT url, title, 1, COALESCE(adddate, datetime('now')) FROM HISTORY"));
+                runQuery(QStringLiteral(
+                    "INSERT OR IGNORE INTO HISTORY_VISITS(url, visit_time) "
+                    "SELECT url, COALESCE(adddate, datetime('now')) FROM HISTORY"));
+                qInfo() << "DB: migrated legacy HISTORY rows to HISTORY_URLS + HISTORY_VISITS";
+            }
+        }
+    }
 }
 
 bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)

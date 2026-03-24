@@ -10,6 +10,7 @@ import org.maui.fiery as Fiery
 
 import "views"
 import "views/widgets"
+import "views/browser"
 
 Maui.ApplicationWindow
 {
@@ -113,6 +114,12 @@ Maui.ApplicationWindow
         // DNS-over-HTTPS (applied at startup via Chromium flags — requires restart)
         property bool dohEnabled: false
         property string dohUrl: "https://cloudflare-dns.com/dns-query"
+
+        property bool widevineEnabled: false
+
+        // Tab sleep — discard background tabs after tabSleepDelay minutes to free memory.
+        property bool tabSleepEnabled: false
+        property int  tabSleepDelay: 30
     }
 
     Fiery.RequestInterceptor
@@ -157,6 +164,17 @@ Maui.ApplicationWindow
     SettingsDialog
     {
         id: _settingsDialog
+    }
+
+    WidevinePrompt
+    {
+        id: _startupWidevinePrompt
+    }
+
+    Component.onCompleted:
+    {
+        if (appSettings.widevineEnabled && !Fiery.WidevineInstaller.isInstalled)
+            Qt.callLater(function() { _startupWidevinePrompt.open() })
     }
 
     AppView
@@ -248,11 +266,7 @@ Maui.ApplicationWindow
     {
         // Destroy on close to release the Window's QML resources.
         // Because it was created with a parent, it won't be garbage-collected.
-        onClosing:
-        {
-            console.log("Closing new window")
-            destroy()
-        }
+        onClosing: destroy()
 
         visible: true
 

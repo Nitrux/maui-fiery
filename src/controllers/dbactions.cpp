@@ -9,12 +9,25 @@ DBActions *DBActions::m_instance = nullptr;
 
 void DBActions::addToHistory(const UrlData &data)
 {
-    auto mData = data.toMap();
-    mData.insert("adddate", QDateTime::currentDateTime().toString(Qt::ISODate));
-    // INSERT OR REPLACE updates adddate on revisit so the signal always fires
-    // and the model stays current regardless of whether the URL is new or repeat.
-    if (this->insert("HISTORY", mData, /*orReplace=*/true))
-    {
+    const QString now    = QDateTime::currentDateTime().toString(Qt::ISODate);
+    const QString urlStr = data.url.toString();
+
+    // Upsert into HISTORY_URLS: increment visit_count and refresh title/last_visit.
+    // ON CONFLICT … DO UPDATE requires SQLite 3.24+ (2018); safe on any current distro.
+    const bool ok = this->runQuery(
+        QStringLiteral(
+            "INSERT INTO HISTORY_URLS(url, title, visit_count, last_visit) VALUES(?,?,1,?) "
+            "ON CONFLICT(url) DO UPDATE SET "
+            "  title=excluded.title,"
+            "  visit_count=visit_count+1,"
+            "  last_visit=excluded.last_visit"),
+        {urlStr, data.title, now});
+
+    if (ok) {
+        // Log the individual visit for time-range and frequency queries.
+        this->runQuery(
+            QStringLiteral("INSERT INTO HISTORY_VISITS(url, visit_time) VALUES(?,?)"),
+            {urlStr, now});
         Q_EMIT this->historyUrlInserted(data);
     }
 }
@@ -33,9 +46,8 @@ void DBActions::removeBookmark(const QUrl &url)
 {
     if (this->remove("BOOKMARKS", {{FMH::MODEL_KEY::URL, url.toString()}}))
     {
-        // Remove the cached icon if this URL no longer appears in history either,
-        // to avoid orphaned rows in the ICONS table.
-        if (!this->checkExistance("HISTORY", "url", url.toString()))
+        // Remove the cached icon only if the URL is also absent from history.
+        if (!this->checkExistance("HISTORY_URLS", "url", url.toString()))
             this->remove("ICONS", {{FMH::MODEL_KEY::URL, url.toString()}});
 
         Q_EMIT this->bookmarkRemoved(url);
@@ -50,7 +62,12 @@ void DBActions::urlIcon(const QUrl &url, const QString &icon)
 
 FMH::MODEL_LIST DBActions::getHistory() const
 {
-return FMH::toModelList(this->get("select * from HISTORY h left join ICONS i on i.url = h.url"));
+    // last_visit aliased to adddate so the existing QML model roles keep working.
+    return FMH::toModelList(this->get(
+        QStringLiteral(
+            "SELECT u.url, u.title, u.last_visit AS adddate, u.visit_count, i.icon "
+            "FROM HISTORY_URLS u LEFT JOIN ICONS i ON i.url = u.url "
+            "ORDER BY u.last_visit DESC")));
 }
 
 FMH::MODEL_LIST DBActions::getBookmarks() const
@@ -65,13 +82,54 @@ bool DBActions::isBookmark(const QUrl &url)
 
 void DBActions::clearHistory()
 {
-    auto query = this->getQuery("DELETE FROM HISTORY");
-    query.exec();
-    // Only remove icons for URLs that are no longer referenced by bookmarks,
-    // so bookmarked-page favicons are preserved across a history clear.
-    auto query2 = this->getQuery("DELETE FROM ICONS WHERE url NOT IN (SELECT url FROM BOOKMARKS)");
-    query2.exec();
+    this->runQuery(QStringLiteral("DELETE FROM HISTORY_VISITS"));
+    this->runQuery(QStringLiteral("DELETE FROM HISTORY_URLS"));
+    // Preserve favicons for bookmarked pages; remove the rest.
+    this->runQuery(QStringLiteral(
+        "DELETE FROM ICONS WHERE url NOT IN (SELECT url FROM BOOKMARKS)"));
     Q_EMIT this->historyCleared();
+}
+
+void DBActions::pushClosedTab(const QStringList &urls)
+{
+    if (urls.isEmpty())
+        return;
+    const QString now = QDateTime::currentDateTime().toString(Qt::ISODate);
+    this->runQuery(
+        QStringLiteral("INSERT INTO RECENTLY_CLOSED(urls, closeddate) VALUES(?,?)"),
+        {urls.join(QLatin1Char('\n')), now});
+    // Cap the stack at 50 entries so the table never grows unbounded.
+    this->runQuery(QStringLiteral(
+        "DELETE FROM RECENTLY_CLOSED WHERE id NOT IN "
+        "(SELECT id FROM RECENTLY_CLOSED ORDER BY id DESC LIMIT 50)"));
+    Q_EMIT this->closedTabsChanged();
+}
+
+QStringList DBActions::popClosedTab()
+{
+    auto q = this->getQuery(
+        QStringLiteral("SELECT id, urls FROM RECENTLY_CLOSED ORDER BY id DESC LIMIT 1"));
+    if (!q.exec() || !q.next())
+        return {};
+    const int id          = q.value(0).toInt();
+    const QStringList urls = q.value(1).toString().split(
+        QLatin1Char('\n'), Qt::SkipEmptyParts);
+    this->runQuery(
+        QStringLiteral("DELETE FROM RECENTLY_CLOSED WHERE id=?"), {id});
+    Q_EMIT this->closedTabsChanged();
+    return urls;
+}
+
+bool DBActions::hasClosedTabs() const
+{
+    return this->checkExistance(
+        QStringLiteral("SELECT 1 FROM RECENTLY_CLOSED LIMIT 1"));
+}
+
+void DBActions::clearClosedTabs()
+{
+    this->runQuery(QStringLiteral("DELETE FROM RECENTLY_CLOSED"));
+    Q_EMIT this->closedTabsChanged();
 }
 
 DBActions::DBActions(QObject *parent) : DB(parent)

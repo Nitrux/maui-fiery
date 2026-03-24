@@ -16,7 +16,8 @@ set(fiery_SRCS
     controllers/surf.cpp
     controllers/fierywebprofile.cpp
     controllers/requestinterceptor.cpp
-    controllers/passwordmanager.cpp)
+    controllers/passwordmanager.cpp
+    controllers/widevineinstaller.cpp)
 
 # Download the Steven Black aggregated hosts blocklist at configure time.
 # The file is placed in the build tree to avoid polluting the source tree.
@@ -66,6 +67,7 @@ qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     views/history/HistoryView.qml
     views/browser/BrowserLayout.qml
     views/browser/Browser.qml
+    views/browser/WidevinePrompt.qml
     views/widgets/NavigationBar.qml
     views/browser/ActionsMenu.qml
     views/home/HomeView.qml
@@ -89,6 +91,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Widgets
     Qt6::Sql
     Qt6::Qml
+    Qt6::Network
     KF6::I18n
     KF6::CoreAddons
     KF6::Notifications

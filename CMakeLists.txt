@@ -4,6 +4,19 @@ cmake_minimum_required(VERSION 3.16)
 # (irrelevant for shared/dynamic builds, which is the only build type supported)
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS TRUE CACHE BOOL "" FORCE)
 
+# ── Widevine / DRM build requirement ─────────────────────────────────────────
+# Widevine CDM decrypts the stream, but Qt WebEngine must also be able to
+# *decode* the resulting video.  Streaming services (Netflix, Spotify, etc.)
+# always deliver DRM content in H.264/AAC, which are proprietary codecs.
+# If the Qt WebEngine library in use was NOT built with proprietary-codec
+# support (-webengine-proprietary-codecs), Widevine will load but video will
+# not play.  Most Debian/Ubuntu-derived distro packages ship with proprietary
+# codecs enabled; verify with:
+#   strings $(qmake6 -query QT_INSTALL_LIBS)/libQt6WebEngineCore.so.6 | grep -i h264
+# If building Qt from source, configure the qtwebengine module with:
+#   -webengine-proprietary-codecs
+# ─────────────────────────────────────────────────────────────────────────────
+
 set(FIERY_VERSION 4.0.2)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -41,12 +54,11 @@ include(ECMSetupVersion)
 include(ECMSourceVersionControl)
 include(FeatureSummary)
 
-find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Qml Sql)
+find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Qml Sql Network)
 find_package(KF6 ${KF5_VERSION} REQUIRED COMPONENTS I18n CoreAddons Notifications)
 
 find_package(Qt6WebEngineCore REQUIRED)
 find_package(Qt6WebEngineQuick REQUIRED)
-
 
 find_package(MauiKit4 REQUIRED COMPONENTS FileBrowsing)
 

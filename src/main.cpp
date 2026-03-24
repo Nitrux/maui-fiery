@@ -7,6 +7,9 @@
 #include <QThread>
 #include <QSurfaceFormat>
 #include <QSettings>
+#include <QFile>
+#include <QFileInfo>
+#include <QStandardPaths>
 #include <sys/sysinfo.h>
 
 #include <MauiKit4/Core/mauiapp.h>
@@ -21,6 +24,8 @@
 #include "controllers/downloadsmanager.h"
 #include "controllers/requestinterceptor.h"
 #include "controllers/passwordmanager.h"
+#include "controllers/dbactions.h"
+#include "controllers/widevineinstaller.h"
 
 #include "../fiery_version.h"
 
@@ -107,11 +112,6 @@ int main(int argc, char *argv[])
             const QString dohUrl = s.value(
                 QStringLiteral("dohUrl"),
                 QStringLiteral("https://cloudflare-dns.com/dns-query")).toString();
-            // Guard against Chromium flag injection: QTWEBENGINE_CHROMIUM_FLAGS is
-            // space-separated, so a URL containing a space would be treated as
-            // additional flags (e.g. "https://x.com --disable-web-security").
-            // Valid HTTPS URLs never contain literal spaces; reject anything that does.
-            // Also enforce HTTPS — DoH over plain HTTP is meaningless for privacy.
             const QUrl parsedDoh(dohUrl);
             if (parsedDoh.isValid()
                     && parsedDoh.scheme() == QStringLiteral("https")
@@ -124,6 +124,48 @@ int main(int argc, char *argv[])
         }
         s.endGroup();
     }
+    {
+        QSettings s(QStringLiteral("Maui"), QStringLiteral("fiery"));
+        s.beginGroup(QStringLiteral("Browser"));
+        const bool widevineEnabled = s.value(QStringLiteral("widevineEnabled"), false).toBool();
+        s.endGroup();
+
+        if (widevineEnabled) {
+            const QString userCdmDir =
+                QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                + QStringLiteral("/fiery/WidevineCdm");
+
+            const QStringList candidates = {
+                userCdmDir,
+                QStringLiteral("/opt/google/chrome/WidevineCdm"),
+                QStringLiteral("/opt/google/chrome-beta/WidevineCdm"),
+                QStringLiteral("/opt/google/chrome-unstable/WidevineCdm"),
+                QStringLiteral("/usr/lib/chromium-browser/WidevineCdm"),
+                QStringLiteral("/usr/lib/chromium/WidevineCdm"),
+                QStringLiteral("/usr/lib64/chromium/WidevineCdm"),
+            };
+
+            QString cdmSo;
+            for (const QString &dir : candidates) {
+                const QString so = dir + QStringLiteral("/_platform_specific/linux_x64/libwidevinecdm.so");
+                if (QFile::exists(dir + QStringLiteral("/manifest.json")) && QFile::exists(so)) {
+                    cdmSo = so;
+                    break;
+                }
+            }
+
+            if (cdmSo.isEmpty()) {
+                qWarning() << "Widevine: enabled but WidevineCdm not found."
+                              " Open Settings → Features and click Install to download it.";
+            } else if (cdmSo.contains(QLatin1Char(' '))) {
+                qWarning() << "Widevine CDM path contains spaces — cannot load:" << cdmSo;
+            } else {
+                chromiumFlags += " --widevine-path=" + cdmSo.toLocal8Bit();
+                qInfo() << "Widevine CDM:" << cdmSo;
+            }
+        }
+    }
+
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", chromiumFlags);
 
     QtWebEngineQuick::initialize();
@@ -185,6 +227,9 @@ int main(int argc, char *argv[])
 
     qmlRegisterSingletonInstance<DownloadsManager>(FIERY_URI, 1, 0, "DownloadsManager", &DownloadsManager::instance());
     qmlRegisterSingletonInstance<PasswordManager>(FIERY_URI, 1, 0, "PasswordManager", &PasswordManager::instance());
+
+    qmlRegisterSingletonInstance<DBActions>(FIERY_URI, 1, 0, "DBActions", DBActions::getInstance());
+    qmlRegisterSingletonInstance<WidevineInstaller>(FIERY_URI, 1, 0, "WidevineInstaller", &WidevineInstaller::instance());
 
     qmlRegisterType<FieryWebProfile>(FIERY_URI, 1, 0, "FieryWebProfile");
     qmlRegisterType<RequestInterceptor>(FIERY_URI, 1, 0, "RequestInterceptor");

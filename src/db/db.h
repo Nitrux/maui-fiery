@@ -47,14 +47,14 @@ public:
      * @param search
      * @return
      */
-    bool checkExistance(const QString &tableName, const QString &searchId, const QString &search);
+    bool checkExistance(const QString &tableName, const QString &searchId, const QString &search) const;
 
     /**
      * @brief checkExistance
      * @param queryStr
      * @return
      */
-    bool checkExistance(const QString &queryStr);
+    bool checkExistance(const QString &queryStr) const;
 
 protected:
     DB(QObject *parent = nullptr);
@@ -77,6 +77,18 @@ protected:
      * @brief prepareCollectionDB
      */
     void prepareCollectionDB() const;
+
+    /**
+     * @brief runQuery — execute a parameterised SQL statement that does not
+     *        return rows (INSERT, UPDATE, DELETE, CREATE, …).
+     */
+    bool runQuery(const QString &queryTxt, const QVariantList &bindings = {});
+
+    /**
+     * @brief migrateSchema — create new tables and run one-time data migrations.
+     *        Safe to call on every open: uses CREATE TABLE IF NOT EXISTS guards.
+     */
+    void migrateSchema();
 
     /**
      * @brief insert

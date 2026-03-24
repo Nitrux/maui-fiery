@@ -53,6 +53,13 @@ public:
 
     bool isBookmark(const QUrl &url);
 
+    // Closed-tabs stack — persisted in RECENTLY_CLOSED so Ctrl+Shift+T survives
+    // crashes and restarts. urls is a list of 1 or 2 URLs (split-view tabs).
+    Q_INVOKABLE void pushClosedTab(const QStringList &urls);
+    Q_INVOKABLE QStringList popClosedTab();
+    Q_INVOKABLE bool hasClosedTabs() const;
+    Q_INVOKABLE void clearClosedTabs();
+
 private:
     static DBActions *m_instance;
 
@@ -70,5 +77,6 @@ Q_SIGNALS:
     void bookmarkRemoved(QUrl url);
     void iconInserted(QUrl url, QString icon);
     void historyCleared();
+    void closedTabsChanged();
 
 };

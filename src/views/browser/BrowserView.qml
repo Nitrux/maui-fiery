@@ -24,7 +24,7 @@ Maui.Page
     property int count: activeView.count
     readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
-    property var _closedTabsStack: []   // stack of url arrays, most-recent last
+    // Closed-tabs stack is now persisted in RECENTLY_CLOSED via Fiery.DBActions.
     onSearchFieldVisibleChanged:
     {
         if(!searchFieldVisible && control.currentBrowser)
@@ -94,11 +94,11 @@ Maui.Page
         enabled: activeView.count > 0
         onActivated:
         {
-            if (currentTab)
-            {
-                var entry = currentTab.urls.map(function(u) { return u.toString() })
-                control._closedTabsStack = control._closedTabsStack.concat([entry])
-            }
+            // Don't persist private-mode URLs to the closed-tabs DB.
+            if (currentTab && !privateMode)
+                Fiery.DBActions.pushClosedTab(
+                    currentTab.urls.map(function(u) { return u.toString() })
+                                   .filter(function(s) { return s.length > 0 && s !== "about:blank" }))
             activeView.closeTab(activeView.currentIndex)
         }
     }
@@ -130,11 +130,9 @@ Maui.Page
         sequence: "Ctrl+Shift+T"
         onActivated:
         {
-            if (control._closedTabsStack.length > 0)
+            var urls = Fiery.DBActions.popClosedTab()
+            if (urls.length > 0)
             {
-                var stack = control._closedTabsStack.slice()
-                var urls = stack.pop()
-                control._closedTabsStack = stack
                 openTab(urls[0])
                 if (urls.length > 1)
                     Qt.callLater(function() { openSplit(urls[1]) })
@@ -479,10 +477,9 @@ Maui.Page
         {
             var tab = _browserListView.tabAt(index)
             if (tab)
-            {
-                var entry = tab.urls.map(function(u) { return u.toString() })
-                control._closedTabsStack = control._closedTabsStack.concat([entry])
-            }
+                Fiery.DBActions.pushClosedTab(
+                    tab.urls.map(function(u) { return u.toString() })
+                              .filter(function(s) { return s.length > 0 && s !== "about:blank" }))
             _browserListView.closeTab(index)
         }
 

@@ -27,26 +27,49 @@ Maui.TabViewButton
         return item ? (item.pinned || false) : false
     }
 
-    readonly property bool _audible: webView !== null && (webView.recentlyAudible || webView.audioMuted)
+    readonly property bool _audible:  webView !== null && (webView.recentlyAudible || webView.audioMuted)
+    readonly property bool _sleeping: webView !== null && webView.lifecycleState === WebEngineView.LifecycleState.Discarded
 
     // Hide close button on pinned tabs, matching browser convention.
     closeButtonVisible: !_pinned
 
-    // Speaker / mute indicator — visible whenever the tab is producing audio
-    // or has been explicitly muted. Click toggles mute.
-    rightContent: ToolButton
+    // Per-tab status indicators: sleep (moon) and audio (speaker).
+    rightContent: Row
     {
-        visible: control._audible
-        height: 16
-        width:  16
-        padding: 0
-        icon.width:  12
-        icon.height: 12
-        icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
-        onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
-        ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
-        ToolTip.visible: hovered
-        ToolTip.delay: 1000
+        spacing: 2
+
+        // Sleep indicator — visible when the tab has been discarded to save memory.
+        ToolButton
+        {
+            visible: control._sleeping
+            height: 16
+            width:  16
+            padding: 0
+            icon.width:  12
+            icon.height: 12
+            icon.name: "zzz"
+            enabled: false   // informational only; clicking the tab wakes it
+            ToolTip.text: i18n("Tab is sleeping")
+            ToolTip.visible: hovered
+            ToolTip.delay: 1000
+        }
+
+        // Speaker / mute indicator — visible whenever the tab is producing audio
+        // or has been explicitly muted. Click toggles mute.
+        ToolButton
+        {
+            visible: control._audible
+            height: 16
+            width:  16
+            padding: 0
+            icon.width:  12
+            icon.height: 12
+            icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
+            onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+            ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
+            ToolTip.visible: hovered
+            ToolTip.delay: 1000
+        }
     }
 
     // Override text to empty only when pinned; let the base class binding
