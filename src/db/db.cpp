@@ -64,14 +64,11 @@ void DB::openDB(const QString &name)
         if (!this->m_db.open())
             qCritical() << "Failed to open database:" << this->m_db.lastError().text() << m_db.connectionName();
     }
-    // WAL mode: writers never block readers and readers never block writers,
-    // giving better throughput for the reads-heavy history/bookmarks access.
     auto walQuery = this->getQuery("PRAGMA journal_mode=WAL");
     walQuery.exec();
     auto query = this->getQuery("PRAGMA synchronous=NORMAL");
     query.exec();
 
-    // Enable foreign-key enforcement (off by default in SQLite).
     auto fkQuery = this->getQuery("PRAGMA foreign_keys=ON");
     fkQuery.exec();
 
@@ -268,7 +265,6 @@ bool DB::runQuery(const QString &queryTxt, const QVariantList &bindings)
 
 void DB::migrateSchema()
 {
-    // ── New tables (safe no-ops on a fresh DB created from script.sql) ────────
     runQuery(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS HISTORY_URLS ("
         "  url TEXT NOT NULL,"
@@ -292,9 +288,7 @@ void DB::migrateSchema()
         "  closeddate TEXT NOT NULL"
         ")"));
 
-    // ── One-time migration from the legacy HISTORY table ─────────────────────
-    // Run only when HISTORY_URLS is empty and the old HISTORY table still exists,
-    // so it fires exactly once and is a no-op on every subsequent open.
+    // One-time migration from the legacy HISTORY table.
     {
         auto countNew = getQuery(QStringLiteral("SELECT COUNT(*) FROM HISTORY_URLS"));
         if (countNew.exec() && countNew.next() && countNew.value(0).toInt() == 0) {
@@ -312,6 +306,10 @@ void DB::migrateSchema()
             }
         }
     }
+    // Always drop the legacy table — prevents it from re-seeding HISTORY_URLS
+    // on any startup where the table happens to exist and HISTORY_URLS is empty
+    // (e.g. after the user clears browsing history).
+    runQuery(QStringLiteral("DROP TABLE IF EXISTS HISTORY"));
 }
 
 bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)

@@ -700,16 +700,32 @@ Maui.Page
                 var opened = 0
                 slice.forEach(function(entry) {
                     if (!entry) return
-                    // Support both old format (plain string) and new format ({url, pinned}).
-                    var url    = typeof entry === "string" ? entry : (entry.url || "")
-                    var pinned = typeof entry === "object" && entry.pinned === true
-                    if (typeof url !== "string" || url.length === 0 || url.length > 2048) return
-                    openTab(url)
+                    // Format v2: {urls: [...], pinned}  — one entry per tab, split included.
+                    // Format v1: {url, pinned}          — one entry per pane (legacy).
+                    // Format v0: plain string           — bare URL (oldest).
+                    var urls, pinned
+                    if (typeof entry === "string") {
+                        urls   = [entry]
+                        pinned = false
+                    } else if (Array.isArray(entry.urls)) {
+                        urls   = entry.urls
+                        pinned = entry.pinned === true
+                    } else {
+                        urls   = [entry.url || ""]
+                        pinned = entry.pinned === true
+                    }
+                    var primary = urls[0]
+                    if (typeof primary !== "string" || primary.length === 0 || primary.length > 2048) return
+                    openTab(primary)
                     opened++
                     if (pinned) {
                         var tab = _browserListView.contentModel.get(_browserListView.count - 1)
                         if (tab) tab.pinned = true
                     }
+                    // Restore split-view pane if one was saved.
+                    var secondary = urls[1]
+                    if (typeof secondary === "string" && secondary.length > 0 && secondary.length <= 2048)
+                        openSplit(secondary)
                 })
                 if (opened > 0)
                     return
@@ -1082,6 +1098,8 @@ Maui.Page
             const tab = _browserListView.contentModel.get(i)
             if (!tab) continue
 
+            // Collect all pane URLs for this tab (1 for normal, 2 for split view).
+            var urls = []
             for (var j = 0; j < tab.count; j++)
             {
                 const browser = tab.model.get(j)
@@ -1089,9 +1107,12 @@ Maui.Page
                 {
                     const u = browser.url.toString()
                     if (u.length > 0 && u !== "about:blank")
-                        tabs.push({url: u, pinned: tab.pinned || false})
+                        urls.push(u)
                 }
             }
+            // Store as one entry per tab so split state is preserved on restore.
+            if (urls.length > 0)
+                tabs.push({urls: urls, pinned: tab.pinned || false})
         }
         return tabs
     }

@@ -35,54 +35,23 @@
 
 int main(int argc, char *argv[])
 {
-    // Enable compositor-level alpha channel for window transparency.
-    // Must be set before QApplication is created.
+    // Alpha channel for window transparency — must precede QApplication.
     QSurfaceFormat format;
     format.setAlphaBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
 
-    // Allow WebEngine and Qt Quick to share the same OpenGL context.
-    // Without this, every composited WebEngine frame requires an extra
-    // texture upload across context boundaries.
+    // Share GL context between WebEngine and Qt Quick to avoid cross-context texture uploads.
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
-    // Append performance flags to whatever the user may have set in the
-    // environment. These must be set before QtWebEngineQuick::initialize().
-    //
-    // --ignore-gpu-blocklist          Force GPU rasterization even when
-    //                                 Chromium's internal blocklist would
-    //                                 fall back to software (common on Linux).
-    // --enable-gpu-rasterization      Rasterize tiles on the GPU.
-    // --enable-oop-rasterization      Rasterize in the GPU process, freeing
-    // --canvas-oop-rasterization      the renderer thread for JS work.
-    // --enable-accelerated-2d-canvas  GPU-accelerated HTML5 canvas (critical for
-    //                                 canvas-based benchmarks and games).
-    // --num-raster-threads=N          Parallelise tile rasterization.
-    // --enable-checker-imaging        Decode images asynchronously on a worker
-    //                                 thread; the main/compositor thread gets a
-    //                                 checkerboard placeholder until decoding
-    //                                 completes, keeping scrolling smooth even on
-    //                                 image-heavy pages.
-    // VaapiVideoDecoder               VA-API hardware video decoding.
-    // VaapiVideoEncoder               VA-API hardware video encoding (WebRTC etc).
-    // AcceleratedVideoDecodeLinuxGL   OpenGL-based hardware decode fallback for
-    //                                 GPUs that expose GL but not DMA-BUF.
+    // Performance/GPU flags appended to any user-set QTWEBENGINE_CHROMIUM_FLAGS.
+    // Must be set before QtWebEngineQuick::initialize().
     QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     if (!chromiumFlags.isEmpty())
         chromiumFlags += ' ';
-    // Use at least 2 raster threads, scaled to the number of logical cores.
-    // Avoids unnecessary context switching on low-end devices while allowing
-    // high-end hardware to fully utilise available cores.
+    // Raster threads: at least 2, scaled to logical core count.
     const int rasterThreads = qMax(2, QThread::idealThreadCount());
-    // Compute a GPU tile-memory budget from system RAM.
-    // Chromium's default on Linux is often as low as 64 MB (GPU VRAM detection
-    // fails under Wayland), which causes the tile manager to exhaust its budget
-    // on complex pages, stall the GPU process, and — because Qt Quick shares the
-    // same GL context via AA_ShareOpenGLContexts — freeze the entire UI.
-    // Budget: 1/8 of total RAM, clamped to [256, 2048] MB.
-    // The upper bound was previously 1024 MB, which under-allocated on ≥16 GB
-    // systems and caused Chromium's tile manager to evict GPU tiles on complex
-    // pages, stalling the GPU process and hurting rendering benchmarks.
+    // GPU tile budget: 1/8 of total RAM, clamped to [256, 2048] MB.
+    // Chromium's Linux default (~64 MB) is often too low and causes GPU stalls.
     {
         struct sysinfo si{};
         sysinfo(&si);
@@ -103,8 +72,7 @@ int main(int argc, char *argv[])
                                         "AcceleratedVideoDecodeLinuxGL "
                      "--num-raster-threads=" + QByteArray::number(rasterThreads);
 
-    // DNS-over-HTTPS: read user preference from persistent settings before
-    // initialising the engine — Chromium only picks up these flags at startup.
+    // DNS-over-HTTPS: must be read from settings before engine init.
     {
         QSettings s(QStringLiteral("Maui"), QStringLiteral("fiery"));
         s.beginGroup(QStringLiteral("Browser"));

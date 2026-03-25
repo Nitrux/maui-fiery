@@ -12,8 +12,6 @@ void DBActions::addToHistory(const UrlData &data)
     const QString now    = QDateTime::currentDateTime().toString(Qt::ISODate);
     const QString urlStr = data.url.toString();
 
-    // Upsert into HISTORY_URLS: increment visit_count and refresh title/last_visit.
-    // ON CONFLICT … DO UPDATE requires SQLite 3.24+ (2018); safe on any current distro.
     const bool ok = this->runQuery(
         QStringLiteral(
             "INSERT INTO HISTORY_URLS(url, title, visit_count, last_visit) VALUES(?,?,1,?) "
@@ -24,7 +22,6 @@ void DBActions::addToHistory(const UrlData &data)
         {urlStr, data.title, now});
 
     if (ok) {
-        // Log the individual visit for time-range and frequency queries.
         this->runQuery(
             QStringLiteral("INSERT INTO HISTORY_VISITS(url, visit_time) VALUES(?,?)"),
             {urlStr, now});
@@ -46,7 +43,6 @@ void DBActions::removeBookmark(const QUrl &url)
 {
     if (this->remove("BOOKMARKS", {{FMH::MODEL_KEY::URL, url.toString()}}))
     {
-        // Remove the cached icon only if the URL is also absent from history.
         if (!this->checkExistance("HISTORY_URLS", "url", url.toString()))
             this->remove("ICONS", {{FMH::MODEL_KEY::URL, url.toString()}});
 
@@ -84,7 +80,6 @@ void DBActions::clearHistory()
 {
     this->runQuery(QStringLiteral("DELETE FROM HISTORY_VISITS"));
     this->runQuery(QStringLiteral("DELETE FROM HISTORY_URLS"));
-    // Preserve favicons for bookmarked pages; remove the rest.
     this->runQuery(QStringLiteral(
         "DELETE FROM ICONS WHERE url NOT IN (SELECT url FROM BOOKMARKS)"));
     Q_EMIT this->historyCleared();
@@ -98,7 +93,6 @@ void DBActions::pushClosedTab(const QStringList &urls)
     this->runQuery(
         QStringLiteral("INSERT INTO RECENTLY_CLOSED(urls, closeddate) VALUES(?,?)"),
         {urls.join(QLatin1Char('\n')), now});
-    // Cap the stack at 50 entries so the table never grows unbounded.
     this->runQuery(QStringLiteral(
         "DELETE FROM RECENTLY_CLOSED WHERE id NOT IN "
         "(SELECT id FROM RECENTLY_CLOSED ORDER BY id DESC LIMIT 50)"));

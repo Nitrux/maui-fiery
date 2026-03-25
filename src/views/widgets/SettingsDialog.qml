@@ -417,9 +417,11 @@ Maui.SettingsDialog
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Widevine DRM")
-                    label2.text: Fiery.WidevineInstaller.isInstalled
-                                 ? i18n("Widevine CDM is installed. DRM playback is active after restart.")
-                                 : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
+                    label2.text: (Fiery.WidevineInstaller.isInstalled && appSettings.widevineEnabled)
+                                 ? i18n("Widevine CDM is installed and active. DRM-protected content is available.")
+                                 : Fiery.WidevineInstaller.isInstalled
+                                   ? i18n("Widevine CDM is installed. Enable to allow DRM-protected content.")
+                                   : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
 
                     Switch
                     {
@@ -630,7 +632,7 @@ Maui.SettingsDialog
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Ad Blocker")
-                    label2.text: i18n("Block requests to known ad and tracker domains. Changes take effect after reload. Place a custom hosts-format file at ~/.config/fiery/blocklist.txt to override the built-in list.")
+                    label2.text: i18n("Block requests to known ad and tracker domains, and skip video ads. Changes take effect after reload. Place a custom hosts-format file at ~/.config/fiery/blocklist.txt to override the built-in list.")
 
                     Switch
                     {
