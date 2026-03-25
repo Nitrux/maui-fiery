@@ -264,6 +264,11 @@ Maui.SplitViewItem
             "_t=setTimeout(function(){_t=null;scan();},500);" +
             "return;}}}" +
             "}).observe(document.documentElement,{childList:true,subtree:true});" +
+            "document.addEventListener('submit',function(e){" +
+            "var f=e.target;if(!f)return;" +
+            "if(!f.querySelector('input[type=\"password\"]'))return;" +
+            "if(typeof window[_k]==='string')console.log('__FIERY_CRED_READY__');" +
+            "},{capture:true});" +
             "})()"
 
         // Reads and clears the credential stored by the watcher.
@@ -276,10 +281,14 @@ Maui.SplitViewItem
             "return c;" +
             "})()"
 
-        // Auto-fills credentials using the native value setter (React/Vue compatible).
-        // A MutationObserver handles multi-step forms and disconnects after fill.
         function buildFillerScript(creds) {
-            var json = JSON.stringify(creds)
+            var safe = creds.map(function(c) {
+                return {
+                    username: typeof c.username === 'string' ? c.username : '',
+                    password: typeof c.password === 'string' ? c.password : ''
+                }
+            })
+            var json = JSON.stringify(safe)
             return "(function(){" +
                 "var creds=" + json + ";" +
                 "if(!creds||!creds.length)return;" +
@@ -562,6 +571,16 @@ Maui.SplitViewItem
 
         onJavaScriptConsoleMessage: function(level, message, lineNumber, sourceId)
         {
+            if (message === "__FIERY_CRED_READY__" && !_webView.profile.offTheRecord) {
+                _webView.runJavaScript(_webView._credentialHarvestScript, function(result) {
+                    if (!result) return
+                    try {
+                        var cred = JSON.parse(result)
+                        if (cred && cred.p)
+                            Fiery.PasswordManager.requestSave(cred.h, cred.u || "", cred.p)
+                    } catch(e) {}
+                })
+            }
             if (message === "__FIERY_DRM_REQUIRED__"
                     && !_webView.profile.offTheRecord
                     && !Fiery.WidevineInstaller.isInstalled

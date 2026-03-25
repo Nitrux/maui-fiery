@@ -26,6 +26,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QSqlRecord>
+#include <QRegularExpression>
 #include <QUuid>
 
 #include <MauiKit4/FileBrowsing/fmstatic.h>
@@ -125,8 +126,18 @@ void DB::prepareCollectionDB() const
     file.close();
 }
 
+static bool isValidIdentifier(const QString &name)
+{
+    static const QRegularExpression re(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
+    return re.match(name).hasMatch();
+}
+
 bool DB::checkExistance(const QString &tableName, const QString &searchId, const QString &search) const
 {
+    if (!isValidIdentifier(tableName) || !isValidIdentifier(searchId)) {
+        qWarning() << "DB::checkExistance: invalid identifier(s):" << tableName << searchId;
+        return false;
+    }
     const QString queryStr = QString("SELECT %1 FROM %2 WHERE %3 = ?").arg(searchId, tableName, searchId);
     QSqlQuery query(this->m_db);
     query.prepare(queryStr);
@@ -167,10 +178,21 @@ bool DB::insert(const QString &tableName, const QVariantMap &insertData, bool or
         return false;
     }
 
+    if (!isValidIdentifier(tableName)) {
+        qWarning() << "DB::insert: invalid table name:" << tableName;
+        return false;
+    }
+
     QStringList strValues;
     QStringList fields = insertData.keys();
     QVariantList values = insertData.values();
     int totalFields = fields.size();
+    for (const QString &field : std::as_const(fields)) {
+        if (!isValidIdentifier(field)) {
+            qWarning() << "DB::insert: invalid column name:" << field;
+            return false;
+        }
+    }
     for (int i = 0; i < totalFields; ++i)
         strValues.append("?");
 
@@ -200,8 +222,11 @@ bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QV
         return false;
     }
 
-    // Column and table names cannot be bound as parameters, but values can.
-    // Build the SET and WHERE clauses with ? placeholders for all values.
+    if (!isValidIdentifier(tableName)) {
+        qWarning() << "DB::update: invalid table name:" << tableName;
+        return false;
+    }
+
     QStringList set;
     const auto updateKeys = updateData.keys();
     for (const auto &key : updateKeys)
@@ -209,8 +234,13 @@ bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QV
 
     QStringList condition;
     const auto whereKeys = where.keys();
-    for (const auto &key : whereKeys)
+    for (const auto &key : whereKeys) {
+        if (!isValidIdentifier(key)) {
+            qWarning() << "DB::update: invalid WHERE column:" << key;
+            return false;
+        }
         condition.append(key + " = ?");
+    }
 
     const QString sqlQueryString = "UPDATE " + tableName
                                    + " SET " + set.join(QStringLiteral(", "))
@@ -233,10 +263,13 @@ bool DB::update(const QString &tableName, const FMH::MODEL &updateData, const QV
 
 bool DB::update(const QString &table, const QString &column, const QVariant &newValue, const QVariant &op, const QString &id)
 {
-    // Bind the two user-supplied values; table/column/op are column/table
-    // identifiers that SQL does not accept as parameters.
+    const QString opStr = op.toString();
+    if (!isValidIdentifier(table) || !isValidIdentifier(column) || !isValidIdentifier(opStr)) {
+        qWarning() << "DB::update: invalid identifier(s):" << table << column << opStr;
+        return false;
+    }
     const QString sqlQueryString = QString("UPDATE %1 SET %2 = ? WHERE %3 = ?")
-                                       .arg(table, column, op.toString());
+                                       .arg(table, column, opStr);
 
     QSqlQuery query(this->m_db);
     query.prepare(sqlQueryString);
@@ -288,7 +321,6 @@ void DB::migrateSchema()
         "  closeddate TEXT NOT NULL"
         ")"));
 
-    // One-time migration from the legacy HISTORY table.
     {
         auto countNew = getQuery(QStringLiteral("SELECT COUNT(*) FROM HISTORY_URLS"));
         if (countNew.exec() && countNew.next() && countNew.value(0).toInt() == 0) {
@@ -320,6 +352,11 @@ bool DB::remove(const QString &tableName, const FMH::MODEL &removeData)
 
     } else if (removeData.isEmpty()) {
         qWarning() << "DB::remove: remove data is empty";
+        return false;
+    }
+
+    if (!isValidIdentifier(tableName)) {
+        qWarning() << "DB::remove: invalid table name:" << tableName;
         return false;
     }
 
