@@ -45,10 +45,16 @@ Maui.TabViewButton
             height: 16
             width:  16
             padding: 0
-            icon.width:  12
-            icon.height: 12
-            icon.name: "zzz"
             enabled: false   // informational only; clicking the tab wakes it
+            contentItem: Text
+            {
+                text: "\uf186"
+                font.family: "Symbols Nerd Font Mono"
+                font.pixelSize: 14
+                color: Maui.Theme.textColor
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
             ToolTip.text: i18n("Tab is sleeping")
             ToolTip.visible: hovered
             ToolTip.delay: 1000
@@ -58,13 +64,19 @@ Maui.TabViewButton
         // or has been explicitly muted. Click toggles mute.
         ToolButton
         {
-            visible: control._audible
+            visible: control._audible && !control._pinned
             height: 16
             width:  16
             padding: 0
-            icon.width:  12
-            icon.height: 12
-            icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
+            contentItem: Text
+            {
+                text: (control.webView && control.webView.audioMuted) ? "\uf026" : "\uf028"
+                font.family: "Symbols Nerd Font Mono"
+                font.pixelSize: 14
+                color: Maui.Theme.textColor
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
             onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
             ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
             ToolTip.visible: hovered
@@ -102,8 +114,61 @@ Maui.TabViewButton
     onRightClicked: _tabMenu.show()
     onCloseClicked: control.tabView.closeTabClicked(control.mindex)
 
-    icon.source: webView ? webView.icon : ""
+    // For pinned tabs the internal IconLabel GridLayout leaves a phantom
+    // fillWidth label column that shoves the icon to the left even when the
+    // label is invisible.  Suppress the icon entirely and render it ourselves
+    // via underlayContent so we can anchor it to the true centre.
+    icon.source: control._pinned ? "" : (webView ? webView.icon : "")
     icon.color: "transparent"
+
+    // Both pinned-tab overlays live inside underlayContent so their parent is
+    // _underlay (which fills the full button).  Direct unnamed children would
+    // go to _content.data (the IconLabel) via TabButton's default alias and
+    // inherit its shifted geometry, causing mis-centering and pin/unpin drift.
+    underlayContent: Item
+    {
+        anchors.fill: parent
+
+        // Favicon — shown when pinned and not audible.
+        Maui.Icon
+        {
+            visible: control._pinned && !control._audible && webView !== null
+            source: webView ? webView.icon : ""
+            color: "transparent"
+            width: 16
+            height: 16
+            anchors.centerIn: parent
+        }
+
+        // Audio glyph — replaces the favicon when pinned and audible/muted.
+        Item
+        {
+            visible: control._pinned && control._audible
+            anchors.fill: parent
+
+            Text
+            {
+                anchors.centerIn: parent
+                text: (control.webView && control.webView.audioMuted) ? "\uf026" : "\uf028"
+                font.family: "Symbols Nerd Font Mono"
+                font.pixelSize: 14
+                color: Maui.Theme.textColor
+            }
+
+            ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
+            ToolTip.visible: _audioOverlayArea.containsMouse
+            ToolTip.delay: 1000
+
+            MouseArea
+            {
+                id: _audioOverlayArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+            }
+        }
+    }
 
     // Per-tab context menu.  Defined here so we have full control over each
     // item's visibility — the TabView's menuActions machinery only supports
