@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Suppress Qt CMake developer warnings about QML plugin static imports
-# (irrelevant for shared/dynamic builds, which is the only build type supported)
-set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS TRUE CACHE BOOL "" FORCE)
-
 # ── Widevine / DRM build requirement ─────────────────────────────────────────
 # Widevine CDM decrypts the stream, but Qt WebEngine must also be able to
 # *decode* the resulting video.  Streaming services (Netflix, Spotify, etc.)

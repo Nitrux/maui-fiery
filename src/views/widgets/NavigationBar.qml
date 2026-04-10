@@ -95,11 +95,14 @@ Maui.TabViewButton
     }
 
     // Keep width fixed for pinned (icon-only square) tabs.
+    // Use `height` (the actual laid-out height, same for every button in the
+    // TabBar) rather than `implicitHeight` (intrinsic content height, which
+    // can differ between tabs and produces uneven widths).
     Binding
     {
         target: control
         property: "width"
-        value: implicitHeight + Maui.Style.space.medium
+        value: height + Maui.Style.space.medium
         when: control._pinned
     }
 
