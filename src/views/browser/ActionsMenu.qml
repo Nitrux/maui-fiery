@@ -32,19 +32,19 @@ Maui.ContextualMenu
         Action
         {
             icon.name: "edit-undo"
-            enabled:   request.editFlags & ContextMenuRequest.CanUndo
+            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanUndo)
         }
 
         Action
         {
             icon.name: "edit-redo"
-            enabled:   request.editFlags & ContextMenuRequest.CanRedo
+            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanRedo)
         }
 
         Action
         {
             icon.name: "edit-cut"
-            enabled:   request.editFlags & ContextMenuRequest.CanCut
+            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanCut)
         }
     }
 
@@ -52,7 +52,7 @@ Maui.ContextualMenu
     {
         text: i18n("Paste")
         height: visible? implicitHeight : 00 - control.spacing
-        visible:  request.editFlags & ContextMenuRequest.CanPaste
+        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanPaste)
         onTriggered:
         {
             //            control.close()
@@ -65,7 +65,7 @@ Maui.ContextualMenu
     {
         text: i18n("Select All")
         height: visible? implicitHeight : 00 - control.spacing
-        visible:  request.editFlags & ContextMenuRequest.CanSelectAll
+        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanSelectAll)
         onTriggered:
         {
             webView.triggerWebAction(WebEngineView.SelectAll);
@@ -77,7 +77,7 @@ Maui.ContextualMenu
     {
         text: i18n("Copy Text")
         height: visible? implicitHeight : 00 - control.spacing
-        visible:  request.editFlags & ContextMenuRequest.CanCopy
+        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanCopy)
         onTriggered:
         {
             Maui.Handy.copyTextToClipboard(control.request.selectedText)

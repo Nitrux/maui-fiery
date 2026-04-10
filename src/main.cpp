@@ -43,34 +43,49 @@ int main(int argc, char *argv[])
     // Share GL context between WebEngine and Qt Quick to avoid cross-context texture uploads.
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
-    // Performance/GPU flags appended to any user-set QTWEBENGINE_CHROMIUM_FLAGS.
+    // WebEngine flags appended to any user-set QTWEBENGINE_CHROMIUM_FLAGS.
     // Must be set before QtWebEngineQuick::initialize().
     QByteArray chromiumFlags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
-    if (!chromiumFlags.isEmpty())
-        chromiumFlags += ' ';
-    // Raster threads: at least 2, scaled to logical core count.
-    const int rasterThreads = qMax(2, QThread::idealThreadCount());
-    // GPU tile budget: 1/8 of total RAM, clamped to [256, 2048] MB.
-    // Chromium's Linux default (~64 MB) is often too low and causes GPU stalls.
-    {
+    if (chromiumFlags.isEmpty() == false)
+        chromiumFlags += " ";
+
+    const QByteArray sessionType = qgetenv("XDG_SESSION_TYPE").trimmed().toLower();
+    const bool isWaylandSession = qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
+                                  || sessionType == "wayland";
+    const bool forceGpuFlags = qEnvironmentVariableIsSet("FIERY_FORCE_GPU_FLAGS");
+    const bool userDisabledGpu = chromiumFlags.contains("--disable-gpu")
+                                 || chromiumFlags.contains("--disable-gpu-compositing");
+    const bool useAggressiveGpuFlags = (userDisabledGpu == false)
+                                       && (isWaylandSession == false || forceGpuFlags);
+
+    chromiumFlags += "--ozone-platform-hint=auto "
+                     "--disable-features=OverlayScrollbar ";
+
+    if (useAggressiveGpuFlags) {
+        // Raster threads: at least 2, scaled to logical core count.
+        const int rasterThreads = qMax(2, QThread::idealThreadCount());
+        // GPU tile budget: 1/8 of total RAM, clamped to [256, 2048] MB.
+        // Chromium's Linux default (~64 MB) is often too low and causes GPU stalls.
         struct sysinfo si{};
         sysinfo(&si);
         const long long totalMb = static_cast<long long>(si.totalram) * si.mem_unit / (1024 * 1024);
         const int gpuBudgetMb   = static_cast<int>(qBound(256LL, totalMb / 8, 2048LL));
-        chromiumFlags += "--force-gpu-mem-available-mb=" + QByteArray::number(gpuBudgetMb) + ' ';
+        chromiumFlags += "--force-gpu-mem-available-mb=" + QByteArray::number(gpuBudgetMb) + " ";
+        chromiumFlags += "--ignore-gpu-blocklist "
+                         "--enable-gpu-rasterization "
+                         "--enable-oop-rasterization "
+                         "--enable-accelerated-2d-canvas "
+                         "--enable-checker-imaging "
+                         "--enable-features=VaapiVideoDecoder,"
+                                            "VaapiVideoEncoder,"
+                                            "AcceleratedVideoDecodeLinuxGL "
+                         "--num-raster-threads=" + QByteArray::number(rasterThreads);
+    } else if (isWaylandSession) {
+        qInfo() << "Fiery: skipping aggressive WebEngine GPU flags on Wayland."
+                << "Set FIERY_FORCE_GPU_FLAGS=1 to restore them.";
+    } else if (userDisabledGpu) {
+        qInfo() << "Fiery: respecting GPU-disabling flags from QTWEBENGINE_CHROMIUM_FLAGS.";
     }
-
-    chromiumFlags += "--ignore-gpu-blocklist "
-                     "--enable-gpu-rasterization "
-                     "--enable-oop-rasterization "
-                     "--enable-accelerated-2d-canvas "
-                     "--enable-checker-imaging "
-                     "--ozone-platform-hint=auto "
-                     "--disable-features=OverlayScrollbar "
-                     "--enable-features=VaapiVideoDecoder,"
-                                        "VaapiVideoEncoder,"
-                                        "AcceleratedVideoDecodeLinuxGL "
-                     "--num-raster-threads=" + QByteArray::number(rasterThreads);
 
     // DNS-over-HTTPS: must be read from settings before engine init.
     {

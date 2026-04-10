@@ -17,8 +17,8 @@ Maui.SplitViewItem
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
     readonly property string iconName: _webView.icon
 
-    height: ListView.view.height
-    width:  ListView.view.width
+    height: ListView.view ? ListView.view.height : 0
+    width:  ListView.view ? ListView.view.width : 0
 
     Maui.Controls.title: title
     Maui.Controls.toolTipText:  _webView.url
@@ -1007,7 +1007,7 @@ Maui.SplitViewItem
             // safeDisplayUrl converts non-ASCII hostnames to Punycode (IDN protection).
             text: _surf.safeDisplayUrl(control._hoveredUrl).replace(/\s+/g, ' ').trim()
             elide: Text.ElideRight
-            font.pointSize: Maui.Style.fontGroup.small
+            font.pointSize: Maui.Style.fontSizes.small
             color: Maui.Theme.textColor
             verticalAlignment: Text.AlignVCenter
         }
