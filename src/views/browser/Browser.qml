@@ -29,6 +29,8 @@ Maui.SplitViewItem
 
     property bool _isSleeping: false
     property bool _drmNotified: false
+    property int _loadSerial: 0
+    property int _fillPromptedLoadSerial: -1
 
     WidevinePrompt { id: _widevinePrompt }
 
@@ -279,6 +281,20 @@ Maui.SplitViewItem
             "var c=typeof window[_k]==='string'?window[_k]:null;" +
             "window[_k]=true;" +
             "return c;" +
+            "})()"
+
+
+        readonly property string _loginFormProbeScript:
+            "(function(){" +
+            "function visible(el){" +
+            "try{" +
+            "if(el == null || el.disabled || el.readOnly)return false;" +
+            "var s=getComputedStyle(el);" +
+            "if(s.display===\"none\"||s.visibility===\"hidden\"||Number(s.opacity)===0)return false;" +
+            "var r=el.getBoundingClientRect();" +
+            "return r.width>0&&r.height>0;" +
+            "}catch(e){return false;}}" +
+            "return Array.from(document.querySelectorAll(\"input[type=\\\"password\\\"]\")).some(visible);" +
             "})()"
 
         function buildFillerScript(creds) {
@@ -628,16 +644,24 @@ Maui.SplitViewItem
                     // Install the credential watcher for this page.
                     _webView.runJavaScript(_webView._credentialWatcherScript)
 
-                    // Prompt the user to fill saved credentials if any exist for this host.
-                    // hasCredentials() checks SQLite only — the keyring is never touched here.
+                    // Prompt to fill saved credentials only when the page
+                    // exposes a visible password field, and only once per load.
                     try {
-                        var host = new URL(_webView.url.toString()).hostname
+                        const host = new URL(_webView.url.toString()).hostname
+                        const loadSerial = control._loadSerial
                         if (host && Fiery.PasswordManager.hasCredentials(host)) {
-                            _fillPasswordAction.host = host
-                            root.notify("dialog-password",
-                                        i18n("Saved Password"),
-                                        i18n("Fill credentials for %1?", host),
-                                        [_fillPasswordAction, _dismissFillAction])
+                            _webView.runJavaScript(_webView._loginFormProbeScript, function(result) {
+                                if (loadSerial !== control._loadSerial
+                                        || control._fillPromptedLoadSerial === loadSerial
+                                        || result !== true)
+                                    return
+                                control._fillPromptedLoadSerial = loadSerial
+                                _fillPasswordAction.host = host
+                                root.notify("dialog-password",
+                                            i18n("Saved Password"),
+                                            i18n("Fill credentials for %1?", host),
+                                            [_fillPasswordAction, _dismissFillAction])
+                            })
                         }
                     } catch(e) {}
                 }
@@ -653,6 +677,7 @@ Maui.SplitViewItem
             {
                 control._loadFailed = false
                 control._drmNotified = false
+                control._loadSerial += 1
 
                 // Harvest any credential the watcher recorded before the page unloads.
                 if (!_webView.profile.offTheRecord) {
