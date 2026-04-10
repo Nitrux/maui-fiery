@@ -8,30 +8,50 @@ import org.mauikit.controls as Maui
 
 import org.maui.fiery as Fiery
 
-Maui.TabViewButton
+BrowserTabViewButton
 {
     id: control
 
     property int position: control.TabBar.position
 
+    // The Repeater in TabView.qml injects `index` as a context property into
+    // each delegate.  It is more reliable than mindex (= TabBar.index) because
+    // QQC TabBar's stackBefore/stackAfter reordering failures corrupt TabBar.index,
+    // causing mindex to point at the wrong slot after pin/unpin.
+    readonly property int _tabIndex: (typeof index !== "undefined" && index >= 0) ? index : control.mindex
+
     readonly property WebEngineView webView:
     {
-        var item = control.tabView.contentModel.get(control.mindex)
+        var item = control.tabView.contentModel.get(control._tabIndex)
         if (!item || !item.browser) return null
         return item.browser.webView
     }
 
     readonly property bool _pinned:
     {
-        var item = control.tabView.contentModel.get(control.mindex)
+        var item = control.tabView.contentModel.get(control._tabIndex)
         return item ? (item.pinned || false) : false
     }
 
     readonly property bool _audible:  webView !== null && (webView.recentlyAudible || webView.audioMuted)
     readonly property bool _sleeping: webView !== null && webView.lifecycleState === WebEngineView.LifecycleState.Discarded
+    readonly property real _pinnedTabWidth: control.height + Maui.Style.space.medium
 
     // Hide close button on pinned tabs, matching browser convention.
     closeButtonVisible: !_pinned
+
+    // Maui.TabButton derives its intrinsic width from an internal RowLayout.
+    // When a tab is pinned, its title, base icon and close button all vanish,
+    // so the layout can collapse after a close and the remaining pinned tabs
+    // get packed on top of each other. Keep a transparent spacer in the
+    // layout so pinned tabs still report a stable footprint to the TabBar.
+    leftContent: Item
+    {
+        width: control._pinned ? control._pinnedTabWidth : 0
+        height: 1
+        opacity: 0
+        enabled: false
+    }
 
     // Per-tab status indicators: sleep (moon) and audio (speaker).
     rightContent: Row
@@ -84,38 +104,31 @@ Maui.TabViewButton
         }
     }
 
-    // Override text to empty only when pinned; let the base class binding
-    // handle the non-pinned case so tabInfo is never accessed from here.
-    Binding
-    {
-        target: control
-        property: "text"
-        value: ""
-        when: control._pinned
-    }
+    // Override text to empty when pinned; use tabInfo.title otherwise.
+    // A direct binding is used instead of a Binding element to avoid the
+    // binding-restoration failure across component boundaries that would
+    // collapse the property to its default when unpinning.
+    text: control._pinned ? "" : (tabInfo ? tabInfo.title : "")
 
     // Keep width fixed for pinned (icon-only square) tabs.
-    // Use `height` (the actual laid-out height, same for every button in the
-    // TabBar) rather than `implicitHeight` (intrinsic content height, which
-    // can differ between tabs and produces uneven widths).
-    Binding
-    {
-        target: control
-        property: "width"
-        value: height + Maui.Style.space.medium
-        when: control._pinned
-    }
+    // A direct binding is used instead of a Binding element for the same
+    // reason: when the Binding element deactivated on unpin, the base-class
+    // width expression failed to restore and the button collapsed to 0px,
+    // causing all tabs to render on top of each other ("joined").
+    width: control._pinned
+        ? (control.height + Maui.Style.space.medium)
+        : (control.tabView.mobile ? ListView.view.width : Math.max(160, Math.min(260, implicitWidth)))
 
     onClicked:
     {
-        if (control.mindex === control.tabView.currentIndex)
+        if (control._tabIndex === control.tabView.currentIndex)
             openEditMode()
         else
-            control.tabView.setCurrentIndex(control.mindex)
+            control.tabView.setCurrentIndex(control._tabIndex)
     }
 
     onRightClicked: _tabMenu.show()
-    onCloseClicked: control.tabView.closeTabClicked(control.mindex)
+    onCloseClicked: control.tabView.closeTabClicked(control._tabIndex)
 
     // For pinned tabs the internal IconLabel GridLayout leaves a phantom
     // fillWidth label column that shoves the icon to the left even when the
@@ -185,9 +198,9 @@ Maui.TabViewButton
             text: i18n("Detach")
             onTriggered:
             {
-                var urls = control.tabView.tabAt(control.mindex).urls
+                var urls = control.tabView.tabAt(control._tabIndex).urls
                 newWindow(urls)
-                control.tabView.closeTab(control.mindex)
+                control.tabView.closeTab(control._tabIndex)
             }
         }
 
@@ -196,7 +209,7 @@ Maui.TabViewButton
             text: control._pinned ? i18n("Unpin") : i18n("Pin")
             onTriggered:
             {
-                var tab = control.tabView.tabAt(control.mindex)
+                var tab = control.tabView.tabAt(control._tabIndex)
                 tab.pinned = !tab.pinned
             }
         }
@@ -218,7 +231,7 @@ Maui.TabViewButton
             // Intentionally no icon.name — requirement: Close must have no icon.
             visible: control._pinned
             height: visible ? implicitHeight : 0
-            onTriggered: control.tabView.closeTab(control.mindex)
+            onTriggered: control.tabView.closeTab(control._tabIndex)
         }
     }
 
