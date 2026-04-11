@@ -96,7 +96,7 @@ Maui.SideBarView
                 {
                     headBar.rightContent: ToolButton
                     {
-                        text: i18n("Clear Finished")
+                        text: i18n("Clear")
                         icon.name: "edit-clear"
                         onClicked: Fiery.DownloadsManager.clearFinished()
                     }

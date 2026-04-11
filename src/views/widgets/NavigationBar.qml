@@ -119,6 +119,22 @@ BrowserTabViewButton
         ? (control.height + Maui.Style.space.medium)
         : (control.tabView.mobile ? ListView.view.width : Math.max(160, Math.min(260, implicitWidth)))
 
+    background: Rectangle
+    {
+        color: control.checked
+            ? Maui.Theme.backgroundColor
+            : ((control.hovered || control.pressed) ? Maui.Theme.hoverColor : "transparent")
+        radius: Maui.Style.radiusV
+
+        border.width: (control._pinned && !control.checked) ? 1 : 0
+        border.color: (control._pinned && !control.checked)
+            ? Qt.rgba(Maui.Theme.textColor.r,
+                      Maui.Theme.textColor.g,
+                      Maui.Theme.textColor.b,
+                      (control.hovered || control.pressed) ? 0.28 : 0.16)
+            : "transparent"
+    }
+
     onClicked:
     {
         if (control.mindex === control.tabView.currentIndex)
