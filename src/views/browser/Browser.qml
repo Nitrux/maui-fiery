@@ -175,6 +175,124 @@ Maui.SplitViewItem
         }
     }
 
+    Dialog
+    {
+        id: _jsDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        closePolicy: Popup.CloseOnEscape
+        padding: Maui.Style.space.big
+
+        property var dialogRequest: null
+        property bool _handled: false
+
+        readonly property bool _isPrompt: dialogRequest == null
+            ? false
+            : dialogRequest.type === JavaScriptDialogRequest.DialogTypePrompt
+
+        width: Math.min(Math.max(control.width - Maui.Style.space.big * 2, 320), 460)
+        title:
+        {
+            if (dialogRequest == null)
+                return ""
+
+            switch (dialogRequest.type)
+            {
+                case JavaScriptDialogRequest.DialogTypeAlert:
+                    return i18n("Alert")
+                case JavaScriptDialogRequest.DialogTypeConfirm:
+                    return i18n("Confirmation")
+                case JavaScriptDialogRequest.DialogTypePrompt:
+                    return i18n("Prompt")
+                case JavaScriptDialogRequest.DialogTypeBeforeUnload:
+                    return i18n("Leave This Page?")
+                default:
+                    return i18n("Message")
+            }
+        }
+
+        standardButtons: dialogRequest == null
+            ? Dialog.Ok | Dialog.Cancel
+            : (dialogRequest.type === JavaScriptDialogRequest.DialogTypeAlert ? Dialog.Ok : Dialog.Ok | Dialog.Cancel)
+
+        function openRequest(request)
+        {
+            if (dialogRequest && _handled == false)
+                dialogRequest.dialogReject()
+
+            dialogRequest = request
+            _handled = false
+            _promptField.text = _isPrompt ? request.defaultText : ""
+            open()
+            Qt.callLater(function() {
+                if (_isPrompt)
+                    _promptField.forceActiveFocus()
+                else {
+                    const okButton = _jsDialog.standardButton(Dialog.Ok)
+                    if (okButton)
+                        okButton.forceActiveFocus()
+                }
+            })
+        }
+
+        onAccepted:
+        {
+            if (dialogRequest == null)
+                return
+
+            _handled = true
+            if (_isPrompt)
+                dialogRequest.dialogAccept(_promptField.text)
+            else
+                dialogRequest.dialogAccept()
+
+            dialogRequest = null
+        }
+
+        onRejected:
+        {
+            if (dialogRequest == null)
+                return
+
+            _handled = true
+            dialogRequest.dialogReject()
+            dialogRequest = null
+        }
+
+        onClosed:
+        {
+            if (dialogRequest && _handled == false)
+            {
+                dialogRequest.dialogReject()
+                dialogRequest = null
+            }
+
+            _handled = false
+        }
+
+        Column
+        {
+            width: parent.width
+            spacing: Maui.Style.space.medium
+
+            Label
+            {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: _jsDialog.dialogRequest ? _jsDialog.dialogRequest.message : ""
+            }
+
+            TextField
+            {
+                id: _promptField
+                width: parent.width
+                visible: _jsDialog._isPrompt
+                onAccepted: _jsDialog.accept()
+            }
+        }
+    }
+
     // Opaque backdrop for error pages (window uses transparent compositing).
     Rectangle
     {
@@ -729,6 +847,12 @@ Maui.SplitViewItem
             }
 
             _fileDialog.open()
+        }
+
+        onJavaScriptDialogRequested: (request) =>
+        {
+            request.accepted = true
+            _jsDialog.openRequest(request)
         }
 
         onNewWindowRequested: (request) =>
