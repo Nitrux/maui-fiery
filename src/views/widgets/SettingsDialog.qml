@@ -981,6 +981,13 @@ Maui.SettingsDialog
                         label1.text: modelData.host
                         label2.text: modelData.username
 
+                        template.content: Button
+                        {
+                            text: i18n("Remove")
+                            Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                            onClicked: Fiery.PasswordManager.remove(modelData.host, modelData.username)
+                        }
+
                         ToolButton
                         {
                             id: _revealBtn
@@ -1019,14 +1026,6 @@ Maui.SettingsDialog
                             Layout.fillWidth: true
                         }
 
-                        ToolButton
-                        {
-                            icon.name: "list-remove"
-                            ToolTip.text: i18n("Remove")
-                            ToolTip.visible: hovered
-                            ToolTip.delay: 1000
-                            onClicked: Fiery.PasswordManager.remove(modelData.host, modelData.username)
-                        }
                     }
                 }
             }
