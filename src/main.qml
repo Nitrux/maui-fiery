@@ -189,6 +189,15 @@ Maui.ApplicationWindow
         anchors.fill: parent
     }
 
+    // Hidden WebEngineView used to re-request persisted download URLs after restart.
+    WebEngineView
+    {
+        id: _downloadRetryView
+        visible: false
+        width: 0
+        height: 0
+        profile: root.profile
+    }
 
     Action
     {
@@ -263,11 +272,21 @@ Maui.ApplicationWindow
     Connections
     {
         target: Fiery.DownloadsManager
+
         function onNewDownload(download)
         {
             _acceptDownloadAction.download = download
             _cancelDownloadAction.download = download
             root.notify("dialog-question", download.downloadFileName, i18n("Do you want to download and save this file?"), [_acceptDownloadAction, _cancelDownloadAction])
+        }
+
+        function onRetryRequested(url)
+        {
+            if (!url || url.toString().length === 0)
+                return
+
+            _downloadRetryView.url = "about:blank"
+            Qt.callLater(function() { _downloadRetryView.url = url })
         }
     }
 

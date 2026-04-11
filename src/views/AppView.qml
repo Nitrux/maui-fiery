@@ -94,6 +94,13 @@ Maui.SideBarView
                 asynchronous: true
                 sourceComponent: Maui.Page
                 {
+                    headBar.rightContent: ToolButton
+                    {
+                        text: i18n("Clear Finished")
+                        icon.name: "edit-clear"
+                        onClicked: Fiery.DownloadsManager.clearFinished()
+                    }
+
                     background: null
 
                     // Warn before handing executable file types to the OS handler.
@@ -119,6 +126,9 @@ Maui.SideBarView
 
                     function openDownloadedFile(filePath)
                     {
+                        if (filePath === undefined || filePath === null || filePath.toString().length === 0)
+                            return
+
                         if (_surf.isDangerousFile(filePath.toString()))
                         {
                             _execWarningDialog.pendingPath = filePath
@@ -135,24 +145,24 @@ Maui.SideBarView
                         id: _downloadMenu
 
                         property int rowIndex: -1
-                        property url currentFilePath
-                        property var currentDownload: null
+                        property url currentFilePath: ""
+                        property url currentUrl: ""
+                        property int currentState: WebEngineDownloadRequest.DownloadRequested
+                        property bool currentPaused: false
+                        readonly property bool _hasFilePath: currentFilePath.toString().length > 0
 
-                        readonly property bool _isActive: currentDownload !== null
-                            && currentDownload.state === WebEngineDownloadRequest.DownloadInProgress
-                            && !currentDownload.isPaused
-                        readonly property bool _isPaused: currentDownload !== null
-                            && currentDownload.state === WebEngineDownloadRequest.DownloadInProgress
-                            && currentDownload.isPaused
-                        readonly property bool _isInterrupted: currentDownload !== null
-                            && currentDownload.state === WebEngineDownloadRequest.DownloadInterrupted
+                        readonly property bool _isActive: currentState === WebEngineDownloadRequest.DownloadInProgress
+                            && currentPaused === false
+                        readonly property bool _isPaused: currentState === WebEngineDownloadRequest.DownloadInProgress
+                            && currentPaused
+                        readonly property bool _isInterrupted: currentState === WebEngineDownloadRequest.DownloadInterrupted
 
                         MenuItem
                         {
                             text: i18n("Open")
                             icon.name: "document-open"
-                            enabled: _downloadMenu.currentDownload !== null
-                                     && _downloadMenu.currentDownload.state === WebEngineDownloadRequest.DownloadCompleted
+                            enabled: _downloadMenu._hasFilePath
+                                     && _downloadMenu.currentState === WebEngineDownloadRequest.DownloadCompleted
                             onTriggered: openDownloadedFile(_downloadMenu.currentFilePath)
                         }
 
@@ -164,9 +174,9 @@ Maui.SideBarView
                             onTriggered:
                             {
                                 if (_downloadMenu._isPaused)
-                                    _downloadMenu.currentDownload.resume()
+                                    Fiery.DownloadsManager.resume(_downloadMenu.rowIndex)
                                 else
-                                    _downloadMenu.currentDownload.pause()
+                                    Fiery.DownloadsManager.pause(_downloadMenu.rowIndex)
                             }
                         }
 
@@ -176,15 +186,15 @@ Maui.SideBarView
                             icon.name: "view-refresh"
                             visible: _downloadMenu._isInterrupted
                             height: visible ? implicitHeight : 0
-                            onTriggered: _downloadMenu.currentDownload.resume()
+                            onTriggered: Fiery.DownloadsManager.resume(_downloadMenu.rowIndex)
                         }
 
                         MenuItem
                         {
                             text: i18n("Copy Download URL")
                             icon.name: "edit-copy"
-                            enabled: _downloadMenu.currentDownload !== null
-                            onTriggered: Maui.Handy.copyTextToClipboard(_downloadMenu.currentDownload.url.toString())
+                            enabled: _downloadMenu.currentUrl.toString().length > 0
+                            onTriggered: Maui.Handy.copyTextToClipboard(_downloadMenu.currentUrl.toString())
                         }
 
                         MenuSeparator {}
@@ -222,10 +232,18 @@ Maui.SideBarView
                             width: ListView.view.width
                             height: _del.implicitHeight + (_dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted ? 6 + Maui.Style.space.small * 2 : 0)
 
-                            property var download: model.download
-                            readonly property bool _inProgress:    download.state === WebEngineDownloadRequest.DownloadInProgress && !download.isPaused
-                            readonly property bool _isPaused:      download.state === WebEngineDownloadRequest.DownloadInProgress && download.isPaused
-                            readonly property bool _isInterrupted: download.state === WebEngineDownloadRequest.DownloadInterrupted
+                            readonly property url _url: model.url
+                            readonly property int _state: model.state
+                            readonly property real _receivedBytes: model.receivedBytes
+                            readonly property real _totalBytes: model.totalBytes
+                            readonly property bool _paused: model.isPaused
+                            readonly property var _filePath: model.filePath ? model.filePath : ""
+                            readonly property bool _hasFilePath: _filePath.toString().length > 0
+                            readonly property bool _inProgress: _state === WebEngineDownloadRequest.DownloadInProgress
+                                && _paused === false
+                            readonly property bool _isPaused: _state === WebEngineDownloadRequest.DownloadInProgress
+                                && _paused
+                            readonly property bool _isInterrupted: _state === WebEngineDownloadRequest.DownloadInterrupted
 
                             property real _speedBps: 0
                             property real _lastBytes: 0
@@ -240,7 +258,7 @@ Maui.SideBarView
                                 onTriggered:
                                 {
                                     var now   = Date.now()
-                                    var bytes = _dlItem.download.receivedBytes
+                                    var bytes = _dlItem._receivedBytes
                                     var secs  = _dlItem._lastTime > 0 ? (now - _dlItem._lastTime) / 1000 : 1
                                     _dlItem._speedBps  = secs > 0 ? (bytes - _dlItem._lastBytes) / secs : 0
                                     _dlItem._lastBytes = bytes
@@ -249,7 +267,7 @@ Maui.SideBarView
 
                                 Component.onCompleted:
                                 {
-                                    _dlItem._lastBytes = _dlItem.download.receivedBytes
+                                    _dlItem._lastBytes = _dlItem._receivedBytes
                                     _dlItem._lastTime  = Date.now()
                                 }
                             }
@@ -277,8 +295,8 @@ Maui.SideBarView
                                     if (_dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted)
                                     {
                                         var host = ""
-                                        try { host = new URL(_dlItem.download.url.toString()).hostname } catch(e) {}
-                                        var sizeStr = _surf.formatBytes(download.receivedBytes) + " / " + _surf.formatBytes(download.totalBytes)
+                                        try { host = new URL(_dlItem._url.toString()).hostname } catch(e) {}
+                                        var sizeStr = _surf.formatBytes(_dlItem._receivedBytes) + " / " + _surf.formatBytes(_dlItem._totalBytes)
                                         var suffix
                                         if (_dlItem._isInterrupted)
                                             suffix = i18n("Interrupted")
@@ -288,32 +306,36 @@ Maui.SideBarView
                                             suffix = _dlItem._speedBps > 0 ? _surf.formatBytes(_dlItem._speedBps) + "/s" : "--.-- /s"
                                         return host + "\n" + sizeStr + (suffix.length > 0 ? "\n" + suffix : "")
                                     }
-                                    return model.url
+                                    return model.url.toString()
                                 }
 
-                                iconSource: download.state === WebEngineDownloadRequest.DownloadCompleted
-                                            ? model.filePath
+                                iconSource: _dlItem._state === WebEngineDownloadRequest.DownloadCompleted && _dlItem._hasFilePath
+                                            ? _dlItem._filePath
                                             : model.icon
 
                                 onClicked:
                                 {
-                                    if (!_dlItem._inProgress && !_dlItem._isPaused)
-                                        openDownloadedFile(model.filePath)
+                                    if (_dlItem._state === WebEngineDownloadRequest.DownloadCompleted && _dlItem._hasFilePath)
+                                        openDownloadedFile(_dlItem._filePath)
                                 }
 
                                 onRightClicked:
                                 {
                                     _downloadMenu.rowIndex = index
-                                    _downloadMenu.currentFilePath = model.filePath
-                                    _downloadMenu.currentDownload = _dlItem.download
+                                    _downloadMenu.currentFilePath = _dlItem._filePath
+                                    _downloadMenu.currentUrl = _dlItem._url
+                                    _downloadMenu.currentState = _dlItem._state
+                                    _downloadMenu.currentPaused = _dlItem._paused
                                     _downloadMenu.popup()
                                 }
 
                                 onPressAndHold:
                                 {
                                     _downloadMenu.rowIndex = index
-                                    _downloadMenu.currentFilePath = model.filePath
-                                    _downloadMenu.currentDownload = _dlItem.download
+                                    _downloadMenu.currentFilePath = _dlItem._filePath
+                                    _downloadMenu.currentUrl = _dlItem._url
+                                    _downloadMenu.currentState = _dlItem._state
+                                    _downloadMenu.currentPaused = _dlItem._paused
                                     _downloadMenu.popup()
                                 }
                             }
@@ -342,9 +364,9 @@ Maui.SideBarView
                                 {
                                     id: _progressFill
 
-                                    readonly property bool _indeterminate: _dlItem._inProgress && _dlItem.download.totalBytes <= 0
-                                    readonly property real _ratio: _dlItem.download.totalBytes > 0
-                                                                   ? _dlItem.download.receivedBytes / _dlItem.download.totalBytes
+                                    readonly property bool _indeterminate: _dlItem._inProgress && _dlItem._totalBytes <= 0
+                                    readonly property real _ratio: _dlItem._totalBytes > 0
+                                                                   ? _dlItem._receivedBytes / _dlItem._totalBytes
                                                                    : 0
 
                                     height: parent.height

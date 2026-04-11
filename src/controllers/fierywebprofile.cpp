@@ -77,10 +77,14 @@ void FieryWebProfile::handleDownload(QQuickWebEngineDownloadRequest *downloadIte
         return;
     }
 
-    download->accept();
-    download->pause();
+    bool notifyUser = true;
+    DownloadsManager::instance().configurePendingRetry(download, &notifyUser);
 
-    DownloadsManager::instance().add(download);
+    download->accept();
+    if (notifyUser)
+        download->pause();
+
+    DownloadsManager::instance().add(download, notifyUser);
 }
 
 void FieryWebProfile::handleDownloadFinished(DownloadItem *downloadItem)

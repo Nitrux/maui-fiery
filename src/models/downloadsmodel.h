@@ -16,13 +16,14 @@ public:
         Directory,
         State,
         Icon,
-        Download,
-        FilePath
+        FilePath,
+        ReceivedBytes,
+        TotalBytes,
+        IsPaused
     };
 
     explicit DownloadsModel(DownloadsManager *parent);
 
-           // QAbstractItemModel interface
 public:
     int rowCount(const QModelIndex &parent) const override final;
     QVariant data(const QModelIndex &index, int role) const override final;
@@ -31,4 +32,3 @@ public:
 private:
     DownloadsManager *m_manager;
 };
-

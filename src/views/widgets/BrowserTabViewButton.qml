@@ -23,7 +23,11 @@ BrowserTabButton
     /**
      * @brief The index of this tab button in the TabBar
      */
-    readonly property int mindex : (typeof index !== "undefined" && index >= 0) ? index : control.TabBar.index
+    property int delegateIndex: -1
+
+    readonly property int mindex : control.delegateIndex >= 0
+        ? control.delegateIndex
+        : ((typeof index != "undefined" && index >= 0) ? index : control.TabBar.index)
 
     /**
      * @brief The TabView to which this tab button belongs to.
@@ -147,10 +151,9 @@ BrowserTabButton
 
         onEntered: (drag) =>
         {
-            if(drag.source &&  drag.source.mindex >= 0)
-            {
+            if (drag.source == null || drag.source.mindex < 0)
                 return
-            }
+
             _dropAreaTimer.restart()
         }
 

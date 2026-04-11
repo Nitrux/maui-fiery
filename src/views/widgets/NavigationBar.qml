@@ -18,18 +18,18 @@ BrowserTabViewButton
     // each delegate.  It is more reliable than mindex (= TabBar.index) because
     // QQC TabBar's stackBefore/stackAfter reordering failures corrupt TabBar.index,
     // causing mindex to point at the wrong slot after pin/unpin.
-    readonly property int _tabIndex: (typeof index !== "undefined" && index >= 0) ? index : control.mindex
+    delegateIndex: (typeof index != "undefined" && index >= 0) ? index : -1
 
     readonly property WebEngineView webView:
     {
-        var item = control.tabView.contentModel.get(control._tabIndex)
+        var item = control.tabView.contentModel.get(control.mindex)
         if (!item || !item.browser) return null
         return item.browser.webView
     }
 
     readonly property bool _pinned:
     {
-        var item = control.tabView.contentModel.get(control._tabIndex)
+        var item = control.tabView.contentModel.get(control.mindex)
         return item ? (item.pinned || false) : false
     }
 
@@ -121,14 +121,14 @@ BrowserTabViewButton
 
     onClicked:
     {
-        if (control._tabIndex === control.tabView.currentIndex)
+        if (control.mindex === control.tabView.currentIndex)
             openEditMode()
         else
-            control.tabView.setCurrentIndex(control._tabIndex)
+            control.tabView.setCurrentIndex(control.mindex)
     }
 
     onRightClicked: _tabMenu.show()
-    onCloseClicked: control.tabView.closeTabClicked(control._tabIndex)
+    onCloseClicked: control.tabView.closeTabClicked(control.mindex)
 
     // For pinned tabs the internal IconLabel GridLayout leaves a phantom
     // fillWidth label column that shoves the icon to the left even when the
@@ -198,9 +198,9 @@ BrowserTabViewButton
             text: i18n("Detach")
             onTriggered:
             {
-                var urls = control.tabView.tabAt(control._tabIndex).urls
+                var urls = control.tabView.tabAt(control.mindex).urls
                 newWindow(urls)
-                control.tabView.closeTab(control._tabIndex)
+                control.tabView.closeTab(control.mindex)
             }
         }
 
@@ -209,7 +209,7 @@ BrowserTabViewButton
             text: control._pinned ? i18n("Unpin") : i18n("Pin")
             onTriggered:
             {
-                var tab = control.tabView.tabAt(control._tabIndex)
+                var tab = control.tabView.tabAt(control.mindex)
                 tab.pinned = !tab.pinned
             }
         }
@@ -231,7 +231,7 @@ BrowserTabViewButton
             // Intentionally no icon.name — requirement: Close must have no icon.
             visible: control._pinned
             height: visible ? implicitHeight : 0
-            onTriggered: control.tabView.closeTab(control._tabIndex)
+            onTriggered: control.tabView.closeTab(control.mindex)
         }
     }
 
