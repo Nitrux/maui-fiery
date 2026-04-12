@@ -1142,7 +1142,7 @@ Maui.SplitViewItem
         height: _statusLabel.implicitHeight + Maui.Style.space.small * 2
 
         color: Maui.Theme.backgroundColor
-        border.color: Maui.Theme.separatorColor
+        border.color: Qt.rgba(Maui.Theme.textColor.r, Maui.Theme.textColor.g, Maui.Theme.textColor.b, 0.18)
         border.width: 1
         radius: Maui.Style.radiusV
 

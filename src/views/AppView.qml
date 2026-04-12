@@ -355,7 +355,7 @@ Maui.SideBarView
                                 height: 6
                                 radius: height / 2
                                 color: Maui.Theme.alternateBackgroundColor
-                                border.color: Maui.Theme.separatorColor
+                                border.color: Qt.rgba(Maui.Theme.textColor.r, Maui.Theme.textColor.g, Maui.Theme.textColor.b, 0.18)
                                 border.width: 1
 
                                 clip: true

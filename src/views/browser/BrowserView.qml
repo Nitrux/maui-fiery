@@ -34,21 +34,54 @@ Maui.Page
 
     headBar.visible: !root.isWide
     altHeader: true
-    headBar.rightContent: Loader
-    {
-        asynchronous: true
-        active: !root.isWide
-        visible: active
-        sourceComponent: _browserMenuComponent
-    }
+    headBar.rightContent: [
+        ToolSeparator
+        {
+            visible: !root.isWide
+            bottomPadding: 10
+            topPadding: 10
+        },
 
-    headBar.leftContent: Loader
-    {
-        asynchronous: true
-        active: !root.isWide
-        visible: active
-        sourceComponent: _navigationControlsComponent
-    }
+        Loader
+        {
+            asynchronous: true
+            active: !root.isWide
+            visible: active
+            sourceComponent: _browserActionButtonsComponent
+        },
+
+        ToolSeparator
+        {
+            visible: !root.isWide
+            bottomPadding: 10
+            topPadding: 10
+        },
+
+        Loader
+        {
+            asynchronous: true
+            active: !root.isWide
+            visible: active
+            sourceComponent: _overflowMenuComponent
+        }
+    ]
+
+    headBar.leftContent: [
+        Loader
+        {
+            asynchronous: true
+            active: !root.isWide
+            visible: active
+            sourceComponent: _navigationControlsComponent
+        },
+
+        ToolSeparator
+        {
+            visible: !root.isWide
+            bottomPadding: 10
+            topPadding: 10
+        }
+    ]
 
     footBar.visible: false
     footBar.middleContent: Maui.SearchField
@@ -516,24 +549,55 @@ Maui.Page
         tabBar.visible: root.visibility !== Window.FullScreen
         altTabBar: Maui.Handy.isMobile
         tabBar.rightContent: [
+            ToolSeparator
+            {
+                visible: root.isWide
+                bottomPadding: 10
+                topPadding: 10
+            },
+
             Loader
             {
                 asynchronous: true
                 active: root.isWide
                 visible: active
-                sourceComponent: _browserMenuComponent
+                sourceComponent: _browserActionButtonsComponent
+            },
+
+            ToolSeparator
+            {
+                visible: root.isWide
+                bottomPadding: 10
+                topPadding: 10
+            },
+
+            Loader
+            {
+                asynchronous: true
+                active: root.isWide
+                visible: active
+                sourceComponent: _overflowMenuComponent
             },
 
             Maui.WindowControls {}
         ]
 
-        tabBar.leftContent: Loader
-        {
-            asynchronous: true
-            active: root.isWide
-            visible: active
-            sourceComponent: _navigationControlsComponent
-        }
+        tabBar.leftContent: [
+            Loader
+            {
+                asynchronous: true
+                active: root.isWide
+                visible: active
+                sourceComponent: _navigationControlsComponent
+            },
+
+            ToolSeparator
+            {
+                visible: root.isWide
+                bottomPadding: 10
+                topPadding: 10
+            }
+        ]
     }
 
     Item
@@ -610,23 +674,55 @@ Maui.Page
             tabBar.visible: root.visibility !== Window.FullScreen
             altTabBar: Maui.Handy.isMobile
             tabBar.rightContent: [
+                ToolSeparator
+                {
+                    visible: root.isWide
+                    bottomPadding: 10
+                    topPadding: 10
+                },
+
                 Loader
                 {
                     asynchronous: true
                     active: root.isWide
                     visible: active
-                    sourceComponent: _browserMenuComponent
+                    sourceComponent: _browserActionButtonsComponent
                 },
+
+                ToolSeparator
+                {
+                    visible: root.isWide
+                    bottomPadding: 10
+                    topPadding: 10
+                },
+
+                Loader
+                {
+                    asynchronous: true
+                    active: root.isWide
+                    visible: active
+                    sourceComponent: _overflowMenuComponent
+                },
+
                 Maui.WindowControls {}
             ]
 
-            tabBar.leftContent: Loader
-            {
-                asynchronous: true
-                active: root.isWide
-                visible: active
-                sourceComponent: _navigationControlsComponent
-            }
+            tabBar.leftContent: [
+                Loader
+                {
+                    asynchronous: true
+                    active: root.isWide
+                    visible: active
+                    sourceComponent: _navigationControlsComponent
+                },
+
+                ToolSeparator
+                {
+                    visible: root.isWide
+                    bottomPadding: 10
+                    topPadding: 10
+                }
+            ]
         }
     }
 
@@ -796,6 +892,10 @@ Maui.Page
                 visible: activeView.count > 1
                 onClicked: activeView.openOverview()
                 icon.name: "view-list-icons"
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: i18n("Tab Overview")
             }
         }
     }
@@ -888,7 +988,7 @@ Maui.Page
 
     Component
     {
-        id: _browserMenuComponent
+        id: _browserActionButtonsComponent
 
         Row
         {
@@ -898,6 +998,10 @@ Maui.Page
             {
                 icon.name: "list-add"
                 onClicked: control.openTab("")
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: i18n("New Tab")
             }
 
             ToolButton
@@ -909,9 +1013,15 @@ Maui.Page
                 ToolTip.visible: hovered
                 ToolTip.text: currentTab && currentTab.count === 2 ? i18n("Close Split View") : i18n("Split View")
             }
+        }
+    }
 
-            Maui.ToolButtonMenu
-            {
+    Component
+    {
+        id: _overflowMenuComponent
+
+        Maui.ToolButtonMenu
+        {
                 icon.name: "overflow-menu"
 
                 Maui.MenuItemActionRow
@@ -1006,7 +1116,6 @@ Maui.Page
                     text: i18n("About")
                     onTriggered: Maui.App.aboutDialog()
                 }
-            }
         }
     }
 

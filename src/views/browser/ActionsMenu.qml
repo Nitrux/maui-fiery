@@ -26,6 +26,7 @@ Maui.ContextualMenu
     // malicious page from injecting a different element into those coordinates
     // between menu-open and menu-item-click.
     property string contextElemId: ""
+    property int playbackRate: 100
 
     Maui.MenuItemActionRow
     {
