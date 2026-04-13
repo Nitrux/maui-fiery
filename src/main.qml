@@ -74,7 +74,7 @@ Maui.ApplicationWindow
         property bool webGLEnabled : true
         property bool webRTCPublicInterfacesOnly : true
 
-        property string downloadsPath : root.profile.downloadPath
+        property string downloadsPath : StandardPaths.writableLocation(StandardPaths.DownloadLocation)
 
         property bool forceDarkMode: false
         property bool restoreSession: true
