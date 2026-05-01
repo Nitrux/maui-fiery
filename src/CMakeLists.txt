@@ -55,14 +55,14 @@ qt_add_resources(${PROJECT_NAME} "blocklist"
     BASE "${CMAKE_CURRENT_BINARY_DIR}"
     FILES "${_blocklist}")
 
-qt_policy(SET QTP0001 OLD) # keep :/app/maui/fiery/ resource prefix
-qt_policy(SET QTP0004 OLD) # no qmldir required for subdirectories
-
 qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     NO_PLUGIN
+    RESOURCE_PREFIX /
+    NO_IMPORT_SCAN
     QML_FILES
     main.qml
     views/widgets/SettingsDialog.qml
+    views/widgets/ShortcutsDialog.qml
     views/browser/BrowserView.qml
     views/history/HistoryView.qml
     views/browser/BrowserLayout.qml

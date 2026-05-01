@@ -84,6 +84,14 @@ ecm_setup_version(${FIERY_VERSION}
     VARIABLE_PREFIX FIERY
     VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/fiery_version.h")
 
+if (QT_KNOWN_POLICY_QTP0001)
+    qt_policy(SET QTP0001 NEW)
+endif()
+
+if (QT_KNOWN_POLICY_QTP0004)
+    qt_policy(SET QTP0004 NEW)
+endif()
+
 add_subdirectory(src)
 
 ki18n_install(po)

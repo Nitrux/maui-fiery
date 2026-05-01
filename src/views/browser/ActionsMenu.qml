@@ -28,27 +28,6 @@ Maui.ContextualMenu
     property string contextElemId: ""
     property int playbackRate: 100
 
-    Maui.MenuItemActionRow
-    {
-        Action
-        {
-            icon.name: "edit-undo"
-            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanUndo)
-        }
-
-        Action
-        {
-            icon.name: "edit-redo"
-            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanRedo)
-        }
-
-        Action
-        {
-            icon.name: "edit-cut"
-            enabled:   !!request && !!(request.editFlags & ContextMenuRequest.CanCut)
-        }
-    }
-
     MenuItem
     {
         text: i18n("Paste")

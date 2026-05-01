@@ -111,12 +111,6 @@ Maui.Page
 
     Shortcut
     {
-        sequence: "Ctrl+K"
-        onActivated: _navigationPopup.open()
-    }
-
-    Shortcut
-    {
         sequence: "Ctrl+T"
         onActivated: openTab("")
     }
@@ -264,9 +258,7 @@ Maui.Page
 
     Shortcut
     {
-        // "Ctrl+=" covers the physical key (= / +) without requiring Shift.
-        // "Ctrl++" is kept as an alias for keyboards that map it directly.
-        sequences: ["Ctrl+=", "Ctrl++"]
+        sequence: "Ctrl+="
         enabled: currentBrowser !== null
         onActivated: appSettings.zoomFactor = Math.min(appSettings.zoomFactor + 0.25, 5.0)
     }
@@ -1024,35 +1016,6 @@ Maui.Page
         {
                 icon.name: "overflow-menu"
 
-                Maui.MenuItemActionRow
-                {
-                    Action
-                    {
-                        icon.name: "love"
-                        checked: Fiery.Bookmarks.isBookmark(currentBrowser.url)
-                        checkable: true
-                        onTriggered: Fiery.Bookmarks.insertBookmark(currentBrowser.url, currentBrowser.title)
-                    }
-
-                    Action
-                    {
-                        icon.name: "zoom-out"
-                        onTriggered: appSettings.zoomFactor = Math.max(appSettings.zoomFactor - 0.25, 0.25)
-                    }
-
-                    Action
-                    {
-                        icon.name: "zoom-fit-page"
-                        onTriggered: appSettings.zoomFactor = 1.0
-                    }
-
-                    Action
-                    {
-                        icon.name: "zoom-in"
-                        onTriggered: appSettings.zoomFactor = Math.min(appSettings.zoomFactor + 0.25, 5.0)
-                    }
-                }
-
                 MenuItem
                 {
                     text: privateMode ? i18n("Exit Private Browsing") : i18n("Private Browsing")
@@ -1107,6 +1070,17 @@ Maui.Page
 
                 MenuItem
                 {
+                    text: i18n("Shortcuts")
+                    icon.name: "configure-shortcuts"
+                    onTriggered:
+                    {
+                        var dialog = _shortcutsDialogComponent.createObject(control)
+                        dialog.open()
+                    }
+                }
+
+                MenuItem
+                {
                     text: i18n("Settings")
                     onTriggered: _settingsDialog.open()
                 }
@@ -1116,6 +1090,16 @@ Maui.Page
                     text: i18n("About")
                     onTriggered: Maui.App.aboutDialog()
                 }
+        }
+    }
+
+    Component
+    {
+        id: _shortcutsDialogComponent
+
+        ShortcutsDialog
+        {
+            onClosed: destroy()
         }
     }
 
