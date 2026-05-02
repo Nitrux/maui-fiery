@@ -883,7 +883,14 @@ Maui.Page
                 text: activeView.count
                 visible: activeView.count > 1
                 onClicked: activeView.openOverview()
-                icon.name: "view-list-icons"
+                font.bold: true
+                font.pointSize: Maui.Style.fontSizes.small
+                display: ToolButton.TextOnly
+                background: Rectangle
+                {
+                    color: Maui.Theme.alternateBackgroundColor
+                    radius: Maui.Style.radiusV
+                }
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
