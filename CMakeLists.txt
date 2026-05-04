@@ -18,9 +18,16 @@ set(FIERY_VERSION 4.0.2)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    add_compile_options($<$<CONFIG:Release>:-march=x86-64-v3>
-                        $<$<CONFIG:Release>:-O3>)
+include(CheckCXXCompilerFlag)
+if(NOT CMAKE_CROSSCOMPILING)
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _host_processor)
+    if(_host_processor MATCHES "^(x86_64|amd64)$")
+        check_cxx_compiler_flag("-march=x86-64-v3" FIERY_HAS_X86_64_V3)
+        if(FIERY_HAS_X86_64_V3)
+            add_compile_options($<$<CONFIG:Release>:-march=x86-64-v3>
+                                $<$<CONFIG:Release>:-O3>)
+        endif()
+    endif()
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -30,6 +37,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 project(fiery VERSION ${FIERY_VERSION})
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(FATAL_ERROR "This project supports Linux only.")
+endif()
+
 
 set(QT_MAJOR_VERSION 6)
 
@@ -105,3 +117,14 @@ install(FILES src/fiery.notifyrc DESTINATION ${KDE_INSTALL_KNOTIFYRCDIR})
 feature_summary(WHAT ALL   FATAL_ON_MISSING_REQUIRED_PACKAGES)
 file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES *.cpp *.h)
 kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
+
+if(NOT TARGET uninstall)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        IMMEDIATE
+        @ONLY)
+
+    add_custom_target(uninstall
+        COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+endif()
