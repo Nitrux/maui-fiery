@@ -26,6 +26,7 @@ Maui.SplitViewItem
     property bool _webFullScreen: false
     property string _hoveredUrl: ""
     property var _pendingFileRequest: null
+    readonly property var _hostWindow: control.Window.window
 
     property bool _isSleeping: false
     property bool _drmNotified: false
@@ -142,10 +143,47 @@ Maui.SplitViewItem
     {
         id: _fileDialog
 
+        function closeIfOpen()
+        {
+            if (typeof _fileDialog.close === "function" && _fileDialog.visible)
+                _fileDialog.close()
+        }
+
+        function acceptPendingRequest(req, files)
+        {
+            if (!req)
+                return
+
+            if (typeof req.dialogAccept === "function")
+                req.dialogAccept(files)
+            else if (typeof req.acceptFiles === "function")
+                req.acceptFiles(files)
+
+            closeIfOpen()
+            Qt.callLater(function() { _webView.forceActiveFocus() })
+        }
+
+        function rejectPendingRequest(req)
+        {
+            if (!req)
+                return
+
+            if (typeof req.dialogReject === "function")
+                req.dialogReject()
+            else if (typeof req.reject === "function")
+                req.reject()
+
+            closeIfOpen()
+            Qt.callLater(function() { _webView.forceActiveFocus() })
+        }
+
         onFinished: function(paths)
         {
             if (control._pendingFileRequest === null)
+            {
+                closeIfOpen()
                 return
+            }
 
             var req = control._pendingFileRequest
             control._pendingFileRequest = null
@@ -157,19 +195,22 @@ Maui.SplitViewItem
                     var s = p.toString()
                     return decodeURIComponent(s.startsWith("file://") ? s.slice(7) : s)
                 })
-                req.acceptFiles(filePaths)
+                acceptPendingRequest(req, filePaths)
             }
             else
             {
-                req.reject()
+                rejectPendingRequest(req)
             }
+
+            // Defensive close in case the picker leaves a lingering modal layer.
+            Qt.callLater(function() { closeIfOpen() })
         }
 
         onVisibleChanged:
         {
             if (!visible && control._pendingFileRequest !== null)
             {
-                control._pendingFileRequest.reject()
+                rejectPendingRequest(control._pendingFileRequest)
                 control._pendingFileRequest = null
             }
         }
@@ -914,11 +955,11 @@ Maui.SplitViewItem
             _webView.grantFeaturePermission(securityOrigin, feature, granted)
         }
 
-        onNavigationRequested: (request) =>
+        onNavigationRequested:
         {
-            const scheme = request.url.toString().trim().toLowerCase()
-            if (scheme.startsWith("javascript:") || scheme.startsWith("data:"))
-                request.action = WebEngineNavigationRequest.IgnoreRequest
+            // openUrl() already blocks javascript:/data: entered in the address bar.
+            // Let in-page links proceed; many web UIs (dropdowns, menu toggles)
+            // rely on javascript:void(0) anchors for click behavior.
         }
 
         settings.accelerated2dCanvasEnabled : true
@@ -1056,7 +1097,7 @@ Maui.SplitViewItem
         repeat: false
         onTriggered:
         {
-            if (control.visible && Window.window && Window.window.active)
+            if (control.visible && control._hostWindow && control._hostWindow.active)
             {
                 _webView.lifecycleState = 0 // WebEngineView.Active
                 _webView.runJavaScript(
@@ -1076,7 +1117,7 @@ Maui.SplitViewItem
             _isSleeping = false
             // Restore full rendering when the tab is brought to the foreground.
             _webView.lifecycleState = 0 // WebEngineView.Active
-            if (Window.window && Window.window.active)
+            if (control._hostWindow && control._hostWindow.active)
             {
                 _kickVizCompositor()
                 _vizRetryTimer.restart()
@@ -1100,10 +1141,10 @@ Maui.SplitViewItem
     // Window.window.active covers focus changes within a workspace.
     Connections
     {
-        target: Window.window
+        target: control._hostWindow
         function onActiveChanged()
         {
-            if (Window.window && Window.window.active && control.visible)
+            if (control._hostWindow && control._hostWindow.active && control.visible)
             {
                 _kickVizCompositor()
                 _vizRetryTimer.restart()
