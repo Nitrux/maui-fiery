@@ -205,49 +205,65 @@ BrowserTabViewButton
     // Per-tab context menu.  Defined here so we have full control over each
     // item's visibility — the TabView's menuActions machinery only supports
     // Action objects which have no visible property.
+    readonly property var _tabMenuActions:
+    {
+        const actions = [_detachTabAction, _pinTabAction]
+        if (control._audible)
+            actions.push(_audioTabAction)
+        if (control._pinned)
+            actions.push(_closeTabAction)
+        return actions
+    }
+
+    Action
+    {
+        id: _detachTabAction
+        text: i18n("Detach")
+        onTriggered:
+        {
+            var urls = control.tabView.tabAt(control.mindex).urls
+            newWindow(urls)
+            control.tabView.closeTab(control.mindex)
+        }
+    }
+
+    Action
+    {
+        id: _pinTabAction
+        text: control._pinned ? i18n("Unpin") : i18n("Pin")
+        onTriggered:
+        {
+            var tab = control.tabView.tabAt(control.mindex)
+            tab.pinned = !tab.pinned
+        }
+    }
+
+    Action
+    {
+        id: _audioTabAction
+        text: (control.webView && control.webView.audioMuted) ? i18n("Unmute Tab") : i18n("Mute Tab")
+        icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
+        onTriggered: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+    }
+
+    Action
+    {
+        id: _closeTabAction
+        text: i18n("Close")
+        onTriggered: control.tabView.closeTab(control.mindex)
+    }
+
     Maui.ContextualMenu
     {
         id: _tabMenu
 
-        MenuItem
+        Repeater
         {
-            text: i18n("Detach")
-            onTriggered:
+            model: control._tabMenuActions
+            delegate: MenuItem
             {
-                var urls = control.tabView.tabAt(control.mindex).urls
-                newWindow(urls)
-                control.tabView.closeTab(control.mindex)
+                action: modelData
             }
-        }
-
-        MenuItem
-        {
-            text: control._pinned ? i18n("Unpin") : i18n("Pin")
-            onTriggered:
-            {
-                var tab = control.tabView.tabAt(control.mindex)
-                tab.pinned = !tab.pinned
-            }
-        }
-
-        MenuItem
-        {
-            visible: control._audible
-            height: visible ? implicitHeight : 0
-            text: (control.webView && control.webView.audioMuted) ? i18n("Unmute Tab") : i18n("Mute Tab")
-            icon.name: (control.webView && control.webView.audioMuted) ? "audio-volume-muted" : "audio-volume-high"
-            onTriggered: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
-        }
-
-        // Close is only useful for pinned tabs: unpinned tabs already have a
-        // visible close button on the tab itself.
-        MenuItem
-        {
-            text: i18n("Close")
-            // Intentionally no icon.name — requirement: Close must have no icon.
-            visible: control._pinned
-            height: visible ? implicitHeight : 0
-            onTriggered: control.tabView.closeTab(control.mindex)
         }
     }
 

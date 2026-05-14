@@ -43,6 +43,39 @@ Maui.ApplicationWindow
     readonly property alias currentBrowser : _appView.currentBrowser
     readonly property alias browserView : _appView.browserView
 
+    function normalizeDownloadsPath(pathValue)
+    {
+        const fallbackPath = StandardPaths.writableLocation(StandardPaths.DownloadLocation)
+
+        if (pathValue === undefined || pathValue === null)
+            return fallbackPath
+
+        var normalizedPath = pathValue.toString().trim()
+        if (normalizedPath.length === 0)
+            return fallbackPath
+
+        if (normalizedPath.startsWith("file://"))
+            normalizedPath = normalizedPath.slice(7)
+        else if (normalizedPath.startsWith("file:/"))
+            normalizedPath = normalizedPath.slice(5)
+        else if (normalizedPath.startsWith("file:"))
+            normalizedPath = normalizedPath.slice(5)
+
+        try
+        {
+            normalizedPath = decodeURIComponent(normalizedPath)
+        }
+        catch (e) {}
+
+        const homePath = StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        if (normalizedPath === "~")
+            normalizedPath = homePath
+        else if (normalizedPath.startsWith("~/"))
+            normalizedPath = homePath + normalizedPath.slice(1)
+
+        return normalizedPath.length > 0 ? normalizedPath : fallbackPath
+    }
+
     onClosing: (close) =>
     {
         if (appSettings.restoreSession)
@@ -179,6 +212,10 @@ Maui.ApplicationWindow
 
     Component.onCompleted:
     {
+        const normalizedDownloadsPath = root.normalizeDownloadsPath(appSettings.downloadsPath)
+        if (normalizedDownloadsPath !== appSettings.downloadsPath)
+            appSettings.downloadsPath = normalizedDownloadsPath
+
         if (appSettings.widevineEnabled && !Fiery.WidevineInstaller.isInstalled)
             Qt.callLater(function() { _startupWidevinePrompt.open() })
     }
@@ -247,7 +284,7 @@ Maui.ApplicationWindow
 
     property WebEngineProfile profile: Fiery.FieryWebProfile
     {
-        downloadPath: appSettings.downloadsPath
+        downloadPath: root.normalizeDownloadsPath(appSettings.downloadsPath)
         // Only register the interceptor when at least one feature needs it.
         // A registered interceptor adds an IPC round-trip for every network request
         // even when interceptRequest() returns immediately — suspending the request,

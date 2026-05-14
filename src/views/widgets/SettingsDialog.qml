@@ -216,7 +216,12 @@ Maui.SettingsDialog
                         id: _downloadsPathField
                         Layout.fillWidth: true
                         text: appSettings.downloadsPath
-                        onEditingFinished: appSettings.downloadsPath = text
+                        onEditingFinished:
+                        {
+                            const normalizedPath = root.normalizeDownloadsPath(text)
+                            appSettings.downloadsPath = normalizedPath
+                            text = normalizedPath
+                        }
                     }
 
                     ToolButton
@@ -233,10 +238,7 @@ Maui.SettingsDialog
                         {
                             if(paths.length > 0)
                             {
-                                // Decode percent-encoded characters (e.g. %20 → space)
-                                // so the stored path is a real filesystem path, not a URL.
-                                var s = paths[0].toString()
-                                const path = decodeURIComponent(s.startsWith("file://") ? s.slice(7) : s)
+                                const path = root.normalizeDownloadsPath(paths[0])
                                 appSettings.downloadsPath = path
                                 _downloadsPathField.text = path
                             }

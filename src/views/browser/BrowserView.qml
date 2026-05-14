@@ -236,6 +236,16 @@ Maui.Page
     Shortcut
     {
         sequence: "Escape"
+        enabled: _sideBarView.sideBar.visible
+        onActivated:
+        {
+            _sideBarView.sideBar.close()
+        }
+    }
+
+    Shortcut
+    {
+        sequence: "Ctrl+."
         enabled: currentBrowser !== null
         onActivated: currentBrowser.stop()
     }
@@ -849,6 +859,16 @@ Maui.Page
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
                 ToolTip.text: i18n("Toggle sidebar")
+            }
+
+            ToolSeparator
+            {
+                visible: _sideBarView.sideBar.visible && !_sideBarView.sideBar.collapsed
+                orientation: Qt.Vertical
+                height: parent.height
+                anchors.verticalCenter: parent.verticalCenter
+                topPadding: 10
+                bottomPadding: 10
             }
 
             Maui.ToolActions
