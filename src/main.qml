@@ -240,7 +240,7 @@ Maui.ApplicationWindow
     {
         id: _acceptDownloadAction
         property var download
-        text: i18n("Accept")
+        text: i18n("Save")
         onTriggered: () => { _acceptDownloadAction.download.resume() }
     }
 
