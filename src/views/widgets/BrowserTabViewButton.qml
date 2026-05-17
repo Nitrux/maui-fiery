@@ -25,9 +25,12 @@ BrowserTabButton
      */
     property int delegateIndex: -1
 
-    readonly property int mindex : control.delegateIndex >= 0
-        ? control.delegateIndex
-        : ((typeof index != "undefined" && index >= 0) ? index : control.TabBar.index)
+    readonly property int mindex :
+        ((typeof control.TabBar.index !== "undefined" && control.TabBar.index >= 0)
+            ? control.TabBar.index
+            : (control.delegateIndex >= 0
+                ? control.delegateIndex
+                : ((typeof index !== "undefined" && index >= 0) ? index : -1)))
 
     /**
      * @brief The TabView to which this tab button belongs to.
@@ -35,6 +38,8 @@ BrowserTabButton
      * @warning When creating a custom tab button for the TabView, you might need to bind this to the TabView ID.
      */
     property Item tabView : control.parent
+    // Forces reevaluation of model-derived bindings after tab moves.
+    readonly property int _modelPulse: control.tabView ? (control.tabView.currentIndex + control.tabView.count) : 0
 
     /**
      * @brief The object map containing information about this tab.
@@ -43,6 +48,7 @@ BrowserTabButton
      */
     readonly property var tabInfo:
     {
+        const _pulse = control._modelPulse
         const item = control.tabView && control.tabView.contentModel ? control.tabView.contentModel.get(mindex) : null
         return item ? item.Maui.Controls : ({})
     }
@@ -68,11 +74,10 @@ BrowserTabButton
     ToolTip.visible: control.hovered && !Maui.Handy.isMobile && ToolTip.text.length
     ToolTip.text: tabInfo.toolTipText
 
-    Drag.active: dragArea.drag.active
     Drag.source: control
     Drag.hotSpot.x: width / 2
     Drag.hotSpot.y: height / 2
-    Drag.dragType: Drag.Automatic
+    Drag.dragType: Drag.Internal
     Drag.proposedAction: Qt.IgnoreAction
 
     Rectangle
@@ -121,7 +126,7 @@ BrowserTabButton
         interval: 250
         onTriggered:
         {
-            if(_dropArea.containsDrag)
+            if(_dropArea.containsDrag && control.mindex >= 0)
             {
                 control.tabView.setCurrentIndex(mindex)
             }
@@ -140,12 +145,12 @@ BrowserTabButton
                 const from = drop.source.mindex
                 const to = control.mindex
 
-                if(to === from)
+                if (from < 0 || to < 0 || from >= control.tabView.count || to >= control.tabView.count || to === from)
                 {
                     return
                 }
 
-                console.log("Move ", drop.source.mindex, control.mindex)
+                console.log("[TabSync] dnd move from=", from, "to=", to, "current=", control.tabView.currentIndex)
                 control.tabView.moveTab(from , to)
         }
 

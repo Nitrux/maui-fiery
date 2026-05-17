@@ -13,15 +13,55 @@ BrowserTabViewButton
     id: control
 
     property int position: control.TabBar.position
+    property bool debugTabSync: true
 
-    // The Repeater in TabView.qml injects `index` as a context property into
-    // each delegate.  It is more reliable than mindex (= TabBar.index) because
-    // QQC TabBar's stackBefore/stackAfter reordering failures corrupt TabBar.index,
-    // causing mindex to point at the wrong slot after pin/unpin.
+    function _debugDumpTabs(tag)
+    {
+        if (!debugTabSync || !control.tabView || !control.tabView.contentModel)
+            return
+
+        const rows = []
+        for (let i = 0; i < control.tabView.count; i++)
+        {
+            const item = control.tabView.contentModel.get(i)
+            if (!item)
+            {
+                rows.push(i + ":[null]")
+                continue
+            }
+
+            const metaTitle = item.Maui && item.Maui.Controls ? item.Maui.Controls.title : ""
+            const liveTitle = (item.browser && item.browser.webView) ? item.browser.webView.title : ""
+            rows.push(i + ":{meta:'" + metaTitle + "', live:'" + liveTitle + "'}")
+        }
+
+        console.log("[TabSync]", tag, "mindex=", control.mindex, "current=", control.tabView.currentIndex, rows.join(" | "))
+    }
+
+    function _debugDelegate(tag)
+    {
+        if (!debugTabSync)
+            return
+
+        const liveTitle = (control.webView && control.webView.title) ? control.webView.title : ""
+        const metaTitle = tabInfo ? tabInfo.title : ""
+        console.log("[TabSync][Delegate]", tag, "mindex=", control.mindex, "current=", control.tabView.currentIndex, "text=", control.text, "meta=", metaTitle, "live=", liveTitle)
+    }
+
+    onMindexChanged: _debugDelegate("mindex")
+    onTextChanged: _debugDelegate("text")
+    Component.onCompleted: _debugDelegate("completed")
+
+    // Keep a stable fallback index from the Repeater context. The base class
+    // now resolves mindex from the live TabBar order first, and only uses this
+    // when a live index cannot be determined.
     delegateIndex: (typeof index != "undefined" && index >= 0) ? index : -1
+    // Forces reevaluation of model-derived bindings after tab moves.
+    readonly property int _modelPulse: control.tabView ? (control.tabView.currentIndex + control.tabView.count) : 0
 
     readonly property WebEngineView webView:
     {
+        const _pulse = control._modelPulse
         var item = control.tabView.contentModel.get(control.mindex)
         if (!item || !item.browser) return null
         return item.browser.webView
@@ -29,6 +69,7 @@ BrowserTabViewButton
 
     readonly property bool _pinned:
     {
+        const _pulse = control._modelPulse
         var item = control.tabView.contentModel.get(control.mindex)
         return item ? (item.pinned || false) : false
     }
@@ -108,7 +149,7 @@ BrowserTabViewButton
     // A direct binding is used instead of a Binding element to avoid the
     // binding-restoration failure across component boundaries that would
     // collapse the property to its default when unpinning.
-    text: control._pinned ? "" : (tabInfo ? tabInfo.title : "")
+    text: control._pinned ? "" : ((control.webView && control.webView.title.length) ? control.webView.title : (tabInfo ? tabInfo.title : ""))
 
     // Keep width fixed for pinned (icon-only square) tabs.
     // A direct binding is used instead of a Binding element for the same
@@ -137,10 +178,12 @@ BrowserTabViewButton
 
     onClicked:
     {
+        _debugDumpTabs("click:before")
         if (control.mindex === control.tabView.currentIndex)
             openEditMode()
         else
             control.tabView.setCurrentIndex(control.mindex)
+        Qt.callLater(function() { control._debugDumpTabs("click:after") })
     }
 
     onRightClicked: _tabMenu.show()
@@ -208,6 +251,10 @@ BrowserTabViewButton
     readonly property var _tabMenuActions:
     {
         const actions = [_detachTabAction, _pinTabAction]
+        if (control.mindex > 0)
+            actions.push(_moveTabLeftAction)
+        if (control.mindex >= 0 && control.mindex < (control.tabView.count - 1))
+            actions.push(_moveTabRightAction)
         if (control._audible)
             actions.push(_audioTabAction)
         if (control._pinned)
@@ -235,6 +282,34 @@ BrowserTabViewButton
         {
             var tab = control.tabView.tabAt(control.mindex)
             tab.pinned = !tab.pinned
+        }
+    }
+
+    Action
+    {
+        id: _moveTabLeftAction
+        text: i18n("Move Left")
+        icon.name: "go-previous"
+        onTriggered:
+        {
+            control._debugDumpTabs("move-left:before")
+            if (control.mindex > 0)
+                control.tabView.moveTab(control.mindex, control.mindex - 1)
+            Qt.callLater(function() { control._debugDumpTabs("move-left:after") })
+        }
+    }
+
+    Action
+    {
+        id: _moveTabRightAction
+        text: i18n("Move Right")
+        icon.name: "go-next"
+        onTriggered:
+        {
+            control._debugDumpTabs("move-right:before")
+            if (control.mindex >= 0 && control.mindex < (control.tabView.count - 1))
+                control.tabView.moveTab(control.mindex, control.mindex + 1)
+            Qt.callLater(function() { control._debugDumpTabs("move-right:after") })
         }
     }
 
