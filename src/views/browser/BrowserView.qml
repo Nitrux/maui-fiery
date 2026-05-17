@@ -24,11 +24,48 @@ Maui.Page
     property int count: activeView.count
     readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
+    property int _popupGeometryNudge: 0
     // Closed-tabs stack is now persisted in RECENTLY_CLOSED via Fiery.DBActions.
     onSearchFieldVisibleChanged:
     {
         if(!searchFieldVisible && control.currentBrowser)
             control.currentBrowser.findText("")
+    }
+    onCurrentTabChanged: _schedulePopupGeometryRefresh()
+    onPrivateModeChanged: _schedulePopupGeometryRefresh()
+
+    function _schedulePopupGeometryRefresh()
+    {
+        if (!control.visible || control.currentBrowser === null)
+            return
+
+        // Workaround for detached/mispositioned HTML <select> popups observed
+        // in XWayland-on-Wayland sessions.
+        if (!_surf.isX11OnWayland())
+            return
+
+        _popupGeometryNudge = 0
+        _popupNudgeOnTimer.restart()
+    }
+
+    Timer
+    {
+        id: _popupNudgeOnTimer
+        interval: 0
+        repeat: false
+        onTriggered:
+        {
+            control._popupGeometryNudge = 1
+            _popupNudgeOffTimer.restart()
+        }
+    }
+
+    Timer
+    {
+        id: _popupNudgeOffTimer
+        interval: 16
+        repeat: false
+        onTriggered: control._popupGeometryNudge = 0
     }
 
 
@@ -508,6 +545,7 @@ Maui.Page
         holder.body: i18n("Enter a new URL or open a recent site.")
 
         onNewTabClicked: openTab("")
+        onCurrentIndexChanged: _schedulePopupGeometryRefresh()
         onCloseTabClicked: (index) =>
         {
             var tab = _browserListView.tabAt(index)
@@ -636,6 +674,7 @@ Maui.Page
             holder.body: i18n("Enter a new URL or open a recent site.")
 
             onNewTabClicked: openTab("")
+            onCurrentIndexChanged: _schedulePopupGeometryRefresh()
             onCloseTabClicked: (index) =>
             {
                 // Private tab URLs must NOT be added to the restore stack:
@@ -838,7 +877,10 @@ Maui.Page
     {
         id: _browserComponent
 
-        BrowserLayout {}
+        BrowserLayout
+        {
+            popupGeometryNudge: control._popupGeometryNudge
+        }
     }
 
     Component

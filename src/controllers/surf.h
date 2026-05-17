@@ -15,5 +15,6 @@ public Q_SLOTS:
     static QString safeDisplayUrl(const QString &urlStr);
     static bool isDangerousFile(const QString &path);
     Q_INVOKABLE static QString formatBytes(qint64 bytes);
+    Q_INVOKABLE static bool isX11OnWayland();
 
 };

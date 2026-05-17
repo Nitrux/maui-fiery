@@ -1,6 +1,7 @@
 #include "surf.h"
 
 #include <KFormat>
+#include <QGuiApplication>
 
 surf::surf(QObject *parent) : QObject(parent)
 {
@@ -147,4 +148,16 @@ bool surf::hasProtocol(const QString &input)
     // explicit URI scheme (http, https, ftp, file, about, data, …) while
     // excluding single-letter Windows drive letters.
     return QUrl(input).scheme().length() > 1;
+}
+
+bool surf::isX11OnWayland()
+{
+    const QString platformName = QGuiApplication::platformName().toLower();
+    const bool isX11Platform = platformName.contains(QStringLiteral("xcb"));
+
+    const QByteArray sessionType = qgetenv("XDG_SESSION_TYPE").trimmed().toLower();
+    const bool isWaylandSession = qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
+                                  || sessionType == "wayland";
+
+    return isX11Platform && isWaylandSession;
 }

@@ -15,6 +15,7 @@ Item
     property url url
     property bool pinned: false
     property WebEngineProfile browserProfile: root.profile
+    property int popupGeometryNudge: 0
 
     property alias currentIndex : _splitView.currentIndex
     property alias orientation : _splitView.orientation
@@ -49,6 +50,7 @@ Item
         id: _splitView
 
         anchors.fill: parent
+        anchors.bottomMargin: control.popupGeometryNudge
         orientation: Qt.Horizontal
         background: null
 
@@ -99,5 +101,4 @@ Item
         _splitView.closeSplit(index)
     }
 }
-
 
