@@ -45,8 +45,8 @@ endif()
 
 set(QT_MAJOR_VERSION 6)
 
-set(REQUIRED_QT_VERSION 6.8.2)
-set(REQUIRED_KF_VERSION 5.240.0)
+set(REQUIRED_QT_VERSION 6.9)
+set(REQUIRED_KF_VERSION 6.13.0)
 
 find_package(ECM ${REQUIRED_KF_VERSION} REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${ECM_MODULE_PATH})
@@ -63,12 +63,12 @@ include(ECMSourceVersionControl)
 include(FeatureSummary)
 
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Widgets Qml Sql Network)
-find_package(KF6 ${KF5_VERSION} REQUIRED COMPONENTS I18n CoreAddons Notifications)
+find_package(KF6 ${REQUIRED_KF_VERSION} REQUIRED COMPONENTS I18n CoreAddons Notifications)
 
 find_package(Qt6WebEngineCore REQUIRED)
 find_package(Qt6WebEngineQuick REQUIRED)
 
-find_package(MauiKit4 REQUIRED COMPONENTS FileBrowsing)
+find_package(MauiKit4 4.0.3 REQUIRED COMPONENTS FileBrowsing)
 
 if(${ECM_SOURCE_UNDER_VERSION_CONTROL})
     execute_process(
