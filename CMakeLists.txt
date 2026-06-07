@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.16)
 #   -webengine-proprietary-codecs
 # ─────────────────────────────────────────────────────────────────────────────
 
-set(FIERY_VERSION 4.0.3)
+set(FIERY_VERSION 4.0.4)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -68,7 +68,7 @@ find_package(KF6 ${REQUIRED_KF_VERSION} REQUIRED COMPONENTS I18n CoreAddons Noti
 find_package(Qt6WebEngineCore REQUIRED)
 find_package(Qt6WebEngineQuick REQUIRED)
 
-find_package(MauiKit4 4.0.3 REQUIRED COMPONENTS FileBrowsing)
+find_package(MauiKit4 4.0.4 REQUIRED COMPONENTS FileBrowsing)
 
 if(${ECM_SOURCE_UNDER_VERSION_CONTROL})
     execute_process(
