@@ -32,8 +32,123 @@ Maui.SplitViewItem
     property bool _drmNotified: false
     property int _loadSerial: 0
     property int _fillPromptedLoadSerial: -1
+    property int _autofillPromptSuppressLoadSerial: -1
+    property string _autofillPromptSuppressHost: ""
+    property bool _autofillPromptPending: false
+    property bool _savePromptPending: false
+    property int _savePromptMiss: 0
 
     WidevinePrompt { id: _widevinePrompt }
+
+    Timer
+    {
+        id: _savePromptTimer
+        repeat: true
+        interval: 350
+        running: false
+        onTriggered:
+        {
+            if (!control._savePromptPending || _webView.profile.offTheRecord)
+            {
+                _savePromptTimer.stop()
+                return
+            }
+
+            _webView.runJavaScript(_webView._credentialHarvestScript, function(result)
+            {
+                if (!result)
+                {
+                    if (++control._savePromptMiss >= 3)
+                    {
+                        control._savePromptPending = false
+                        _savePromptTimer.stop()
+                    }
+                    return
+                }
+
+                try
+                {
+                    var cred = JSON.parse(result)
+                    if (!cred || !cred.p)
+                    {
+                        control._savePromptPending = false
+                        control._savePromptMiss = 0
+                        _savePromptTimer.stop()
+                        return
+                    }
+
+                    _webView.runJavaScript(_webView._loginFormProbeScript, function(visible)
+                    {
+                        if (visible === true)
+                        {
+                            control._savePromptMiss = 0
+                            return
+                        }
+
+                        if (++control._savePromptMiss < 2)
+                            return
+
+                        control._savePromptPending = false
+                        control._savePromptMiss = 0
+                        _savePromptTimer.stop()
+                        Fiery.PasswordManager.requestSave(cred.h, cred.u || "", cred.p)
+                    })
+                }
+                catch(e)
+                {
+                    control._savePromptPending = false
+                    control._savePromptMiss = 0
+                    _savePromptTimer.stop()
+                }
+            })
+        }
+    }
+
+    function _requestAutofillPromptCheck()
+    {
+        if (_webView.profile.offTheRecord)
+            return
+
+        try
+        {
+            const host = new URL(_webView.url.toString()).hostname
+            const loadSerial = control._loadSerial
+            if (!host || !Fiery.PasswordManager.hasCredentials(host))
+                return
+
+            _webView.runJavaScript(_webView._loginFormProbeScript, function(result)
+            {
+                if (loadSerial !== control._loadSerial
+                        || control._fillPromptedLoadSerial === loadSerial)
+                {
+                    return
+                }
+
+                if (host === control._autofillPromptSuppressHost
+                        && loadSerial === control._autofillPromptSuppressLoadSerial)
+                {
+                    control._autofillPromptPending = false
+                    return
+                }
+
+                if (result !== true || !control.visible)
+                {
+                    control._autofillPromptPending = true
+                    return
+                }
+
+                control._fillPromptedLoadSerial = loadSerial
+                control._autofillPromptPending = false
+                _fillPasswordAction.host = host
+                root.notify("dialog-password",
+                            i18n("Saved Password"),
+                            i18n("Fill credentials for %1?", host),
+                            [_fillPasswordAction, _dismissFillAction])
+            })
+        }
+        catch(e) {}
+    }
+
 
     Timer
     {
@@ -397,6 +512,34 @@ Maui.SplitViewItem
             "var em=ins.filter(function(i){return i.type==='email'||(i.name&&i.name.toLowerCase().indexOf('email')!==-1)||(i.id&&i.id.toLowerCase().indexOf('email')!==-1);});" +
             "return em.length?em[em.length-1].value:ins.length?ins[ins.length-1].value:'';}" +
             "var _ck=Symbol('fieryCred');" +
+            "var _saveArmed=false,_saveMiss=0,_saveTimer=null;" +
+            "function visible(el){" +
+            "try{" +
+            "if(el==null||el.disabled||el.readOnly)return false;" +
+            "var s=getComputedStyle(el);" +
+            "if(s.display===\"none\"||s.visibility===\"hidden\"||Number(s.opacity)===0)return false;" +
+            "var r=el.getBoundingClientRect();" +
+            "return r.width>0&&r.height>0;" +
+            "}catch(e){return false;}}" +
+            "function anyVisiblePassword(){" +
+            "return Array.from(document.querySelectorAll('input[type=\"password\"]')).some(visible);}" +
+            "function armSaveCheck(){" +
+            "_saveArmed=true;" +
+            "_saveMiss=0;" +
+            "console.log('__FIERY_CRED_ARMED__');" +
+            "if(_saveTimer)return;" +
+            "_saveTimer=setTimeout(checkSave,400);}" +
+            "function disarmSaveCheck(){" +
+            "_saveArmed=false;" +
+            "_saveMiss=0;" +
+            "if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}}" +
+            "function checkSave(){" +
+            "_saveTimer=null;" +
+            "if(!window[_k]||typeof window[_k]!=='string'){disarmSaveCheck();return;}" +
+            "if(anyVisiblePassword()){_saveMiss=0;return;}" +
+            "if(++_saveMiss<2){_saveTimer=setTimeout(checkSave,400);return;}" +
+            "disarmSaveCheck();" +
+            "console.log('__FIERY_CRED_READY__');}" +
             "function attach(pw){" +
             "if(pw[_ck])return;" +
             "pw[_ck]=true;" +
@@ -418,17 +561,36 @@ Maui.SplitViewItem
             "var _t=null;" +
             "new MutationObserver(function(muts){" +
             "if(_t)return;" +
+            "if(_saveArmed){" +
+            "_saveTimer=setTimeout(checkSave,250);}" +
             "for(var i=0;i<muts.length;i++){" +
             "var ns=muts[i].addedNodes;" +
             "for(var j=0;j<ns.length;j++){" +
             "if(ns[j].nodeType===1){" +
             "_t=setTimeout(function(){_t=null;scan();},500);" +
             "return;}}}" +
-            "}).observe(document.documentElement,{childList:true,subtree:true});" +
+            "}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});" +
             "document.addEventListener('submit',function(e){" +
-            "var f=e.target;if(!f)return;" +
-            "if(!f.querySelector('input[type=\"password\"]'))return;" +
-            "if(typeof window[_k]==='string')console.log('__FIERY_CRED_READY__');" +
+            "if(!e||!e.isTrusted)return;" +
+            "var f=e.target;" +
+            "if(!f||!f.querySelector('input[type=\"password\"]'))return;" +
+            "armSaveCheck();" +
+            "},{capture:true});" +
+            "document.addEventListener('click',function(e){" +
+            "if(!e||!e.isTrusted)return;" +
+            "var t=e.target;" +
+            "if(!t)return;" +
+            "var f=t.form||((t.closest&&t.closest('form'))||null);" +
+            "if(!f||!f.querySelector('input[type=\"password\"]'))return;" +
+            "armSaveCheck();" +
+            "},{capture:true});" +
+            "document.addEventListener('keydown',function(e){" +
+            "if(!e||!e.isTrusted||e.key!=='Enter')return;" +
+            "var t=e.target;" +
+            "if(!t)return;" +
+            "var f=t.form||((t.closest&&t.closest('form'))||null);" +
+            "if(!f||!f.querySelector('input[type=\"password\"]'))return;" +
+            "armSaveCheck();" +
             "},{capture:true});" +
             "})()"
 
@@ -454,6 +616,50 @@ Maui.SplitViewItem
             "return r.width>0&&r.height>0;" +
             "}catch(e){return false;}}" +
             "return Array.from(document.querySelectorAll(\"input[type=\\\"password\\\"]\")).some(visible);" +
+            "})()"
+
+        readonly property string _autofillPromptScript:
+            "(function(){" +
+            "if(window.__fieryFillHooked)return;" +
+            "window.__fieryFillHooked=true;" +
+            "var _t=null;" +
+            "function visible(el){" +
+            "try{" +
+            "if(el==null||el.disabled||el.readOnly)return false;" +
+            "var s=getComputedStyle(el);" +
+            "if(s.display===\"none\"||s.visibility===\"hidden\"||Number(s.opacity)===0)return false;" +
+            "var r=el.getBoundingClientRect();" +
+            "return r.width>0&&r.height>0;" +
+            "}catch(e){return false;}}" +
+            "function probe(){" +
+            "if(_t)return;" +
+            "_t=setTimeout(function(){" +
+            "_t=null;" +
+            "if(Array.from(document.querySelectorAll('input[type=\"password\"]')).some(visible)){" +
+            "try{console.warn('__FIERY_FILL_READY__');}catch(e){}" +
+            "}" +
+            "},150);" +
+            "}" +
+            "function attach(el){" +
+            "if(!el||el.__fieryFillWatch)return;" +
+            "el.__fieryFillWatch=true;" +
+            "el.addEventListener('focus',probe,true);" +
+            "el.addEventListener('click',probe,true);" +
+            "el.addEventListener('input',probe,true);" +
+            "}" +
+            "function scan(){" +
+            "Array.from(document.querySelectorAll('input')).forEach(function(el){" +
+            "attach(el);" +
+            "});" +
+            "if(Array.from(document.querySelectorAll('input[type=\"password\"]')).some(visible))" +
+            "probe();" +
+            "}" +
+            "scan();" +
+            "new MutationObserver(function(){" +
+            "scan();" +
+            "}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['type','style','class','hidden']});" +
+            "document.addEventListener('focusin',probe,true);" +
+            "document.addEventListener('click',probe,true);" +
             "})()"
 
         function buildFillerScript(creds) {
@@ -746,7 +952,15 @@ Maui.SplitViewItem
 
         onJavaScriptConsoleMessage: function(level, message, lineNumber, sourceId)
         {
-            if (message === "__FIERY_CRED_READY__" && !_webView.profile.offTheRecord) {
+            if (message === "__FIERY_CRED_ARMED__" && !_webView.profile.offTheRecord) {
+                control._savePromptPending = true
+                control._savePromptMiss = 0
+                _savePromptTimer.restart()
+            }
+            else if (message === "__FIERY_CRED_READY__" && !_webView.profile.offTheRecord) {
+                control._savePromptPending = false
+                control._savePromptMiss = 0
+                _savePromptTimer.stop()
                 _webView.runJavaScript(_webView._credentialHarvestScript, function(result) {
                     if (!result) return
                     try {
@@ -755,6 +969,10 @@ Maui.SplitViewItem
                             Fiery.PasswordManager.requestSave(cred.h, cred.u || "", cred.p)
                     } catch(e) {}
                 })
+            }
+            else if (message === "__FIERY_FILL_READY__" && !_webView.profile.offTheRecord)
+            {
+                control._requestAutofillPromptCheck()
             }
             if (message === "__FIERY_DRM_REQUIRED__"
                     && !_webView.profile.offTheRecord
@@ -798,31 +1016,19 @@ Maui.SplitViewItem
                         control._pendingCredHost = ""
                         control._pendingCredUser = ""
                         control._pendingCredPass = ""
+                        control._savePromptPending = false
+                        control._savePromptMiss = 0
+                        _savePromptTimer.stop()
                     }
 
-                    // Install the credential watcher for this page.
+                    // Install the credential watcher and autofill prompt hooks for this page.
                     _webView.runJavaScript(_webView._credentialWatcherScript)
+                    _webView.runJavaScript(_webView._autofillPromptScript)
 
-                    // Prompt to fill saved credentials only when the page
-                    // exposes a visible password field, and only once per load.
-                    try {
-                        const host = new URL(_webView.url.toString()).hostname
-                        const loadSerial = control._loadSerial
-                        if (host && Fiery.PasswordManager.hasCredentials(host)) {
-                            _webView.runJavaScript(_webView._loginFormProbeScript, function(result) {
-                                if (loadSerial !== control._loadSerial
-                                        || control._fillPromptedLoadSerial === loadSerial
-                                        || result !== true)
-                                    return
-                                control._fillPromptedLoadSerial = loadSerial
-                                _fillPasswordAction.host = host
-                                root.notify("dialog-password",
-                                            i18n("Saved Password"),
-                                            i18n("Fill credentials for %1?", host),
-                                            [_fillPasswordAction, _dismissFillAction])
-                            })
-                        }
-                    } catch(e) {}
+                    // Check once on load, then let focus/mutation events re-trigger
+                    // the prompt if the login form appears later.
+                    control._autofillPromptPending = false
+                    control._requestAutofillPromptCheck()
                 }
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
@@ -837,6 +1043,7 @@ Maui.SplitViewItem
                 control._loadFailed = false
                 control._drmNotified = false
                 control._loadSerial += 1
+                control._autofillPromptPending = false
 
                 // Harvest any credential the watcher recorded before the page unloads.
                 if (!_webView.profile.offTheRecord) {
@@ -1032,6 +1239,9 @@ Maui.SplitViewItem
         text: i18n("Fill")
         onTriggered:
         {
+            control._autofillPromptPending = false
+            control._autofillPromptSuppressHost = _fillPasswordAction.host
+            control._autofillPromptSuppressLoadSerial = control._loadSerial + 1
             var creds = Fiery.PasswordManager.find(_fillPasswordAction.host)
             if (creds.length > 0)
                 _webView.runJavaScript(_webView.buildFillerScript(creds))
@@ -1122,6 +1332,8 @@ Maui.SplitViewItem
                 _kickVizCompositor()
                 _vizRetryTimer.restart()
             }
+            if (control._autofillPromptPending)
+                Qt.callLater(control._requestAutofillPromptCheck)
         }
         else if (!_webView.recentlyAudible)
         {
