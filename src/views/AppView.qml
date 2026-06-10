@@ -25,7 +25,8 @@ Maui.SideBarView
     sideBar.autoHide: true
     // Scale with the window up to a comfortable maximum so long filenames
     // are not clipped; on narrow/portrait layouts give it most of the width.
-    sideBar.preferredWidth: Math.min(root.width * (root.isWide ? 0.38 : 0.88), 520)
+    sideBar.maximumWidth: Maui.Style.units.gridUnit * 20
+    sideBar.preferredWidth: Math.min(root.width * (root.isWide ? 0.38 : 0.88), sideBar.maximumWidth)
 
     sideBar.content: Maui.Page
     {
