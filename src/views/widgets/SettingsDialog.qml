@@ -12,10 +12,30 @@ Maui.SettingsDialog
 {
     id: control
 
+    Maui.InfoDialog
+    {
+        id: confirmationDialog
+        property string url: ""
+        property string displayUrl: ""
+
+        title: i18n("Reset downloads folder")
+        message: i18n("Reset the downloads folder back to the default location?\n%1", displayUrl.length > 0 ? displayUrl : url)
+        template.iconSource: "emblem-warning"
+
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        onAccepted:
+        {
+            appSettings.downloadsPath = root.normalizeDownloadsPath("")
+            confirmationDialog.close()
+        }
+
+        onRejected: confirmationDialog.close()
+    }
+
     Maui.SectionGroup
     {
-        title: i18n("Navigation")
-        description: i18n("Configure the app basic navigation features.")
+        title: i18n("General")
 
         Maui.FlexSectionItem
         {
@@ -45,45 +65,112 @@ Maui.SettingsDialog
             }
         }
 
-        Maui.FlexSectionItem
+        Maui.SectionItem
         {
-            label1.text: i18n("Load Images")
-            label2.text: i18n("Automatically load images on web pages.")
+            label1.text: i18n("Home Page")
+            label2.text: i18n("Page loaded on startup and for new tabs.")
 
-            Switch
+            TextField
             {
-                Layout.fillHeight: true
-                checkable: true
-                checked: appSettings.autoLoadImages
-                onToggled: appSettings.autoLoadImages = !appSettings.autoLoadImages
+                Layout.fillWidth: true
+                text: appSettings.homePage
+                onEditingFinished: appSettings.homePage = text
             }
         }
 
-        Maui.FlexSectionItem
+        Maui.SectionItem
         {
-            label1.text: i18n("Load Favicons")
-            label2.text: i18n("Automatically load site icons for tabs.")
+            label1.text: i18n("Search Engine")
+            label2.text: i18n("Engine used when entering a plain query.")
 
-            Switch
+            TextField
             {
-                Layout.fillHeight: true
-                checkable: true
-                checked: appSettings.autoLoadIconsForPage
-                onToggled: appSettings.autoLoadIconsForPage = !appSettings.autoLoadIconsForPage
+                Layout.fillWidth: true
+                text: appSettings.searchEnginePage
+                onEditingFinished: appSettings.searchEnginePage = text
+            }
+        }
+
+        Maui.SectionItem
+        {
+            label1.text: i18n("User Agent")
+            label2.text: i18n("Override the browser identity string sent to websites.")
+
+            TextField
+            {
+                Layout.fillWidth: true
+                placeholderText: i18n("Default")
+                text: appSettings.customUserAgent
+                onEditingFinished: appSettings.customUserAgent = text
             }
         }
     }
 
-    Maui.FlexSectionItem
+    Maui.SectionGroup
     {
-        label1.text: i18n("General")
-        label2.text: i18n("Configure home page, search engine, and downloads.")
+        title: i18n("Downloads")
 
-        ToolButton
+        Maui.FlexSectionItem
         {
-            icon.name: "go-next"
-            checkable: true
-            onToggled: control.addPage(_generalComponent)
+            label1.text: i18n("Auto Save")
+            label2.text: i18n("Download files without asking each time.")
+
+            Switch
+            {
+                Layout.fillHeight: true
+                checkable: true
+                checked: appSettings.autoSave
+                onToggled: appSettings.autoSave = !appSettings.autoSave
+            }
+        }
+
+        ColumnLayout
+        {
+            Layout.fillWidth: true
+            spacing: Maui.Style.space.medium
+
+            Maui.ListDelegate
+            {
+                Layout.fillWidth: true
+
+                template.iconSource: "folder-download"
+                template.iconSizeHint: Maui.Style.iconSizes.small
+                template.label1.text: i18n("Downloads")
+                template.label2.text: root.normalizeDownloadsPath(appSettings.downloadsPath)
+
+                template.content: ToolButton
+                {
+                    icon.name: "edit-clear"
+                    flat: true
+                    onClicked:
+                    {
+                        confirmationDialog.url = appSettings.downloadsPath
+                        confirmationDialog.displayUrl = root.normalizeDownloadsPath(appSettings.downloadsPath)
+                        confirmationDialog.open()
+                    }
+                }
+            }
+
+            Button
+            {
+                Layout.fillWidth: true
+                text: i18n("Change")
+                onClicked: _folderDialog.open()
+            }
+
+            FB.FileDialog
+            {
+                id: _folderDialog
+                mode: FB.FileDialog.Modes.Dirs
+                onFinished: function(paths)
+                {
+                    if(paths.length > 0)
+                    {
+                        const path = root.normalizeDownloadsPath(paths[0])
+                        appSettings.downloadsPath = path
+                    }
+                }
+            }
         }
     }
 
@@ -102,19 +189,6 @@ Maui.SettingsDialog
 
     Maui.FlexSectionItem
     {
-        label1.text: i18n("JavaScript")
-        label2.text: i18n("Configure JavaScript behaviour.")
-
-        ToolButton
-        {
-            icon.name: "go-next"
-            checkable: true
-            onToggled: control.addPage(_jsComponent)
-        }
-    }
-
-    Maui.FlexSectionItem
-    {
         label1.text: i18n("Permissions")
         label2.text: i18n("Control which features websites are allowed to use.")
 
@@ -128,7 +202,7 @@ Maui.SettingsDialog
 
     Maui.FlexSectionItem
     {
-        label1.text: i18n("Privacy & Security")
+        label1.text: i18n("Privacy and Security")
         label2.text: i18n("Ad blocker, tracking, and data options.")
 
         ToolButton
@@ -152,117 +226,6 @@ Maui.SettingsDialog
         }
     }
 
-    // ── General ─────────────────────────────────────────────────────────────
-
-    Component
-    {
-        id: _generalComponent
-
-        Maui.SettingsPage
-        {
-            title: i18n("General")
-
-            Maui.SectionItem
-            {
-                label1.text: i18n("Home Page")
-                label2.text: i18n("Page loaded on startup and for new tabs.")
-
-                TextField
-                {
-                    Layout.fillWidth: true
-                    text: appSettings.homePage
-                    onEditingFinished: appSettings.homePage = text
-                }
-            }
-
-            Maui.SectionItem
-            {
-                label1.text: i18n("Search Engine")
-                label2.text: i18n("Engine used when entering a plain query.")
-
-                TextField
-                {
-                    Layout.fillWidth: true
-                    text: appSettings.searchEnginePage
-                    onEditingFinished: appSettings.searchEnginePage = text
-                }
-            }
-
-            Maui.SectionItem
-            {
-                label1.text: i18n("User Agent")
-                label2.text: i18n("Override the browser identity string sent to websites. Leave blank to use the default.")
-
-                TextField
-                {
-                    Layout.fillWidth: true
-                    placeholderText: i18n("Default")
-                    text: appSettings.customUserAgent
-                    onEditingFinished: appSettings.customUserAgent = text
-                }
-            }
-
-            Maui.SectionGroup
-            {
-                title: i18n("Downloads")
-
-                Maui.SectionItem
-                {
-                    label1.text: i18n("Downloads Folder")
-                    label2.text: i18n("Where downloaded files are saved.")
-
-                    TextField
-                    {
-                        id: _downloadsPathField
-                        Layout.fillWidth: true
-                        text: appSettings.downloadsPath
-                        onEditingFinished:
-                        {
-                            const normalizedPath = root.normalizeDownloadsPath(text)
-                            appSettings.downloadsPath = normalizedPath
-                            text = normalizedPath
-                        }
-                    }
-
-                    ToolButton
-                    {
-                        icon.name: "folder-open"
-                        onClicked: _folderDialog.open()
-                    }
-
-                    FB.FileDialog
-                    {
-                        id: _folderDialog
-                        mode: FB.FileDialog.Dirs
-                        onFinished: function(paths)
-                        {
-                            if(paths.length > 0)
-                            {
-                                const path = root.normalizeDownloadsPath(paths[0])
-                                appSettings.downloadsPath = path
-                                _downloadsPathField.text = path
-                            }
-                        }
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Auto Save")
-                    label2.text: i18n("Download files without asking each time.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked: appSettings.autoSave
-                        onToggled: appSettings.autoSave = !appSettings.autoSave
-                    }
-                }
-            }
-        }
-    }
-
     // ── Features ─────────────────────────────────────────────────────────────
 
     Component
@@ -275,19 +238,7 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("PDF Viewer")
-                    label2.text: i18n("Open PDF documents in the browser instead of downloading.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked: appSettings.pdfViewerEnabled
-                        onToggled: appSettings.pdfViewerEnabled = !appSettings.pdfViewerEnabled
-                    }
-                }
+                title: i18n("Site Behavior")
 
                 Maui.FlexSectionItem
                 {
@@ -314,20 +265,6 @@ Maui.SettingsDialog
                         checkable: true
                         checked: appSettings.fullScreenSupportEnabled
                         onToggled: appSettings.fullScreenSupportEnabled = !appSettings.fullScreenSupportEnabled
-                    }
-                }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Screen Capture")
-                    label2.text: i18n("Allow web pages to capture screen contents.")
-
-                    Switch
-                    {
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked: appSettings.screenCaptureEnabled
-                        onToggled: appSettings.screenCaptureEnabled = !appSettings.screenCaptureEnabled
                     }
                 }
 
@@ -372,6 +309,26 @@ Maui.SettingsDialog
                         onToggled: appSettings.showScrollBars = !appSettings.showScrollBars
                     }
                 }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Media Behavior")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("PDF Viewer")
+                    label2.text: i18n("Open PDF documents in the browser instead of downloading.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.pdfViewerEnabled
+                        onToggled: appSettings.pdfViewerEnabled = !appSettings.pdfViewerEnabled
+                    }
+                }
+
 
                 Maui.FlexSectionItem
                 {
@@ -386,10 +343,15 @@ Maui.SettingsDialog
                         onToggled: appSettings.playbackRequiresUserGesture = !appSettings.playbackRequiresUserGesture
                     }
                 }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Tab Behavior")
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Tab Sleep")
+                    label1.text: i18n("Tab Discard")
                     label2.text: i18n("Automatically discard background tabs to free memory. The tab reloads when you switch back to it.")
 
                     Switch
@@ -404,7 +366,7 @@ Maui.SettingsDialog
                 Maui.SectionItem
                 {
                     visible: appSettings.tabSleepEnabled
-                    label1.text: i18n("Sleep After (minutes)")
+                    label1.text: i18n("Tab Sleep (minutes)")
                     label2.text: i18n("How long a tab must be inactive before it is put to sleep.")
 
                     SpinBox
@@ -415,48 +377,12 @@ Maui.SettingsDialog
                         onValueModified: appSettings.tabSleepDelay = value
                     }
                 }
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("Widevine DRM")
-                    label2.text: (Fiery.WidevineInstaller.isInstalled && appSettings.widevineEnabled)
-                                 ? i18n("Widevine CDM is installed and active. DRM-protected content is available.")
-                                 : Fiery.WidevineInstaller.isInstalled
-                                   ? i18n("Widevine CDM is installed. Enable to allow DRM-protected content.")
-                                   : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
-
-                    Switch
-                    {
-                        id: _widevineSwitch
-                        Layout.fillHeight: true
-                        checkable: true
-                        checked: appSettings.widevineEnabled
-                        onToggled:
-                        {
-                            appSettings.widevineEnabled = !appSettings.widevineEnabled
-                            if (appSettings.widevineEnabled && !Fiery.WidevineInstaller.isInstalled)
-                                _widevinePrompt.open()
-                        }
-                    }
-                }
             }
-
-            WidevinePrompt { id: _widevinePrompt }
-        }
-    }
-
-    // ── JavaScript ───────────────────────────────────────────────────────────
-
-    Component
-    {
-        id: _jsComponent
-
-        Maui.SettingsPage
-        {
-            title: i18n("JavaScript")
 
             Maui.SectionGroup
             {
+                title: i18n("Javascript")
+
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Enable JavaScript")
@@ -499,6 +425,37 @@ Maui.SettingsDialog
                     }
                 }
             }
+
+            Maui.SectionGroup
+            {
+                title: i18n("DRM Management")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Widevine DRM")
+                    label2.text: (Fiery.WidevineInstaller.isInstalled && appSettings.widevineEnabled)
+                                    ? i18n("Widevine CDM is installed and active. DRM-protected content is available.")
+                                    : Fiery.WidevineInstaller.isInstalled
+                                    ? i18n("Widevine CDM is installed. Enable to allow DRM-protected content.")
+                                    : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
+
+                    Switch
+                    {
+                        id: _widevineSwitch
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.widevineEnabled
+                        onToggled:
+                        {
+                            appSettings.widevineEnabled = !appSettings.widevineEnabled
+                            if (appSettings.widevineEnabled && !Fiery.WidevineInstaller.isInstalled)
+                                _widevinePrompt.open()
+                        }
+                    }
+                }
+
+                WidevinePrompt { id: _widevinePrompt }
+            }
         }
     }
 
@@ -514,7 +471,7 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                description: i18n("These are global defaults. When disabled, the permission is silently denied for all sites without a prompt.")
+                title: i18n("Global")
 
                 Maui.FlexSectionItem
                 {
@@ -603,7 +560,7 @@ Maui.SettingsDialog
         }
     }
 
-    // ── Privacy & Security ───────────────────────────────────────────────────
+    // ── Privacy and Security ───────────────────────────────────────────────────
 
     Component
     {
@@ -611,11 +568,11 @@ Maui.SettingsDialog
 
         Maui.SettingsPage
         {
-            title: i18n("Privacy & Security")
+            title: i18n("Privacy and Security")
 
             Maui.SectionGroup
             {
-                title: i18n("Tracking & Ads")
+                title: i18n("Tracking and Ads")
 
                 Maui.FlexSectionItem
                 {
@@ -634,7 +591,7 @@ Maui.SettingsDialog
                 Maui.FlexSectionItem
                 {
                     label1.text: i18n("Ad Blocker")
-                    label2.text: i18n("Block requests to known ad and tracker domains, and skip video ads. Changes take effect after reload. Place a custom hosts-format file at ~/.config/fiery/blocklist.txt to override the built-in list.")
+                    label2.text: i18n("Block requests to known ad and tracker domains, and skip video ads. Changes take effect after reload.")
 
                     Switch
                     {
@@ -689,7 +646,7 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Subscribe & Ad-Block Popup Blocker")
+                    label1.text: i18n("Subscribe and Ad-Block Popup Blocker")
                     label2.text: i18n("Automatically remove newsletter, subscription, and ad-blocker-detection overlays.")
 
                     Switch
@@ -919,6 +876,7 @@ Maui.SettingsDialog
                     Button
                     {
                         text: i18n("Clear")
+                        enabled: !appSettings.clearSessionOnExit
                         onClicked: Fiery.History.clearAll()
                     }
                 }
@@ -931,6 +889,7 @@ Maui.SettingsDialog
                     Button
                     {
                         text: i18n("Clear")
+                        enabled: !appSettings.clearSessionOnExit
                         onClicked: root.profile.clearHttpCache()
                     }
                 }
@@ -943,6 +902,7 @@ Maui.SettingsDialog
                     Button
                     {
                         text: i18n("Clear")
+                        enabled: !appSettings.clearSessionOnExit
                         onClicked: root.profile.cookieStore.deleteAllCookies()
                     }
                 }
