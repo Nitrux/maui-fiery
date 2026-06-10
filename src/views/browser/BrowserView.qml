@@ -539,10 +539,11 @@ Maui.Page
         visible: !privateMode
         background: null
         tabBarMargins: Maui.Style.contentMargins
+        holder.visible: count === 0
         holder.emoji: "qrc:/internet.svg"
-
         holder.title: i18n("Start Browsing")
         holder.body: i18n("Enter a new URL or open a recent site.")
+        holder.emojiSize: Maui.Style.iconSizes.big
 
         onNewTabClicked: openTab("")
         onCurrentIndexChanged: _schedulePopupGeometryRefresh()
@@ -633,7 +634,7 @@ Maui.Page
 
             ToolSeparator
             {
-                visible: root.isWide
+                visible: root.isWide && activeView.count > 1
                 bottomPadding: 10
                 topPadding: 10
             }
@@ -646,32 +647,19 @@ Maui.Page
         anchors.fill: parent
         visible: privateMode
 
-        Maui.Holder
-        {
-            z: 1
-            anchors.fill: parent
-            visible: _privateTabView.count === 0
-            emoji: "face-glasses"
-            title: i18n("Private Browsing")
-            body: i18n("Fiery won't save your browsing history, cookies, or site data in Private Browsing mode. Downloads will still be saved.\n\nYour activity may still be visible to your network or device administrator.")
-
-            actions: Action
-            {
-                text: i18n("New Private Tab")
-                onTriggered: openTab("")
-            }
-        }
 
         Maui.TabView
         {
             id: _privateTabView
             anchors.fill: parent
-            visible: count > 0
+            visible: true
             background: null
             tabBarMargins: Maui.Style.contentMargins
+            holder.visible: count === 0
             holder.emoji: "qrc:/internet.svg"
-            holder.title: i18n("Start Browsing Privately")
+            holder.title: i18n("Start Browsing")
             holder.body: i18n("Enter a new URL or open a recent site.")
+            holder.emojiSize: Maui.Style.iconSizes.big
 
             onNewTabClicked: openTab("")
             onCurrentIndexChanged: _schedulePopupGeometryRefresh()
@@ -759,7 +747,7 @@ Maui.Page
 
                 ToolSeparator
                 {
-                    visible: root.isWide
+                    visible: root.isWide && activeView.count > 1
                     bottomPadding: 10
                     topPadding: 10
                 }
@@ -825,7 +813,7 @@ Maui.Page
 
     Component.onCompleted:
     {
-        if (appSettings.restoreSession && appSettings.sessionUrlsJson.length > 0)
+        if (appSettings.sessionUrlsJson.length > 0)
         {
             try
             {
@@ -853,8 +841,12 @@ Maui.Page
                     }
                     var primary = urls[0]
                     if (typeof primary !== "string" || primary.length === 0 || primary.length > 2048) return
+                    if (!appSettings.restoreSession && !pinned)
+                        return
+
                     openTab(primary)
                     opened++
+
                     if (pinned) {
                         var tab = _browserListView.contentModel.get(_browserListView.count - 1)
                         if (tab) tab.pinned = true
@@ -918,7 +910,7 @@ Maui.Page
                 display: ToolButton.IconOnly
                 Action
                 {
-                    enabled: currentBrowser.canGoBack
+                    enabled: currentBrowser !== null && currentBrowser.canGoBack
                     onTriggered: currentBrowser.goBack()
                     text: i18n("Previous")
 
@@ -928,16 +920,19 @@ Maui.Page
                 Action
                 {
                     text: i18n("Next")
-                    enabled: currentBrowser.canGoForward
+                    enabled: currentBrowser !== null && currentBrowser.canGoForward
                     icon.name: "go-next"
                     onTriggered: currentBrowser.goForward()
                 }
             }
 
-            ToolButton
+            ToolSeparator
             {
-                icon.name: "view-refresh"
-                onClicked: currentBrowser.reload()
+                orientation: Qt.Vertical
+                height: parent.height
+                anchors.verticalCenter: parent.verticalCenter
+                topPadding: 10
+                bottomPadding: 10
             }
 
             ToolButton
@@ -1057,6 +1052,16 @@ Maui.Page
 
             ToolButton
             {
+                icon.name: "view-refresh"
+                onClicked: currentBrowser.reload()
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: i18n("Reload Page")
+            }
+
+            ToolButton
+            {
                 icon.name: "list-add"
                 onClicked: control.openTab("")
                 ToolTip.delay: 1000
@@ -1092,8 +1097,8 @@ Maui.Page
                     onTriggered:
                     {
                         privateMode = !privateMode
-                        if(privateMode && _privateTabView.count === 0)
-                            Qt.callLater(openEditMode)
+                        if (privateMode && _privateTabView.count === 0)
+                            openTab("")
                     }
                 }
 
@@ -1252,7 +1257,7 @@ Maui.Page
         openUrl(path)
     }
 
-    function collectSessionUrls()
+    function collectSessionUrls(onlyPinned)
     {
         var tabs = []
         for (var i = 0; i < _browserListView.count; i++)
@@ -1273,7 +1278,7 @@ Maui.Page
                 }
             }
             // Store as one entry per tab so split state is preserved on restore.
-            if (urls.length > 0)
+            if (urls.length > 0 && (!onlyPinned || tab.pinned))
                 tabs.push({urls: urls, pinned: tab.pinned || false})
         }
         return tabs

@@ -10,7 +10,7 @@ Item
 
     Maui.Controls.title: title
     Maui.Controls.toolTipText: currentItem.url
-    Maui.Controls.color: browserProfile.offTheRecord ? Maui.Theme.highlightColor : ""
+    Maui.Controls.color: browserProfile.offTheRecord ? Maui.Theme.visitedLinkColor : ""
 
     property url url
     property bool pinned: false

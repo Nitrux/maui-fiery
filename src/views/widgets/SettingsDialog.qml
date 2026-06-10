@@ -946,6 +946,20 @@ Maui.SettingsDialog
                         onClicked: root.profile.cookieStore.deleteAllCookies()
                     }
                 }
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Clear Session on Exit")
+                    label2.text: i18n("Forget the current session when the app closes.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.clearSessionOnExit
+                        onToggled: appSettings.clearSessionOnExit = !appSettings.clearSessionOnExit
+                    }
+                }
             }
         }
     }

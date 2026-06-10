@@ -78,8 +78,12 @@ Maui.ApplicationWindow
 
     onClosing: (close) =>
     {
-        if (appSettings.restoreSession)
-            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls())
+        if (appSettings.clearSessionOnExit)
+            appSettings.sessionUrlsJson = ""
+        else if (appSettings.restoreSession)
+            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls(false))
+        else
+            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls(true))
     }
 
     Settings
@@ -111,6 +115,7 @@ Maui.ApplicationWindow
 
         property bool forceDarkMode: false
         property bool restoreSession: true
+        property bool clearSessionOnExit: false
         property bool switchToTab: false
         property double zoomFactor: 1.0
 

@@ -138,7 +138,17 @@ BrowserTabViewButton
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
-            onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+            onClicked:
+            {
+                if (control.mindex !== control.tabView.currentIndex)
+                {
+                    control.tabView.setCurrentIndex(control.mindex)
+                }
+                else if (control.webView)
+                {
+                    control.webView.audioMuted = !control.webView.audioMuted
+                }
+            }
             ToolTip.text: (control.webView && control.webView.audioMuted) ? i18n("Unmute tab") : i18n("Mute tab")
             ToolTip.visible: hovered
             ToolTip.delay: 1000
@@ -240,7 +250,17 @@ BrowserTabViewButton
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (control.webView) control.webView.audioMuted = !control.webView.audioMuted
+                onClicked:
+                {
+                    if (control.mindex !== control.tabView.currentIndex)
+                    {
+                        control.tabView.setCurrentIndex(control.mindex)
+                    }
+                    else if (control.webView)
+                    {
+                        control.webView.audioMuted = !control.webView.audioMuted
+                    }
+                }
             }
         }
     }

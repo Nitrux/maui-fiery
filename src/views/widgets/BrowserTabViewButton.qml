@@ -84,7 +84,7 @@ BrowserTabButton
     {
         parent: control.background
         color: control.color
-        height: 2
+        height: control.color.a > 0 ? 1 : 2
         width: parent.width*0.9
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
