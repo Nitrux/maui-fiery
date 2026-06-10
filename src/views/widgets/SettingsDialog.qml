@@ -161,7 +161,8 @@ Maui.SettingsDialog
             FB.FileDialog
             {
                 id: _folderDialog
-                mode: FB.FileDialog.Modes.Dirs
+                mode: FB.FileDialog.Modes.Open
+                browser.settings.onlyDirs: true
                 onFinished: function(paths)
                 {
                     if(paths.length > 0)
@@ -987,7 +988,7 @@ Maui.SettingsDialog
                     Maui.SearchField
                     {
                         Layout.fillWidth: true
-                        placeholderText: i18n("Search by domain")
+                        placeholderText: "Search by domain"
                         text: _passwordsPage.credentialsSearchQuery
                         onTextChanged: _passwordsPage.credentialsSearchQuery = text
                     }
@@ -1008,11 +1009,44 @@ Maui.SettingsDialog
                     {
                         required property var modelData
 
-                        visible: _passwordsPage.credentialsSearchQuery.length === 0
-                                 || String(modelData.host || "").toLowerCase().indexOf(_passwordsPage.credentialsSearchQuery.toLowerCase()) !== -1
+                        visible: (_passwordsPage.credentialsSearchQuery || "").length === 0
+                                 || String(modelData.host || "").toLowerCase().indexOf((_passwordsPage.credentialsSearchQuery || "").toLowerCase()) !== -1
+
+                        property string passwordCache: ""
+
+                        Component.onCompleted: loadPassword()
 
                         label1.text: modelData.host
                         label2.text: modelData.username
+
+                        function currentPassword()
+                        {
+                            if (passwordField.editMode)
+                                return passwordField.text
+
+                            if (_revealBtn.checked)
+                                return passwordCache
+
+                            return passwordCache
+                        }
+
+                        function loadPassword()
+                        {
+                            if ((passwordCache || "").length > 0)
+                                return passwordCache
+
+                            var creds = Fiery.PasswordManager.find(modelData.host) || []
+                            for (var i = 0; i < creds.length; i++)
+                            {
+                                if (creds[i].username === modelData.username)
+                                {
+                                    passwordCache = creds[i].password || ""
+                                    return passwordCache
+                                }
+                            }
+
+                            return ""
+                        }
 
                         template.content: RowLayout
                         {
@@ -1021,27 +1055,38 @@ Maui.SettingsDialog
 
                             Button
                             {
+                                id: _editBtn
+                                checkable: true
+                                text: checked ? i18n("Save") : i18n("Edit")
+                                onToggled:
+                                {
+                                    if (checked)
+                                    {
+                                        passwordField.editMode = true
+                                        passwordField.text = loadPassword()
+                                        passwordField.forceActiveFocus()
+                                        passwordField.selectAll()
+                                    }
+                                    else
+                                    {
+                                        Fiery.PasswordManager.save(modelData.host, modelData.username, passwordField.text)
+                                        passwordCache = passwordField.text
+                                        passwordField.editMode = false
+                                        _revealBtn.checked = false
+                                    }
+                                }
+                            }
+
+                            Button
+                            {
                                 id: _revealBtn
                                 checkable: true
                                 text: checked ? i18n("Hide") : i18n("Show")
-
-                                // Fetched from the keyring on first reveal; cached afterwards.
-                                property string revealedPassword: ""
-
+                                enabled: !passwordField.editMode
                                 onToggled:
                                 {
-                                    if (checked && !revealedPassword)
-                                    {
-                                        var creds = Fiery.PasswordManager.find(modelData.host)
-                                        for (var i = 0; i < creds.length; i++)
-                                        {
-                                            if (creds[i].username === modelData.username)
-                                            {
-                                                revealedPassword = creds[i].password || ""
-                                                break
-                                            }
-                                        }
-                                    }
+                                    if (checked)
+                                        loadPassword()
                                 }
                             }
 
@@ -1054,9 +1099,24 @@ Maui.SettingsDialog
 
                         Maui.TextField
                         {
-                            readOnly: true
-                            text: _revealBtn.checked ? (_revealBtn.revealedPassword || "••••••••") : "••••••••"
+                            id: passwordField
                             Layout.fillWidth: true
+                            readOnly: !editMode
+                            text: currentPassword()
+                            property bool editMode: false
+                            selectByMouse: true
+                            echoMode: editMode || _revealBtn.checked ? TextInput.Normal : TextInput.Password
+                            font.family: Maui.Style.monospacedFont.family
+                            onEditingFinished:
+                            {
+                                if (editMode)
+                                {
+                                    Fiery.PasswordManager.save(modelData.host, modelData.username, text)
+                                    passwordCache = text
+                                    editMode = false
+                                    _editBtn.checked = false
+                                }
+                            }
                         }
 
                     }
