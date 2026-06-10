@@ -1024,7 +1024,7 @@ Maui.SettingsDialog
                                     {
                                         if (creds[i].username === modelData.username)
                                         {
-                                            revealedPassword = creds[i].password
+                                            revealedPassword = creds[i].password || ""
                                             break
                                         }
                                     }
