@@ -931,7 +931,9 @@ Maui.SettingsDialog
 
         Maui.SettingsPage
         {
+            id: _passwordsPage
             title: i18n("Passwords and Autofill")
+            property string credentialsSearchQuery: ""
 
             Maui.SectionGroup
             {
@@ -975,7 +977,21 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                title: i18n("Saved Credentials")
+                title: i18n("Passwords")
+
+                Maui.SectionItem
+                {
+                    label1.text: i18n("Search")
+                    label2.text: i18n("Filter saved credentials by domain.")
+
+                    Maui.SearchField
+                    {
+                        Layout.fillWidth: true
+                        placeholderText: i18n("Search by domain")
+                        text: _passwordsPage.credentialsSearchQuery
+                        onTextChanged: _passwordsPage.credentialsSearchQuery = text
+                    }
+                }
 
                 Maui.SectionItem
                 {
@@ -992,51 +1008,54 @@ Maui.SettingsDialog
                     {
                         required property var modelData
 
+                        visible: _passwordsPage.credentialsSearchQuery.length === 0
+                                 || String(modelData.host || "").toLowerCase().indexOf(_passwordsPage.credentialsSearchQuery.toLowerCase()) !== -1
+
                         label1.text: modelData.host
                         label2.text: modelData.username
 
-                        template.content: Button
+                        template.content: RowLayout
                         {
-                            text: i18n("Remove")
                             Layout.alignment: Qt.AlignTop | Qt.AlignRight
-                            onClicked: Fiery.PasswordManager.remove(modelData.host, modelData.username)
-                        }
+                            spacing: Maui.Style.space.small
 
-                        ToolButton
-                        {
-                            id: _revealBtn
-                            checkable: true
-                            checked: false
-                            icon.name: checked ? "password-show-off" : "password-show-on"
-                            ToolTip.text: checked ? i18n("Hide password") : i18n("Show password")
-                            ToolTip.visible: hovered
-                            ToolTip.delay: 1000
-
-                            // Fetched from the keyring on first reveal; cached afterwards.
-                            property string revealedPassword: ""
-
-                            onToggled:
+                            Button
                             {
-                                if (checked && !revealedPassword)
+                                id: _revealBtn
+                                checkable: true
+                                text: checked ? i18n("Hide") : i18n("Show")
+
+                                // Fetched from the keyring on first reveal; cached afterwards.
+                                property string revealedPassword: ""
+
+                                onToggled:
                                 {
-                                    var creds = Fiery.PasswordManager.find(modelData.host)
-                                    for (var i = 0; i < creds.length; i++)
+                                    if (checked && !revealedPassword)
                                     {
-                                        if (creds[i].username === modelData.username)
+                                        var creds = Fiery.PasswordManager.find(modelData.host)
+                                        for (var i = 0; i < creds.length; i++)
                                         {
-                                            revealedPassword = creds[i].password || ""
-                                            break
+                                            if (creds[i].username === modelData.username)
+                                            {
+                                                revealedPassword = creds[i].password || ""
+                                                break
+                                            }
                                         }
                                     }
                                 }
                             }
+
+                            Button
+                            {
+                                text: i18n("Remove")
+                                onClicked: Fiery.PasswordManager.remove(modelData.host, modelData.username)
+                            }
                         }
 
-                        Label
+                        Maui.TextField
                         {
+                            readOnly: true
                             text: _revealBtn.checked ? (_revealBtn.revealedPassword || "••••••••") : "••••••••"
-                            font: Maui.Style.monospacedFont
-                            elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
 
