@@ -117,6 +117,7 @@ Maui.ApplicationWindow
         property bool restoreSession: true
         property bool clearSessionOnExit: false
         property bool switchToTab: false
+        property bool showPasswordDetails: true
         property double zoomFactor: 1.0
 
         property bool autoSave: false

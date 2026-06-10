@@ -382,7 +382,7 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                title: i18n("Javascript")
+                title: i18n("JavaScript")
 
                 Maui.FlexSectionItem
                 {
@@ -472,7 +472,7 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                title: i18n("Global")
+                title: i18n("Global Site Permissions")
 
                 Maui.FlexSectionItem
                 {
@@ -935,7 +935,6 @@ Maui.SettingsDialog
             id: _passwordsPage
             title: i18n("Passwords and Autofill")
             property string credentialsSearchQuery: ""
-            property bool showPasswordDetails: true
 
             Maui.SectionGroup
             {
@@ -979,7 +978,7 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                title: i18n("Passwords")
+                title: i18n("Password Management")
 
                 Maui.FlexSectionItem
                 {
@@ -990,11 +989,105 @@ Maui.SettingsDialog
                     {
                         Layout.fillHeight: true
                         checkable: true
-                        checked: _passwordsPage.showPasswordDetails
-                        onToggled: _passwordsPage.showPasswordDetails = !_passwordsPage.showPasswordDetails
+                        checked: appSettings.showPasswordDetails
+                        onToggled: appSettings.showPasswordDetails = !appSettings.showPasswordDetails
                     }
                 }
 
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Add Credentials")
+                    label2.text: i18n("Add a credential manually when a site does not save it automatically.")
+
+                    Button
+                    {
+                        text: i18n("Add")
+                        onClicked: _addCredentialsDialog.open()
+                    }
+
+                    Maui.InfoDialog
+                    {
+                        id: _addCredentialsDialog
+                        title: i18n("Add Credentials")
+                        standardButtons: Dialog.Ok | Dialog.Cancel
+
+                        property string pendingHost: ""
+                        property string pendingUsername: ""
+                        property string pendingPassword: ""
+
+                        onOpened:
+                        {
+                            pendingHost = ""
+                            pendingUsername = ""
+                            pendingPassword = ""
+                            _addHostField.text = ""
+                            _addUsernameField.text = ""
+                            _addPasswordField.text = ""
+                            _addHostField.forceActiveFocus()
+                        }
+
+                        onAccepted:
+                        {
+                            const host = pendingHost.trim()
+                            const username = pendingUsername.trim()
+                            const password = pendingPassword
+
+                            if (host.length === 0 || username.length === 0)
+                                return
+
+                            Fiery.PasswordManager.save(host, username, password)
+                        }
+
+                        Maui.SectionGroup
+                        {
+                            title: i18n("Credentials")
+                            Layout.fillWidth: true
+
+                            Maui.SectionItem
+                            {
+                                label1.text: i18n("Domain")
+                                label2.text: i18n("The site where the credential is used.")
+
+                                Maui.TextField
+                                {
+                                    id: _addHostField
+                                    Layout.fillWidth: true
+                                    placeholderText: "accounts.example.com"
+                                    onTextChanged: _addCredentialsDialog.pendingHost = text
+                                }
+                            }
+
+                            Maui.SectionItem
+                            {
+                                label1.text: i18n("Username")
+                                label2.text: i18n("The login name or email address.")
+
+                                Maui.TextField
+                                {
+                                    id: _addUsernameField
+                                    Layout.fillWidth: true
+                                    placeholderText: "name@example.com"
+                                    onTextChanged: _addCredentialsDialog.pendingUsername = text
+                                }
+                            }
+
+                            Maui.SectionItem
+                            {
+                                label1.text: i18n("Password")
+                                label2.text: i18n("The password to store for this site.")
+
+                                Maui.TextField
+                                {
+                                    id: _addPasswordField
+                                    Layout.fillWidth: true
+                                    placeholderText: i18n("Password")
+                                    echoMode: TextInput.Password
+                                    onTextChanged: _addCredentialsDialog.pendingPassword = text
+                                }
+                            }
+                        }
+                    }
+                }
                 Maui.SectionItem
                 {
                     label1.text: i18n("Search")
@@ -1033,7 +1126,7 @@ Maui.SettingsDialog
 
                         label1.text: modelData.host
                         label2.text: modelData.username
-                        label2.visible: _passwordsPage.showPasswordDetails
+                        label2.visible: appSettings.showPasswordDetails
 
                         function currentPassword()
                         {
@@ -1066,7 +1159,7 @@ Maui.SettingsDialog
 
                         template.content: RowLayout
                         {
-                            visible: _passwordsPage.showPasswordDetails
+                            visible: appSettings.showPasswordDetails
                             Layout.alignment: Qt.AlignTop | Qt.AlignRight
                             spacing: Maui.Style.space.small
 
@@ -1117,7 +1210,7 @@ Maui.SettingsDialog
                         Maui.TextField
                         {
                             id: passwordField
-                            visible: _passwordsPage.showPasswordDetails
+                            visible: appSettings.showPasswordDetails
                             Layout.fillWidth: true
                             readOnly: !editMode
                             text: currentPassword()
