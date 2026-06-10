@@ -935,6 +935,7 @@ Maui.SettingsDialog
             id: _passwordsPage
             title: i18n("Passwords and Autofill")
             property string credentialsSearchQuery: ""
+            property bool showPasswordDetails: true
 
             Maui.SectionGroup
             {
@@ -980,6 +981,20 @@ Maui.SettingsDialog
             {
                 title: i18n("Passwords")
 
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Show Password Details")
+                    label2.text: i18n("Display the password actions, password field, and username in the list.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: _passwordsPage.showPasswordDetails
+                        onToggled: _passwordsPage.showPasswordDetails = !_passwordsPage.showPasswordDetails
+                    }
+                }
+
                 Maui.SectionItem
                 {
                     label1.text: i18n("Search")
@@ -1018,6 +1033,7 @@ Maui.SettingsDialog
 
                         label1.text: modelData.host
                         label2.text: modelData.username
+                        label2.visible: _passwordsPage.showPasswordDetails
 
                         function currentPassword()
                         {
@@ -1050,6 +1066,7 @@ Maui.SettingsDialog
 
                         template.content: RowLayout
                         {
+                            visible: _passwordsPage.showPasswordDetails
                             Layout.alignment: Qt.AlignTop | Qt.AlignRight
                             spacing: Maui.Style.space.small
 
@@ -1100,6 +1117,7 @@ Maui.SettingsDialog
                         Maui.TextField
                         {
                             id: passwordField
+                            visible: _passwordsPage.showPasswordDetails
                             Layout.fillWidth: true
                             readOnly: !editMode
                             text: currentPassword()
