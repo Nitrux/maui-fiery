@@ -866,7 +866,6 @@ Maui.SettingsDialog
             Maui.SectionGroup
             {
                 title: i18n("Clear Browsing Data")
-                description: i18n("Permanently delete stored browsing data.")
 
                 Maui.FlexSectionItem
                 {
@@ -883,7 +882,7 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Cache")
+                    label1.text: i18n("Site Cache")
                     label2.text: i18n("Clear cached images and files.")
 
                     Button
@@ -896,7 +895,7 @@ Maui.SettingsDialog
 
                 Maui.FlexSectionItem
                 {
-                    label1.text: i18n("Cookies & Site Data")
+                    label1.text: i18n("Cookies and Site Data")
                     label2.text: i18n("Clear cookies stored by websites.")
 
                     Button
@@ -932,12 +931,11 @@ Maui.SettingsDialog
 
         Maui.SettingsPage
         {
-            title: i18n("Passwords")
+            title: i18n("Passwords and Autofill")
 
             Maui.SectionGroup
             {
                 title: i18n("Saved Passwords")
-                description: i18n("Passwords are encrypted and stored in the system keyring.")
 
                 Maui.SectionItem
                 {
