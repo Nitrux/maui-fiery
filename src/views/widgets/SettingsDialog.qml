@@ -935,7 +935,47 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
-                title: i18n("Saved Passwords")
+                title: i18n("Clear Passwords")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Remove Saved Credentials")
+                    label2.text: i18n("Permanently delete all stored credentials.")
+
+                    Button
+                    {
+                        text: i18n("Clear")
+                        enabled: Fiery.PasswordManager.entries.length > 0
+                        onClicked: _clearPasswordsDialog.open()
+                    }
+
+                    Dialog
+                    {
+                        id: _clearPasswordsDialog
+                        title: i18n("Clear All Passwords?")
+                        standardButtons: Dialog.Ok | Dialog.Cancel
+                        anchors.centerIn: parent
+
+                        Label
+                        {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: i18n("This will permanently delete all saved credentials. This cannot be undone.")
+                        }
+
+                        onAccepted:
+                        {
+                            var all = Fiery.PasswordManager.entries
+                            for (var i = 0; i < all.length; i++)
+                                Fiery.PasswordManager.remove(all[i].host, all[i].username)
+                        }
+                    }
+                }
+            }
+
+            Maui.SectionGroup
+            {
+                title: i18n("Saved Credentials")
 
                 Maui.SectionItem
                 {
@@ -995,51 +1035,11 @@ Maui.SettingsDialog
                         Label
                         {
                             text: _revealBtn.checked ? (_revealBtn.revealedPassword || "••••••••") : "••••••••"
-                            font.family: _revealBtn.checked ? "monospace" : font.family
+                            font: Maui.Style.monospacedFont
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
 
-                    }
-                }
-            }
-
-            Maui.SectionGroup
-            {
-                title: i18n("Clear Passwords")
-
-                Maui.FlexSectionItem
-                {
-                    label1.text: i18n("All Saved Passwords")
-                    label2.text: i18n("Permanently delete all stored credentials.")
-
-                    Button
-                    {
-                        text: i18n("Clear")
-                        enabled: Fiery.PasswordManager.entries.length > 0
-                        onClicked: _clearPasswordsDialog.open()
-                    }
-
-                    Dialog
-                    {
-                        id: _clearPasswordsDialog
-                        title: i18n("Clear All Passwords?")
-                        standardButtons: Dialog.Ok | Dialog.Cancel
-                        anchors.centerIn: parent
-
-                        Label
-                        {
-                            width: parent.width
-                            wrapMode: Text.WordWrap
-                            text: i18n("This will permanently delete all saved credentials. This cannot be undone.")
-                        }
-
-                        onAccepted:
-                        {
-                            var all = Fiery.PasswordManager.entries
-                            for (var i = 0; i < all.length; i++)
-                                Fiery.PasswordManager.remove(all[i].host, all[i].username)
-                        }
                     }
                 }
             }
