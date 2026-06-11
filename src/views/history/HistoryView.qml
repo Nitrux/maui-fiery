@@ -18,6 +18,7 @@ Maui.Page
         Layout.fillWidth: true
         Layout.maximumWidth: 500
         Layout.alignment: Qt.AlignCenter
+        placeholderText: i18n("Search history")
         onAccepted:
         {
             _listView.model.filter = text

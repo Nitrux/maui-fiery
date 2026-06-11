@@ -17,6 +17,7 @@ Maui.Page
         Layout.fillWidth: true
         Layout.maximumWidth: 500
         Layout.alignment: Qt.AlignCenter
+        placeholderText: i18n("Search bookmarks")
     }
 
     Maui.ListBrowser

@@ -88,21 +88,37 @@ Maui.SideBarView
                 sourceComponent: HistoryView {}
             }
 
-
             Loader
             {
                 active: visible
                 asynchronous: true
                 sourceComponent: Maui.Page
                 {
-                    headBar.rightContent: ToolButton
+                    headBar.middleContent: RowLayout
                     {
-                        text: i18n("Clear")
-                        icon.name: "edit-clear"
-                        onClicked: Fiery.DownloadsManager.clearFinished()
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+
+                        Maui.SearchField
+                        {
+                            id: _downloadsSearchField
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: 500
+                            placeholderText: i18n("Search downloads")
+                            onTextChanged: downloadsSearchQuery = text
+                        }
+
+                        ToolButton
+                        {
+                            text: i18n("Clear")
+                            icon.name: "edit-clear"
+                            onClicked: Fiery.DownloadsManager.clearFinished()
+                        }
                     }
 
                     background: null
+
+                    property string downloadsSearchQuery: ""
 
                     // Warn before handing executable file types to the OS handler.
                     Dialog
@@ -229,6 +245,10 @@ Maui.SideBarView
                         delegate: Item
                         {
                             id: _dlItem
+
+                            visible: downloadsSearchQuery.length === 0
+                                     || String(model.name || "").toLowerCase().indexOf(downloadsSearchQuery.toLowerCase()) !== -1
+                                     || String(model.url || "").toLowerCase().indexOf(downloadsSearchQuery.toLowerCase()) !== -1
 
                             width: ListView.view.width
                             height: _del.implicitHeight + (_dlItem._inProgress || _dlItem._isPaused || _dlItem._isInterrupted ? 6 + Maui.Style.space.small * 2 : 0)
@@ -433,5 +453,4 @@ Maui.SideBarView
         _sidebarSwipeView.setCurrentIndex(2)
     }
 }
-
 
