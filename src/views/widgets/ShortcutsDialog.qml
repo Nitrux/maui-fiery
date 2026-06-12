@@ -11,7 +11,6 @@ Maui.SettingsDialog
     Maui.SectionGroup
     {
         title: i18n("Tabs")
-        description: i18n("Manage tabs, windows, and browsing sessions from the keyboard.")
 
         Maui.FlexSectionItem
         {
@@ -146,7 +145,6 @@ Maui.SettingsDialog
     Maui.SectionGroup
     {
         title: i18n("Navigation")
-        description: i18n("Control page loading, history, and browser views.")
 
         Maui.FlexSectionItem
         {
@@ -250,7 +248,6 @@ Maui.SettingsDialog
     Maui.SectionGroup
     {
         title: i18n("Page")
-        description: i18n("Save, bookmark, zoom, and open browser panels.")
 
         Maui.FlexSectionItem
         {
