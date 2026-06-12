@@ -149,8 +149,6 @@ BrowserTabButton
                 {
                     return
                 }
-
-                console.log("[TabSync] dnd move from=", from, "to=", to, "current=", control.tabView.currentIndex)
                 control.tabView.moveTab(from , to)
         }
 

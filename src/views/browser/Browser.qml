@@ -526,7 +526,6 @@ Maui.SplitViewItem
             "function armSaveCheck(){" +
             "_saveArmed=true;" +
             "_saveMiss=0;" +
-            "console.log('__FIERY_CRED_ARMED__');" +
             "if(_saveTimer)return;" +
             "_saveTimer=setTimeout(checkSave,400);}" +
             "function disarmSaveCheck(){" +
@@ -539,7 +538,6 @@ Maui.SplitViewItem
             "if(anyVisiblePassword()){_saveMiss=0;return;}" +
             "if(++_saveMiss<2){_saveTimer=setTimeout(checkSave,400);return;}" +
             "disarmSaveCheck();" +
-            "console.log('__FIERY_CRED_READY__');}" +
             "function attach(pw){" +
             "if(pw[_ck])return;" +
             "pw[_ck]=true;" +

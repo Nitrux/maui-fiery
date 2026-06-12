@@ -13,44 +13,6 @@ BrowserTabViewButton
     id: control
 
     property int position: control.TabBar.position
-    property bool debugTabSync: true
-
-    function _debugDumpTabs(tag)
-    {
-        if (!debugTabSync || !control.tabView || !control.tabView.contentModel)
-            return
-
-        const rows = []
-        for (let i = 0; i < control.tabView.count; i++)
-        {
-            const item = control.tabView.contentModel.get(i)
-            if (!item)
-            {
-                rows.push(i + ":[null]")
-                continue
-            }
-
-            const metaTitle = item.Maui && item.Maui.Controls ? item.Maui.Controls.title : ""
-            const liveTitle = (item.browser && item.browser.webView) ? item.browser.webView.title : ""
-            rows.push(i + ":{meta:'" + metaTitle + "', live:'" + liveTitle + "'}")
-        }
-
-        console.log("[TabSync]", tag, "mindex=", control.mindex, "current=", control.tabView.currentIndex, rows.join(" | "))
-    }
-
-    function _debugDelegate(tag)
-    {
-        if (!debugTabSync)
-            return
-
-        const liveTitle = (control.webView && control.webView.title) ? control.webView.title : ""
-        const metaTitle = tabInfo ? tabInfo.title : ""
-        console.log("[TabSync][Delegate]", tag, "mindex=", control.mindex, "current=", control.tabView.currentIndex, "text=", control.text, "meta=", metaTitle, "live=", liveTitle)
-    }
-
-    onMindexChanged: _debugDelegate("mindex")
-    onTextChanged: _debugDelegate("text")
-    Component.onCompleted: _debugDelegate("completed")
 
     // Keep a stable fallback index from the Repeater context. The base class
     // now resolves mindex from the live TabBar order first, and only uses this
@@ -187,14 +149,10 @@ BrowserTabViewButton
     }
 
     onClicked:
-    {
-        _debugDumpTabs("click:before")
-        if (control.mindex === control.tabView.currentIndex)
+    {        if (control.mindex === control.tabView.currentIndex)
             openEditMode()
         else
-            control.tabView.setCurrentIndex(control.mindex)
-        Qt.callLater(function() { control._debugDumpTabs("click:after") })
-    }
+            control.tabView.setCurrentIndex(control.mindex)    }
 
     onRightClicked: _tabMenu.show()
     onCloseClicked: control.tabView.closeTabClicked(control.mindex)
@@ -311,12 +269,8 @@ BrowserTabViewButton
         text: i18n("Move Left")
         icon.name: "go-previous"
         onTriggered:
-        {
-            control._debugDumpTabs("move-left:before")
-            if (control.mindex > 0)
-                control.tabView.moveTab(control.mindex, control.mindex - 1)
-            Qt.callLater(function() { control._debugDumpTabs("move-left:after") })
-        }
+        {            if (control.mindex > 0)
+                control.tabView.moveTab(control.mindex, control.mindex - 1)        }
     }
 
     Action
@@ -325,12 +279,8 @@ BrowserTabViewButton
         text: i18n("Move Right")
         icon.name: "go-next"
         onTriggered:
-        {
-            control._debugDumpTabs("move-right:before")
-            if (control.mindex >= 0 && control.mindex < (control.tabView.count - 1))
-                control.tabView.moveTab(control.mindex, control.mindex + 1)
-            Qt.callLater(function() { control._debugDumpTabs("move-right:after") })
-        }
+        {            if (control.mindex >= 0 && control.mindex < (control.tabView.count - 1))
+                control.tabView.moveTab(control.mindex, control.mindex + 1)        }
     }
 
     Action
