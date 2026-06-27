@@ -76,14 +76,43 @@ Maui.ApplicationWindow
         return normalizedPath.length > 0 ? normalizedPath : fallbackPath
     }
 
+    function encodeSessionUrlsJson(tabs)
+    {
+        return encodeURIComponent(JSON.stringify(tabs))
+    }
+
+    function decodeSessionUrlsJson(serializedTabs)
+    {
+        if (typeof serializedTabs !== "string" || serializedTabs.length === 0)
+            return []
+
+        try
+        {
+            var encodedEntries = JSON.parse(decodeURIComponent(serializedTabs))
+            if (Array.isArray(encodedEntries))
+                return encodedEntries
+        }
+        catch (e) {}
+
+        try
+        {
+            var legacyEntries = JSON.parse(serializedTabs)
+            if (Array.isArray(legacyEntries))
+                return legacyEntries
+        }
+        catch (e) {}
+
+        return []
+    }
+
     onClosing: (close) =>
     {
         if (appSettings.clearSessionOnExit)
             appSettings.sessionUrlsJson = ""
         else if (appSettings.restoreSession)
-            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls(false))
+            appSettings.sessionUrlsJson = encodeSessionUrlsJson(browserView.collectSessionUrls(false))
         else
-            appSettings.sessionUrlsJson = JSON.stringify(browserView.collectSessionUrls(true))
+            appSettings.sessionUrlsJson = encodeSessionUrlsJson(browserView.collectSessionUrls(true))
     }
 
     Settings

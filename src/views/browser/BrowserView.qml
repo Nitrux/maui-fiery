@@ -815,11 +815,9 @@ Maui.Page
     {
         if (appSettings.sessionUrlsJson.length > 0)
         {
-            try
+            var entries = root.decodeSessionUrlsJson(appSettings.sessionUrlsJson)
+            if (entries.length > 0)
             {
-                var entries = JSON.parse(appSettings.sessionUrlsJson)
-                if (!Array.isArray(entries))
-                    throw new Error("not an array")
                 // Cap at 50 tabs to prevent a crafted session from opening hundreds of tabs.
                 var slice = entries.slice(0, 50)
                 var opened = 0
@@ -859,7 +857,6 @@ Maui.Page
                 if (opened > 0)
                     return
             }
-            catch (e) {}
         }
 
         openTab(appSettings.homePage)
