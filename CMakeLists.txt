@@ -110,8 +110,8 @@ add_subdirectory(src)
 ki18n_install(po)
 
 install(TARGETS ${PROJECT_NAME} ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-install(FILES org.kde.fiery.desktop DESTINATION ${KDE_INSTALL_APPDIR})
-install(FILES org.kde.fiery.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
+install(FILES org.maui.fiery.desktop DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES org.maui.fiery.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
 install(FILES src/assets/fiery.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 install(FILES src/fiery.notifyrc DESTINATION ${KDE_INSTALL_KNOTIFYRCDIR})
 
