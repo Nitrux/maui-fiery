@@ -885,7 +885,6 @@ Maui.Page
                 icon.name: _sideBarView.sideBar.visible ? "sidebar-collapse" : "sidebar-expand"
                 onClicked: _sideBarView.sideBar.toggle()
                 checked: _sideBarView.sideBar.visible
-                visible: _sideBarView.sideBar.visible && !_sideBarView.sideBar.collapsed
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
@@ -894,7 +893,6 @@ Maui.Page
 
             ToolSeparator
             {
-                visible: _sideBarView.sideBar.visible && !_sideBarView.sideBar.collapsed
                 orientation: Qt.Vertical
                 height: parent.height
                 anchors.verticalCenter: parent.verticalCenter

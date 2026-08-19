@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtWebEngine
 
@@ -23,15 +24,41 @@ Maui.SideBarView
 
     sideBar.autoShow: false
     sideBar.autoHide: true
-    // Scale with the window up to a comfortable maximum so long filenames
-    // are not clipped; on narrow/portrait layouts give it most of the width.
-    sideBar.maximumWidth: Maui.Style.units.gridUnit * 20
-    sideBar.preferredWidth: Math.min(root.width * (root.isWide ? 0.38 : 0.88), sideBar.maximumWidth)
+    sideBar.collapsed: true
+    sideBar.floats: true
+    sideBar.resizeable: false
+    sideBar.preferredWidth: Maui.Style.units.gridUnit * 25
 
-    sideBar.content: Maui.Page
+    sideBarContent: Maui.Page
     {
+        id: _sidebarPanel
         anchors.fill: parent
-        background: null
+        anchors.margins: Maui.Style.contentMargins
+        background: Rectangle
+        {
+            color: Maui.Theme.backgroundColor
+            radius: Maui.Style.radiusV
+        }
+        clip: true
+
+        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+        layer.effect: MultiEffect
+        {
+            maskEnabled: true
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+            maskSpreadAtMax: 0.0
+            maskThresholdMax: 1.0
+            maskSource: ShaderEffectSource
+            {
+                sourceItem: Rectangle
+                {
+                    width: _sidebarPanel.width
+                    height: _sidebarPanel.height
+                    radius: Maui.Style.radiusV
+                }
+            }
+        }
         headerMargins: Maui.Style.contentMargins
         Maui.Theme.colorSet: Maui.Theme.Window
         Maui.Theme.inherit: false
@@ -108,10 +135,9 @@ Maui.SideBarView
                             onTextChanged: downloadsSearchQuery = text
                         }
 
-                        ToolButton
+                        Button
                         {
                             text: i18n("Clear")
-                            icon.name: "edit-clear"
                             onClicked: Fiery.DownloadsManager.clearFinished()
                         }
                     }
@@ -429,10 +455,16 @@ Maui.SideBarView
         }
     }
 
-    BrowserView
+    Item
     {
-        id: _browserView
         anchors.fill: parent
+        clip: true
+
+        BrowserView
+        {
+            id: _browserView
+            anchors.fill: parent
+        }
     }
 
     function openHistory()
