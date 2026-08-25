@@ -66,13 +66,13 @@ BrowserTabButton
 
     icon.name: tabInfo.iconName
 
-    Maui.Controls.badgeText: tabInfo.badgeText
-    Maui.Controls.status: tabInfo.status    
+    Maui.Controls.badgeText: tabInfo.badgeText || ""
+    Maui.Controls.status: typeof tabInfo.status !== "undefined" ? tabInfo.status : Maui.Controls.Normal
 
     ToolTip.delay: 1000
     ToolTip.timeout: 5000
     ToolTip.visible: control.hovered && !Maui.Handy.isMobile && ToolTip.text.length
-    ToolTip.text: tabInfo.toolTipText
+    ToolTip.text: tabInfo.toolTipText || ""
 
     Drag.source: control
     Drag.hotSpot.x: width / 2

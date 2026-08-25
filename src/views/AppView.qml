@@ -101,24 +101,21 @@ Maui.SideBarView
             anchors.fill: parent
             id: _sidebarSwipeView
 
-            Loader
+            Maui.SwipeViewLoader
             {
-                active: visible
-                asynchronous: true
+                active: true
                 sourceComponent: HomeView {}
             }
 
-            Loader
+            Maui.SwipeViewLoader
             {
-                active: visible
-                asynchronous: true
+                active: true
                 sourceComponent: HistoryView {}
             }
 
-            Loader
+            Maui.SwipeViewLoader
             {
-                active: visible
-                asynchronous: true
+                active: true
                 sourceComponent: Maui.Page
                 {
                     headBar.middleContent: RowLayout
@@ -135,8 +132,15 @@ Maui.SideBarView
                             onTextChanged: downloadsSearchQuery = text
                         }
 
+                        ToolSeparator
+                        {
+                            topPadding: 10
+                            bottomPadding: 10
+                        }
+
                         Button
                         {
+                            implicitWidth: Math.max(implicitContentWidth + leftPadding + rightPadding, implicitHeight)
                             text: i18n("Clear")
                             onClicked: Fiery.DownloadsManager.clearFinished()
                         }
