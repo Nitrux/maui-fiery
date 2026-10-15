@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/app/maui/fiery">
+        <file>main.qml</file>
+        <file>views/widgets/SettingsDialog.qml</file>
+        <file>views/widgets/ShortcutsDialog.qml</file>
+        <file>views/browser/BrowserView.qml</file>
+        <file>views/history/HistoryView.qml</file>
+        <file>views/browser/BrowserLayout.qml</file>
+        <file>views/browser/Browser.qml</file>
+        <file>views/browser/WidevinePrompt.qml</file>
+        <file>views/widgets/NavigationBar.qml</file>
+        <file>views/widgets/BrowserTabButton.qml</file>
+        <file>views/widgets/BrowserTabViewButton.qml</file>
+        <file>views/browser/ActionsMenu.qml</file>
+        <file>views/home/HomeView.qml</file>
+        <file>views/AppView.qml</file>
+    </qresource>
+</RCC>

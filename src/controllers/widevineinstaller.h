@@ -13,6 +13,7 @@ class WidevineInstaller : public QObject
     Q_PROPERTY(int     progress READ progress NOTIFY progressChanged)
     Q_PROPERTY(QString statusMessage READ statusMessage NOTIFY statusMessageChanged)
     Q_PROPERTY(bool    isInstalled   READ isInstalled   NOTIFY stateChanged)
+    Q_PROPERTY(QString installedVersion READ installedVersion NOTIFY stateChanged)
 
 public:
     enum class State { Idle, Downloading, Extracting, Ready, Failed };
@@ -25,6 +26,7 @@ public:
     QString statusMessage() const { return m_statusMessage; }
 
     bool isInstalled() const;
+    QString installedVersion() const;
     Q_INVOKABLE QString installedPath() const;
     Q_INVOKABLE void install();
     Q_INVOKABLE void cancel();

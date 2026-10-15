@@ -1417,7 +1417,7 @@ Maui.SplitViewItem
     {
         anchors.fill: parent
         visible: control.url.toString().length <= 0
-        emoji: "qrc:/internet.svg"
+        emoji: "internet-web-browser"
 
         title: i18n("Start Browsing")
         body: i18n("Enter a new URL or open a recent site.")

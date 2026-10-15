@@ -39,7 +39,6 @@ if(NOT EXISTS "${_blocklist}")
 endif()
 
 qt_add_resources(fiery_ASSETS
-    assets/img_assets.qrc
     assets.qrc)
 
 qt_add_executable(${PROJECT_NAME}

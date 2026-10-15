@@ -540,7 +540,7 @@ Maui.Page
         background: null
         tabBarMargins: Maui.Style.contentMargins
         holder.visible: count === 0
-        holder.emoji: "qrc:/internet.svg"
+        holder.emoji: "internet-web-browser"
         holder.title: i18n("Start Browsing")
         holder.body: i18n("Enter a new URL or open a recent site.")
         holder.emojiSize: Maui.Style.iconSizes.big
@@ -656,7 +656,7 @@ Maui.Page
             background: null
             tabBarMargins: Maui.Style.contentMargins
             holder.visible: count === 0
-            holder.emoji: "qrc:/internet.svg"
+            holder.emoji: "internet-web-browser"
             holder.title: i18n("Start Browsing")
             holder.body: i18n("Enter a new URL or open a recent site.")
             holder.emojiSize: Maui.Style.iconSizes.big

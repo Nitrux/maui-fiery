@@ -4,6 +4,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QStandardPaths>
@@ -39,6 +41,19 @@ WidevineInstaller::WidevineInstaller(QObject *parent)
 bool WidevineInstaller::isInstalled() const
 {
     return QFile::exists(m_destPath) && QFile::exists(m_manifestPath);
+}
+
+QString WidevineInstaller::installedVersion() const
+{
+    if (!isInstalled())
+        return {};
+
+    QFile manifest(m_manifestPath);
+    if (!manifest.open(QIODevice::ReadOnly))
+        return {};
+
+    const QJsonDocument document = QJsonDocument::fromJson(manifest.readAll());
+    return document.object().value(QStringLiteral("version")).toString();
 }
 
 QString WidevineInstaller::installedPath() const

@@ -435,9 +435,9 @@ Maui.SettingsDialog
                 {
                     label1.text: i18n("Widevine DRM")
                     label2.text: (Fiery.WidevineInstaller.isInstalled && appSettings.widevineEnabled)
-                                    ? i18n("Widevine CDM is installed and active. DRM-protected content is available.")
+                                    ? i18n("Widevine CDM version %1 is installed and active. DRM-protected content is available.", Fiery.WidevineInstaller.installedVersion || i18n("unknown"))
                                     : Fiery.WidevineInstaller.isInstalled
-                                    ? i18n("Widevine CDM is installed. Enable to allow DRM-protected content.")
+                                    ? i18n("Widevine CDM version %1 is installed. Enable to allow DRM-protected content.", Fiery.WidevineInstaller.installedVersion || i18n("unknown"))
                                     : i18n("Enable playback of DRM-protected content (Netflix, etc.). Downloads the Widevine CDM from Google on first use.")
 
                     Switch

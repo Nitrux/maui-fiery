@@ -1,5 +1,5 @@
 [Global]
-IconName=fiery
+IconName=internet-web-browser
 Comment=Fiery Browser
 
 [Event/webNotification]

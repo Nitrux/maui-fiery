@@ -15,6 +15,7 @@
 #include <MauiKit4/Core/mauiapp.h>
 
 #include <KLocalizedString>
+#include <KLocalizedQmlContext>
 
 #include "models/historymodel.h"
 #include "models/bookmarksmodel.h"
@@ -27,7 +28,7 @@
 #include "controllers/dbactions.h"
 #include "controllers/widevineinstaller.h"
 
-#include "../fiery_version.h"
+#include "fiery_version.h"
 
 #include <QtWebEngineQuick>
 
@@ -154,7 +155,7 @@ int main(int argc, char *argv[])
     QtWebEngineQuick::initialize();
     QApplication app(argc, argv);
 
-    app.setWindowIcon(QIcon(":/fiery.svg"));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("internet-web-browser")));
 
     KLocalizedString::setApplicationDomain("fiery");
     KAboutData about(QStringLiteral("fiery"),
@@ -181,7 +182,7 @@ int main(int argc, char *argv[])
     //   config  → ~/.config/Maui/fiery.conf
     //   cache   → ~/.cache/Maui/fiery/
     app.setOrganizationName(QStringLiteral("Maui"));
-    MauiApp::instance()->setIconName("qrc:/fiery.png");
+    MauiApp::instance()->setIconName(QStringLiteral("internet-web-browser"));
 
     QCommandLineParser parser;
 
@@ -204,7 +205,7 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
 
 
-    engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));
 
     qmlRegisterType<surf>(FIERY_URI, 1, 0, "Surf");
 

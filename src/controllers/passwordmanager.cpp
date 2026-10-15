@@ -8,9 +8,18 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 
+#ifdef signals
+#pragma push_macro("signals")
+#undef signals
+#define FIERY_RESTORE_QT_SIGNALS
+#endif
 extern "C" {
 #include <libsecret/secret.h>
 }
+#ifdef FIERY_RESTORE_QT_SIGNALS
+#pragma pop_macro("signals")
+#undef FIERY_RESTORE_QT_SIGNALS
+#endif
 
 // ── libsecret schema ─────────────────────────────────────────────────────────
 
