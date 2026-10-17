@@ -38,6 +38,8 @@ set(CMAKE_AUTORCC ON)
 
 project(fiery VERSION ${FIERY_VERSION})
 
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "This project supports Linux only.")
 endif()
@@ -69,6 +71,8 @@ find_package(KF6 ${REQUIRED_KF_VERSION} REQUIRED COMPONENTS I18n CoreAddons Noti
 find_package(Qt6WebEngineCore REQUIRED)
 find_package(Qt6WebEngineQuick REQUIRED)
 
+set(QT_NO_PRIVATE_MODULE_WARNING ON CACHE BOOL
+    "MauiKit uses Qt's private WaylandClient API" FORCE)
 find_package(MauiKit4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED COMPONENTS FileBrowsing)
 
 if(${ECM_SOURCE_UNDER_VERSION_CONTROL})
