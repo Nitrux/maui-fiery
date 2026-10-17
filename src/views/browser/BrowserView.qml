@@ -907,12 +907,14 @@ Maui.Page
                 Maui.Theme.inherit: false
 
                 spacing: 2
-                Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
+                readonly property color navigationHoverColor: Maui.ColorUtils.scaleColor(
+                    Qt.darker(control.headBar.Maui.Theme.hoverColor, 1.38),
+                    { saturation: -44.8 })
+                Maui.Theme.hoverColor: navigationHoverColor
 
                 ToolButton
                 {
                     id: _backButton
-                    Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
                     icon.name: "go-previous"
                     display: ToolButton.IconOnly
@@ -947,7 +949,6 @@ Maui.Page
                 ToolButton
                 {
                     id: _forwardButton
-                    Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
                     icon.name: "go-next"
                     display: ToolButton.IconOnly
