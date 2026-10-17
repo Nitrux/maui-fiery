@@ -900,24 +900,32 @@ Maui.Page
                 bottomPadding: 10
             }
 
-            Maui.ToolActions
+            Row
             {
-                display: ToolButton.IconOnly
-                Action
+                spacing: Maui.Style.space.small
+
+                ToolButton
                 {
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
-                    onTriggered: currentBrowser.goBack()
-                    text: i18n("Previous")
-
                     icon.name: "go-previous"
+                    display: ToolButton.IconOnly
+                    onClicked: currentBrowser.goBack()
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: i18n("Previous")
                 }
 
-                Action
+                ToolButton
                 {
-                    text: i18n("Next")
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
                     icon.name: "go-next"
-                    onTriggered: currentBrowser.goForward()
+                    display: ToolButton.IconOnly
+                    onClicked: currentBrowser.goForward()
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: i18n("Next")
                 }
             }
 
