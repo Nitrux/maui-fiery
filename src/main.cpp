@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     QtWebEngineQuick::initialize();
     QApplication app(argc, argv);
 
-    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("internet-web-browser")));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("maui-fiery")));
 
     KLocalizedString::setApplicationDomain("fiery");
     KAboutData about(QStringLiteral("fiery"),
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
     //   config  → ~/.config/Maui/fiery.conf
     //   cache   → ~/.cache/Maui/fiery/
     app.setOrganizationName(QStringLiteral("Maui"));
-    MauiApp::instance()->setIconName(QStringLiteral("internet-web-browser"));
+    MauiApp::instance()->setIconName(QStringLiteral("maui-fiery"));
 
     QCommandLineParser parser;
 

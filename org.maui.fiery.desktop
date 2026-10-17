@@ -105,4 +105,4 @@ GenericName[zh_CN]=网页浏览器
 GenericName[zh_TW]=網頁瀏覽器
 MimeType=text/html;x-scheme-handler/http;x-scheme-handler/https;
 StartupNotify=true
-Icon=internet-web-browser
+Icon=maui-fiery
