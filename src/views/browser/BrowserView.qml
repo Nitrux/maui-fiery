@@ -902,30 +902,77 @@ Maui.Page
 
             Row
             {
-                spacing: Maui.Style.space.small
+                Maui.Theme.colorSet: Maui.Theme.Button
+                Maui.Theme.inherit: false
+
+                spacing: 2
 
                 ToolButton
                 {
+                    id: _backButton
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
                     icon.name: "go-previous"
                     display: ToolButton.IconOnly
+                    font.pointSize: Maui.Style.fontSizes.small
                     onClicked: currentBrowser.goBack()
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: i18n("Previous")
+
+                    background: Maui.ShadowedRectangle
+                    {
+                        color: _backButton.checked || _backButton.down
+                               ? _backButton.Maui.Theme.highlightColor
+                               : (_backButton.hovered ? Maui.Theme.hoverColor : _backButton.Maui.Theme.backgroundColor)
+
+                        corners
+                        {
+                            topLeftRadius: Maui.Style.radiusV
+                            topRightRadius: 0
+                            bottomLeftRadius: Maui.Style.radiusV
+                            bottomRightRadius: 0
+                        }
+
+                        Behavior on color
+                        {
+                            Maui.ColorTransition {}
+                        }
+                    }
                 }
 
                 ToolButton
                 {
+                    id: _forwardButton
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
                     icon.name: "go-next"
                     display: ToolButton.IconOnly
+                    font.pointSize: Maui.Style.fontSizes.small
                     onClicked: currentBrowser.goForward()
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
                     ToolTip.text: i18n("Next")
+
+                    background: Maui.ShadowedRectangle
+                    {
+                        color: _forwardButton.checked || _forwardButton.down
+                               ? _forwardButton.Maui.Theme.highlightColor
+                               : (_forwardButton.hovered ? Maui.Theme.hoverColor : _forwardButton.Maui.Theme.backgroundColor)
+
+                        corners
+                        {
+                            topLeftRadius: 0
+                            topRightRadius: Maui.Style.radiusV
+                            bottomLeftRadius: 0
+                            bottomRightRadius: Maui.Style.radiusV
+                        }
+
+                        Behavior on color
+                        {
+                            Maui.ColorTransition {}
+                        }
+                    }
                 }
             }
 
