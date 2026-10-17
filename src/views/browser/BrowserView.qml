@@ -902,14 +902,17 @@ Maui.Page
 
             Row
             {
+                id: _navigationActions
                 Maui.Theme.colorSet: Maui.Theme.Button
                 Maui.Theme.inherit: false
 
                 spacing: 2
+                Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
 
                 ToolButton
                 {
                     id: _backButton
+                    Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
                     icon.name: "go-previous"
                     display: ToolButton.IconOnly
@@ -924,7 +927,7 @@ Maui.Page
                     {
                         color: _backButton.checked || _backButton.down
                                ? _backButton.Maui.Theme.highlightColor
-                               : (_backButton.hovered ? Maui.Theme.hoverColor : _backButton.Maui.Theme.backgroundColor)
+                               : (_backButton.hovered ? _navigationActions.Maui.Theme.hoverColor : _backButton.Maui.Theme.backgroundColor)
 
                         corners
                         {
@@ -944,6 +947,7 @@ Maui.Page
                 ToolButton
                 {
                     id: _forwardButton
+                    Maui.Theme.hoverColor: control.headBar.Maui.Theme.hoverColor
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
                     icon.name: "go-next"
                     display: ToolButton.IconOnly
@@ -958,7 +962,7 @@ Maui.Page
                     {
                         color: _forwardButton.checked || _forwardButton.down
                                ? _forwardButton.Maui.Theme.highlightColor
-                               : (_forwardButton.hovered ? Maui.Theme.hoverColor : _forwardButton.Maui.Theme.backgroundColor)
+                               : (_forwardButton.hovered ? _navigationActions.Maui.Theme.hoverColor : _forwardButton.Maui.Theme.backgroundColor)
 
                         corners
                         {
