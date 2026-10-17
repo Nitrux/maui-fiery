@@ -14,7 +14,7 @@ import org.mauikit.controls as Maui
  *
  * This control adds the DnD features, and integrates with the attached Controls metadata properties.
  */
-BrowserTabButton
+Maui.TabButton
 {
     id: control
 

@@ -894,7 +894,6 @@ Maui.Page
             ToolSeparator
             {
                 orientation: Qt.Vertical
-                height: parent.height
                 anchors.verticalCenter: parent.verticalCenter
                 topPadding: 10
                 bottomPadding: 10
@@ -924,7 +923,6 @@ Maui.Page
             ToolSeparator
             {
                 orientation: Qt.Vertical
-                height: parent.height
                 anchors.verticalCenter: parent.verticalCenter
                 topPadding: 10
                 bottomPadding: 10

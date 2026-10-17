@@ -9,7 +9,6 @@
         <file>views/browser/Browser.qml</file>
         <file>views/browser/WidevinePrompt.qml</file>
         <file>views/widgets/NavigationBar.qml</file>
-        <file>views/widgets/BrowserTabButton.qml</file>
         <file>views/widgets/BrowserTabViewButton.qml</file>
         <file>views/browser/ActionsMenu.qml</file>
         <file>views/home/HomeView.qml</file>

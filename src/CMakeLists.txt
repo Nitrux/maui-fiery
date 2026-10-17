@@ -68,7 +68,6 @@ qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     views/browser/Browser.qml
     views/browser/WidevinePrompt.qml
     views/widgets/NavigationBar.qml
-    views/widgets/BrowserTabButton.qml
     views/widgets/BrowserTabViewButton.qml
     views/browser/ActionsMenu.qml
     views/home/HomeView.qml
