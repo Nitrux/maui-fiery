@@ -40,6 +40,19 @@ project(fiery VERSION ${FIERY_VERSION})
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
+if(UNIX)
+    execute_process(
+        COMMAND locale charmap
+        OUTPUT_VARIABLE _fiery_locale_charmap
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+    if(NOT _fiery_locale_charmap MATCHES "UTF-8")
+        set(ENV{LC_ALL} "C.UTF-8")
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_CUSTOM
+            "${CMAKE_COMMAND} -E env LC_ALL=C.UTF-8")
+    endif()
+endif()
+
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "This project supports Linux only.")
 endif()
