@@ -91,6 +91,29 @@ Maui.Page
         onTriggered: control._popupGeometryNudge = 0
     }
 
+    Timer
+    {
+        id: _overviewChromeRestoreTimer
+        interval: Maui.Style.units.longDuration
+        repeat: false
+        onTriggered:
+        {
+            if (!activeView.overviewMode)
+                _overviewChromeHidden = false
+        }
+    }
+
+    Connections
+    {
+        target: control.activeView
+
+        function onOverviewModeChanged()
+        {
+            if (!control.activeView.overviewMode)
+                _overviewChromeRestoreTimer.restart()
+        }
+    }
+
 
     function _syncAddressField()
     {
@@ -139,7 +162,7 @@ Maui.Page
         }
     }
 
-    headBar.visible: root.visibility !== Window.FullScreen && !activeView.overviewMode
+    headBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
 
@@ -992,6 +1015,7 @@ Maui.Page
         visible: !privateMode
         background: null
         tabBarMargins: Maui.Style.contentMargins
+        tabBar.topMargin: 0
         holder.visible: count === 0
         holder.emoji: "internet-web-browser"
         holder.title: i18n("Start Browsing")
@@ -1040,7 +1064,7 @@ Maui.Page
         }
 
         tabBar.showNewTabButton: false
-        tabBar.visible: root.visibility !== Window.FullScreen && !_browserListView.overviewMode
+        tabBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
         altTabBar: Maui.Handy.isMobile
         tabBar.leftContent: [
             ToolButton
@@ -1048,7 +1072,7 @@ Maui.Page
                 text: activeView.count
                 visible: activeView.count > 1
                 display: ToolButton.TextOnly
-                onClicked: activeView.openOverview()
+                onClicked: control._openOverview()
                 font.bold: true
                 font.pointSize: Maui.Style.fontSizes.small
 
@@ -1103,6 +1127,7 @@ Maui.Page
             visible: true
             background: null
             tabBarMargins: Maui.Style.contentMargins
+            tabBar.topMargin: 0
             holder.visible: count === 0
             holder.emoji: "internet-web-browser"
             holder.title: i18n("Start Browsing")
@@ -1148,7 +1173,7 @@ Maui.Page
             }
 
             tabBar.showNewTabButton: false
-            tabBar.visible: root.visibility !== Window.FullScreen && !_privateTabView.overviewMode
+            tabBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
             altTabBar: Maui.Handy.isMobile
             tabBar.leftContent: [
                 ToolButton
@@ -1156,7 +1181,7 @@ Maui.Page
                     text: activeView.count
                     visible: activeView.count > 1
                     display: ToolButton.TextOnly
-                    onClicked: activeView.openOverview()
+                    onClicked: control._openOverview()
                     font.bold: true
                     font.pointSize: Maui.Style.fontSizes.small
 
