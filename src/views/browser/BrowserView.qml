@@ -907,10 +907,26 @@ Maui.Page
                 Maui.Theme.inherit: false
 
                 spacing: 2
+
+                // These controls intentionally remain ToolButtons instead of Maui.ToolActions.
+                // In Fiery's TabBar, using ToolActions for this group caused the contents to
+                // // reload during tab-overview transitions, changing the bar height and
+                // // stretching the separators into the web view. This custom styling path preserves
+                // // the ToolActions appearance without re-entering that faulty path.
+
+                // Build the base from the head bar hover color, then rotate only its hue.
+                // navigationHoverHueAdjustment is in degrees; Qt.hsva() receives normalized
+                // HSV values and reuses saturation, value, and alpha unchanged.
                 readonly property color navigationHoverColor: Maui.ColorUtils.scaleColor(
-                    Qt.darker(control.headBar.Maui.Theme.hoverColor, 1.38),
-                    { saturation: -50 })
-                Maui.Theme.hoverColor: navigationHoverColor
+                    Qt.darker(control.headBar.Maui.Theme.hoverColor, 1.33),
+                    { saturation: -52 })
+                property real navigationHoverHueAdjustment: -8
+                readonly property color adjustedNavigationHoverColor: Qt.hsva(
+                    ((navigationHoverColor.hsvHue + navigationHoverHueAdjustment / 360) % 1 + 1) % 1,
+                    navigationHoverColor.hsvSaturation,
+                    navigationHoverColor.hsvValue,
+                    navigationHoverColor.a)
+                Maui.Theme.hoverColor: adjustedNavigationHoverColor
 
                 ToolButton
                 {
