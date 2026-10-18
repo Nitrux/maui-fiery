@@ -167,7 +167,9 @@ Maui.Page
     }
 
     floatingHeader: true
-    headBar.visible: root.visibility !== Window.FullScreen && !activeView.overviewMode
+    headBar.visible: root.visibility !== Window.FullScreen
+    headBar.opacity: activeView.overviewMode ? 0 : 1
+    headBar.enabled: !activeView.overviewMode
     headBar.preferredHeight: Maui.Style.rowHeightAlt
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
