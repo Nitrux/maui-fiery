@@ -15,6 +15,8 @@ cmake_minimum_required(VERSION 3.16)
 
 set(FIERY_VERSION 4.0.4)
 
+option(FIERY_UI_DIAGNOSTICS "Enable Fiery UI geometry diagnostics" OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

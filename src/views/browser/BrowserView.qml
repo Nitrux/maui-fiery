@@ -45,7 +45,7 @@ Maui.Page
     readonly property real _headerFootprint: root.visibility !== Window.FullScreen
                                            ? headBar.preferredHeight + headBar.topPadding + headBar.bottomPadding + headerMargins * 2
                                            : 0
-    readonly property bool _uiDebug: true
+    readonly property bool _uiDebug: fieryUiDiagnostics
 
     function _uiLog(event, details)
     {

@@ -58,7 +58,7 @@ Maui.TabButton
     implicitHeight: Math.max(Maui.Style.rowHeightAlt,
                              _contentHeightContract + topPadding + bottomPadding)
 
-    readonly property bool _uiDebug: true
+    readonly property bool _uiDebug: fieryUiDiagnostics
 
     function _uiLog(event, details)
     {

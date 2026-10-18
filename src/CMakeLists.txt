@@ -45,6 +45,9 @@ qt_add_executable(${PROJECT_NAME}
     ${fiery_SRCS}
     ${fiery_ASSETS})
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    FIERY_UI_DIAGNOSTICS=$<BOOL:${FIERY_UI_DIAGNOSTICS}>)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
 
 # Bundle the downloaded blocklist. The target form of qt_add_resources is used

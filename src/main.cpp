@@ -189,6 +189,12 @@ int main(int argc, char *argv[])
     about.processCommandLine(&parser);
 
     QQmlApplicationEngine engine;
+#if FIERY_UI_DIAGNOSTICS
+    constexpr bool fieryUiDiagnostics = true;
+#else
+    constexpr bool fieryUiDiagnostics = false;
+#endif
+    engine.rootContext()->setContextProperty(QStringLiteral("fieryUiDiagnostics"), fieryUiDiagnostics);
     const QUrl url(QStringLiteral("qrc:/app/maui/fiery/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl)

@@ -17,7 +17,7 @@ Maui.SideBarView
 {
     id: _sideBarView
 
-    readonly property bool _uiDebug: true
+    readonly property bool _uiDebug: fieryUiDiagnostics
 
     function _uiLog(event, details)
     {

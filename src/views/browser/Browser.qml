@@ -11,7 +11,7 @@ import org.maui.fiery as Fiery
 Maui.SplitViewItem
 {
     id: control
-    readonly property bool _uiDebug: true
+    readonly property bool _uiDebug: fieryUiDiagnostics
 
     function _uiLog(event, details)
     {
