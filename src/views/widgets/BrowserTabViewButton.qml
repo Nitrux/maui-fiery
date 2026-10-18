@@ -41,6 +41,41 @@ Maui.TabButton
     // Forces reevaluation of model-derived bindings after tab moves.
     readonly property int _modelPulse: control.tabView ? (control.tabView.currentIndex + control.tabView.count) : 0
 
+    TextMetrics
+    {
+        id: _tabLabelMetrics
+        font: control.font
+        text: "Ag"
+    }
+
+    readonly property real _contentHeightContract: Math.max(
+        _tabLabelMetrics.height,
+        Maui.Style.iconSize,
+        closeButtonVisible ? Maui.Style.iconSizes.small : 0,
+        (typeof control._sleeping !== "undefined" && control._sleeping) ||
+        (typeof control._audible !== "undefined" && control._audible) ? Maui.Style.iconSizes.small : 0)
+
+    implicitHeight: Math.max(Maui.Style.rowHeightAlt,
+                             _contentHeightContract + topPadding + bottomPadding)
+
+    readonly property bool _uiDebug: true
+
+    function _uiLog(event, details)
+    {
+        if (_uiDebug)
+            console.log("[Fiery UI][TabButton]", event, details === undefined ? "" : details)
+    }
+
+    function _uiGeometry(item)
+    {
+        if (!item)
+            return "null"
+
+        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
+                + ",iw=" + item.implicitWidth + ",ih=" + item.implicitHeight
+                + ",visible=" + item.visible
+    }
+
     /**
      * @brief The object map containing information about this tab.
      * The information was provided using the Controls metadata attached properties.
@@ -60,6 +95,13 @@ Maui.TabButton
     property color color : tabInfo.color ? tabInfo.color : "transparent"
 
     width: control.tabView.mobile ? control.tabView.width : Math.max(160, Math.min(260, implicitWidth))
+
+    onWidthChanged: _uiLog("widthChanged", _uiGeometry(control) + " index=" + mindex)
+    onHeightChanged: _uiLog("heightChanged", _uiGeometry(control) + " index=" + mindex)
+    onImplicitHeightChanged: _uiLog("implicitHeightChanged", _uiGeometry(control) + " index=" + mindex)
+    onVisibleChanged: _uiLog("visibleChanged", _uiGeometry(control) + " index=" + mindex)
+    onMindexChanged: _uiLog("mindexChanged", "index=" + mindex + " " + _uiGeometry(control))
+    Component.onCompleted: _uiLog("completed", "index=" + mindex + " " + _uiGeometry(control) + " tabView=" + _uiGeometry(tabView))
 
     checked: control.mindex === control.tabView.currentIndex
     text: tabInfo.title

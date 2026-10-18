@@ -200,13 +200,9 @@ void RequestInterceptor::loadBlockList()
                              + QStringLiteral("/blocklist.txt");
     if (QFile::exists(userList)) {
         loadHostsFile(userList, m_blockedHosts);
-        qInfo() << "RequestInterceptor: loaded" << m_blockedHosts.size()
-                << "blocked hosts from" << userList;
         return;
     }
 
     // Fall back to the comprehensive list embedded in the application bundle.
     loadHostsFile(QStringLiteral(":/blocklist.txt"), m_blockedHosts);
-    qInfo() << "RequestInterceptor: loaded" << m_blockedHosts.size()
-            << "blocked hosts from built-in list";
 }

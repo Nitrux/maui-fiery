@@ -42,20 +42,48 @@ Maui.Page
     readonly property var model: activeView.contentModel
     property alias searchFieldVisible: control.footBar.visible
     property int _popupGeometryNudge: 0
+    readonly property real _headerFootprint: root.visibility !== Window.FullScreen
+                                           ? headBar.preferredHeight + headBar.topPadding + headBar.bottomPadding + headerMargins * 2
+                                           : 0
+    readonly property bool _uiDebug: true
+
+    function _uiLog(event, details)
+    {
+        if (_uiDebug)
+            console.log("[Fiery UI][BrowserView]", event, details === undefined ? "" : details)
+    }
+
+    function _uiGeometry(item)
+    {
+        if (!item)
+            return "null"
+
+        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
+                + ",iw=" + item.implicitWidth + ",ih=" + item.implicitHeight
+                + ",visible=" + item.visible
+    }
     // Closed-tabs stack is now persisted in RECENTLY_CLOSED via Fiery.DBActions.
     onSearchFieldVisibleChanged:
     {
         if(!searchFieldVisible && control.currentBrowser)
             control.currentBrowser.findText("")
     }
-    onCurrentTabChanged: _schedulePopupGeometryRefresh()
+    onCurrentTabChanged:
+    {
+        _uiLog("currentTabChanged", "index=" + activeView.currentIndex + ", count=" + activeView.count)
+        _schedulePopupGeometryRefresh()
+    }
     onCurrentBrowserChanged:
     {
         _syncAddressField()
         if (currentBrowser && currentSiteAvailable)
             _surf.inspectCertificate(currentBrowser.url)
     }
-    onPrivateModeChanged: _schedulePopupGeometryRefresh()
+    onPrivateModeChanged:
+    {
+        _schedulePopupGeometryRefresh()
+    }
+
 
     function _schedulePopupGeometryRefresh()
     {
@@ -90,7 +118,6 @@ Maui.Page
         repeat: false
         onTriggered: control._popupGeometryNudge = 0
     }
-
 
     function _syncAddressField()
     {
@@ -139,9 +166,36 @@ Maui.Page
         }
     }
 
-    headBar.visible: root.visibility !== Window.FullScreen
+    floatingHeader: true
+    headBar.visible: root.visibility !== Window.FullScreen && !activeView.overviewMode
+    headBar.preferredHeight: Maui.Style.rowHeightAlt
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
+
+    Connections
+    {
+        target: control.headBar
+
+        function onVisibleChanged()
+        {
+            control._uiLog("headBar visibleChanged", control._uiGeometry(control.headBar))
+        }
+
+        function onWidthChanged()
+        {
+            control._uiLog("headBar widthChanged", control._uiGeometry(control.headBar))
+        }
+
+        function onHeightChanged()
+        {
+            control._uiLog("headBar heightChanged", control._uiGeometry(control.headBar))
+        }
+
+        function onImplicitHeightChanged()
+        {
+            control._uiLog("headBar implicitHeightChanged", control._uiGeometry(control.headBar))
+        }
+    }
 
     headBar.middleContent: Item
     {
@@ -152,11 +206,22 @@ Maui.Page
         property bool editing: false
         property string displayText: ""
 
+        onWidthChanged: control._uiLog("addressBar widthChanged", control._uiGeometry(_addressBar))
+        onHeightChanged: control._uiLog("addressBar heightChanged", control._uiGeometry(_addressBar))
+        onEditingChanged: control._uiLog("addressBar editingChanged", "editing=" + editing + " " + control._uiGeometry(_addressBar))
+        onDisplayTextChanged: control._uiLog("addressBar displayTextChanged", "length=" + displayText.length)
+        Component.onCompleted:
+        {
+            control._uiLog("addressBar completed", control._uiGeometry(_addressBar) + " editing=" + editing)
+            control._syncAddressField()
+        }
+
         implicitWidth: Math.max(_addressDisplay.implicitWidth, _addressEntry.implicitWidth)
         implicitHeight: Math.max(_addressDisplay.implicitHeight, _addressEntry.implicitHeight)
 
         onVisibleChanged:
         {
+            control._uiLog("addressBar visibleChanged", control._uiGeometry(_addressBar) + " editing=" + editing)
             if (!visible)
                 control._finishAddressEditing()
         }
@@ -166,6 +231,7 @@ Maui.Page
             id: _addressDisplay
             anchors.fill: parent
             visible: !_addressBar.editing
+            onVisibleChanged: control._uiLog("addressDisplay visibleChanged", control._uiGeometry(_addressDisplay))
             implicitWidth: _addressEntry.implicitWidth
             implicitHeight: _addressEntry.implicitHeight
 
@@ -194,7 +260,11 @@ Maui.Page
             TapHandler
             {
                 id: _addressDisplayTapHandler
-                onTapped: control._beginAddressEditing()
+                onTapped:
+                {
+                    control._uiLog("addressDisplay tapped", control._uiGeometry(_addressDisplay))
+                    control._beginAddressEditing()
+                }
             }
 
             HoverHandler
@@ -213,14 +283,22 @@ Maui.Page
             activeFocusOnPress: true
             inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
 
+            onWidthChanged: control._uiLog("addressEntry widthChanged", control._uiGeometry(_addressEntry))
+            onHeightChanged: control._uiLog("addressEntry heightChanged", control._uiGeometry(_addressEntry))
+            onVisibleChanged: control._uiLog("addressEntry visibleChanged", control._uiGeometry(_addressEntry))
+
             onActiveFocusChanged:
             {
+                control._uiLog("addressEntry focusChanged", "activeFocus=" + activeFocus + " textLength=" + text.length + " " + control._uiGeometry(_addressEntry))
                 if (!activeFocus)
                     control._finishAddressEditing()
             }
 
+            onTextChanged: control._uiLog("addressEntry textChanged", "length=" + text.length)
+
             onAccepted:
             {
+                control._uiLog("addressEntry accepted", "length=" + text.length)
                 if (text.length > 0)
                     control.openUrl(text)
 
@@ -234,8 +312,6 @@ Maui.Page
             }
         }
 
-        Component.onCompleted: control._syncAddressField()
-
         Maui.ToolButtonMenu
         {
             id: _siteControlsButton
@@ -243,6 +319,11 @@ Maui.Page
             anchors.verticalCenter: parent.verticalCenter
             icon.name: "dialog-information"
             enabled: control.currentSiteAvailable
+            onWidthChanged: control._uiLog("siteControlsButton widthChanged", control._uiGeometry(_siteControlsButton))
+            onHeightChanged: control._uiLog("siteControlsButton heightChanged", control._uiGeometry(_siteControlsButton))
+            onVisibleChanged: control._uiLog("siteControlsButton visibleChanged", control._uiGeometry(_siteControlsButton))
+            onEnabledChanged: control._uiLog("siteControlsButton enabledChanged", "enabled=" + enabled + " " + control._uiGeometry(_siteControlsButton))
+            Component.onCompleted: control._uiLog("siteControlsButton completed", control._uiGeometry(_siteControlsButton))
 
             ToolTip.visible: hovered
             ToolTip.text: i18n("Site controls")
@@ -518,8 +599,9 @@ Maui.Page
     headBar.rightContent: [
         ToolSeparator
         {
-            bottomPadding: 10
-            topPadding: 10
+            height: Maui.Style.space.medium
+            topPadding: 0
+            bottomPadding: 0
         },
 
         Loader
@@ -532,8 +614,9 @@ Maui.Page
 
         ToolSeparator
         {
-            bottomPadding: 10
-            topPadding: 10
+            height: Maui.Style.space.medium
+            topPadding: 0
+            bottomPadding: 0
         },
 
         Loader
@@ -558,8 +641,9 @@ Maui.Page
 
         ToolSeparator
         {
-            bottomPadding: 10
-            topPadding: 10
+            height: Maui.Style.space.medium
+            topPadding: 0
+            bottomPadding: 0
         }
     ]
 
@@ -992,7 +1076,17 @@ Maui.Page
         visible: !privateMode
         background: null
         tabBarMargins: Maui.Style.contentMargins
-        tabBar.topMargin: 0
+        readonly property real tabBarContentHeight:
+            Math.max(tabBar.count > 0 && tabBar.itemAt(0) ? tabBar.itemAt(0).implicitHeight : 0,
+                     Maui.Style.rowHeightAlt,
+                     Maui.Style.iconSize + Maui.Style.defaultPadding * 2)
+        tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
+        tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
+        tabBar.bottomMargin: Maui.Handy.isMobile ? control._headerFootprint : 0
+        onWidthChanged: control._uiLog("public TabView widthChanged", control._uiGeometry(_browserListView))
+        onHeightChanged: control._uiLog("public TabView heightChanged", control._uiGeometry(_browserListView))
+        onVisibleChanged: control._uiLog("public TabView visibleChanged", control._uiGeometry(_browserListView))
+        Component.onCompleted: control._uiLog("public TabView completed", control._uiGeometry(_browserListView) + " tabBar=" + control._uiGeometry(_browserListView.tabBar))
         holder.visible: count === 0
         holder.emoji: "internet-web-browser"
         holder.title: i18n("Start Browsing")
@@ -1000,7 +1094,11 @@ Maui.Page
         holder.emojiSize: Maui.Style.iconSizes.big
 
         onNewTabClicked: openTab("")
-        onCurrentIndexChanged: _schedulePopupGeometryRefresh()
+        onCurrentIndexChanged:
+        {
+            _schedulePopupGeometryRefresh()
+            control._uiLog("public TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count + ", overview=" + overviewMode)
+        }
         onCloseTabClicked: (index) =>
         {
             var tab = _browserListView.tabAt(index)
@@ -1063,8 +1161,9 @@ Maui.Page
             ToolSeparator
             {
                 visible: activeView.count > 1
-                bottomPadding: 10
-                topPadding: 10
+                height: Maui.Style.space.medium
+                topPadding: 0
+                bottomPadding: 0
             }
         ]
 
@@ -1072,8 +1171,9 @@ Maui.Page
             ToolSeparator
             {
                 visible: activeView.count > 1
-                bottomPadding: 10
-                topPadding: 10
+                height: Maui.Style.space.medium
+                topPadding: 0
+                bottomPadding: 0
             },
 
             ToolButton
@@ -1090,6 +1190,25 @@ Maui.Page
         ]
     }
 
+    Connections
+    {
+        target: _browserListView.tabBar
+
+        function logPublicTabBar(event)
+        {
+            control._uiLog("public TabBar " + event, control._uiGeometry(_browserListView.tabBar) + " topMargin=" + _browserListView.tabBar.topMargin)
+        }
+
+        function onXChanged() { logPublicTabBar("xChanged") }
+        function onYChanged() { logPublicTabBar("yChanged") }
+        function onWidthChanged() { logPublicTabBar("widthChanged") }
+        function onHeightChanged() { logPublicTabBar("heightChanged") }
+        function onImplicitHeightChanged() { logPublicTabBar("implicitHeightChanged") }
+        function onVisibleChanged() { logPublicTabBar("visibleChanged") }
+        function onPositionChanged() { logPublicTabBar("positionChanged") }
+        function onTopMarginChanged() { logPublicTabBar("topMarginChanged") }
+    }
+
     Item
     {
         id: _privateModeView
@@ -1104,7 +1223,17 @@ Maui.Page
             visible: true
             background: null
             tabBarMargins: Maui.Style.contentMargins
-            tabBar.topMargin: 0
+            readonly property real tabBarContentHeight:
+                Math.max(tabBar.count > 0 && tabBar.itemAt(0) ? tabBar.itemAt(0).implicitHeight : 0,
+                         Maui.Style.rowHeightAlt,
+                         Maui.Style.iconSize + Maui.Style.defaultPadding * 2)
+            tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
+            tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
+            tabBar.bottomMargin: Maui.Handy.isMobile ? control._headerFootprint : 0
+            onWidthChanged: control._uiLog("private TabView widthChanged", control._uiGeometry(_privateTabView))
+            onHeightChanged: control._uiLog("private TabView heightChanged", control._uiGeometry(_privateTabView))
+            onVisibleChanged: control._uiLog("private TabView visibleChanged", control._uiGeometry(_privateTabView))
+            Component.onCompleted: control._uiLog("private TabView completed", control._uiGeometry(_privateTabView) + " tabBar=" + control._uiGeometry(_privateTabView.tabBar))
             holder.visible: count === 0
             holder.emoji: "internet-web-browser"
             holder.title: i18n("Start Browsing")
@@ -1112,7 +1241,11 @@ Maui.Page
             holder.emojiSize: Maui.Style.iconSizes.big
 
             onNewTabClicked: openTab("")
-            onCurrentIndexChanged: _schedulePopupGeometryRefresh()
+            onCurrentIndexChanged:
+            {
+                _schedulePopupGeometryRefresh()
+                control._uiLog("private TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count + ", overview=" + overviewMode)
+            }
             onCloseTabClicked: (index) =>
             {
                 // Private tab URLs must NOT be added to the restore stack:
@@ -1172,8 +1305,9 @@ Maui.Page
                 ToolSeparator
                 {
                     visible: activeView.count > 1
-                    bottomPadding: 10
-                    topPadding: 10
+                    height: Maui.Style.space.medium
+                    topPadding: 0
+                    bottomPadding: 0
                 }
             ]
 
@@ -1181,8 +1315,9 @@ Maui.Page
                 ToolSeparator
                 {
                     visible: activeView.count > 1
-                    bottomPadding: 10
-                    topPadding: 10
+                    height: Maui.Style.space.medium
+                    topPadding: 0
+                    bottomPadding: 0
                 },
 
                 ToolButton
@@ -1198,6 +1333,25 @@ Maui.Page
                 }
             ]
         }
+    }
+
+    Connections
+    {
+        target: _privateTabView.tabBar
+
+        function logPrivateTabBar(event)
+        {
+            control._uiLog("private TabBar " + event, control._uiGeometry(_privateTabView.tabBar) + " topMargin=" + _privateTabView.tabBar.topMargin)
+        }
+
+        function onXChanged() { logPrivateTabBar("xChanged") }
+        function onYChanged() { logPrivateTabBar("yChanged") }
+        function onWidthChanged() { logPrivateTabBar("widthChanged") }
+        function onHeightChanged() { logPrivateTabBar("heightChanged") }
+        function onImplicitHeightChanged() { logPrivateTabBar("implicitHeightChanged") }
+        function onVisibleChanged() { logPrivateTabBar("visibleChanged") }
+        function onPositionChanged() { logPrivateTabBar("positionChanged") }
+        function onTopMarginChanged() { logPrivateTabBar("topMarginChanged") }
     }
 
     // Full-width loading indicator at the edge of the tab bar, like Chrome on mobile.
@@ -1323,12 +1477,26 @@ Maui.Page
 
         Row
         {
+            id: _navigationControlsRow
             spacing: control.headBar.spacing
+
+            onWidthChanged: control._uiLog("navigationControls widthChanged", control._uiGeometry(_navigationControlsRow))
+            onHeightChanged: control._uiLog("navigationControls heightChanged", control._uiGeometry(_navigationControlsRow))
+            Component.onCompleted: control._uiLog("navigationControls completed", control._uiGeometry(_navigationControlsRow))
 
             ToolButton
             {
+                id: _sidebarButton
                 icon.name: _sideBarView.sideBar.visible ? "sidebar-collapse" : "sidebar-expand"
-                onClicked: _sideBarView.sideBar.toggle()
+                onWidthChanged: control._uiLog("sidebarButton widthChanged", control._uiGeometry(_sidebarButton))
+                onHeightChanged: control._uiLog("sidebarButton heightChanged", control._uiGeometry(_sidebarButton))
+                onVisibleChanged: control._uiLog("sidebarButton visibleChanged", control._uiGeometry(_sidebarButton))
+                onEnabledChanged: control._uiLog("sidebarButton enabledChanged", "enabled=" + enabled + " " + control._uiGeometry(_sidebarButton))
+                onClicked:
+                {
+                    control._uiLog("sidebarButton clicked", "checked=" + checked + " " + control._uiGeometry(_sidebarButton))
+                    _sideBarView.sideBar.toggle()
+                }
                 checked: _sideBarView.sideBar.visible
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
@@ -1339,14 +1507,19 @@ Maui.Page
             ToolSeparator
             {
                 orientation: Qt.Vertical
-                height: Maui.Style.rowHeightAlt
+                height: Maui.Style.space.medium
                 anchors.verticalCenter: parent.verticalCenter
-                topPadding: 10
-                bottomPadding: 10
+                topPadding: 0
+                bottomPadding: 0
             }
 
             Maui.ToolActions
             {
+                id: _navigationActions
+                onWidthChanged: control._uiLog("navigationActions widthChanged", control._uiGeometry(_navigationActions))
+                onHeightChanged: control._uiLog("navigationActions heightChanged", control._uiGeometry(_navigationActions))
+                onVisibleChanged: control._uiLog("navigationActions visibleChanged", control._uiGeometry(_navigationActions))
+                Component.onCompleted: control._uiLog("navigationActions completed", control._uiGeometry(_navigationActions))
                 autoExclusive: false
                 checkable: false
                 display: ToolButton.IconOnly
@@ -1356,7 +1529,12 @@ Maui.Page
                     text: i18n("Previous")
                     icon.name: "go-previous"
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
-                    onTriggered: currentBrowser.goBack()
+                    onEnabledChanged: control._uiLog("backButton enabledChanged", "enabled=" + enabled + " canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false))
+                    onTriggered:
+                    {
+                        control._uiLog("backButton triggered", "canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false))
+                        currentBrowser.goBack()
+                    }
                 }
 
                 Action
@@ -1364,7 +1542,12 @@ Maui.Page
                     text: i18n("Next")
                     icon.name: "go-next"
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
-                    onTriggered: currentBrowser.goForward()
+                    onEnabledChanged: control._uiLog("forwardButton enabledChanged", "enabled=" + enabled + " canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false))
+                    onTriggered:
+                    {
+                        control._uiLog("forwardButton triggered", "canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false))
+                        currentBrowser.goForward()
+                    }
                 }
             }
         }
@@ -1462,12 +1645,25 @@ Maui.Page
 
         Row
         {
+            id: _browserActionsRow
             spacing: control.headBar.spacing
+
+            onWidthChanged: control._uiLog("browserActions widthChanged", control._uiGeometry(_browserActionsRow))
+            onHeightChanged: control._uiLog("browserActions heightChanged", control._uiGeometry(_browserActionsRow))
+            Component.onCompleted: control._uiLog("browserActions completed", control._uiGeometry(_browserActionsRow))
 
             ToolButton
             {
+                id: _reloadButton
                 icon.name: "view-refresh"
-                onClicked: currentBrowser.reload()
+                onWidthChanged: control._uiLog("reloadButton widthChanged", control._uiGeometry(_reloadButton))
+                onHeightChanged: control._uiLog("reloadButton heightChanged", control._uiGeometry(_reloadButton))
+                onVisibleChanged: control._uiLog("reloadButton visibleChanged", control._uiGeometry(_reloadButton))
+                onClicked:
+                {
+                    control._uiLog("reloadButton clicked", control._uiGeometry(_reloadButton))
+                    currentBrowser.reload()
+                }
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
@@ -1476,8 +1672,16 @@ Maui.Page
 
             ToolButton
             {
+                id: _splitButton
                 icon.name: currentTab && currentTab.count === 2 ? "view-right-close" : "view-split-left-right"
-                onClicked: currentTab && currentTab.count === 2 ? currentTab.pop() : control.openSplit("")
+                onWidthChanged: control._uiLog("splitButton widthChanged", control._uiGeometry(_splitButton))
+                onHeightChanged: control._uiLog("splitButton heightChanged", control._uiGeometry(_splitButton))
+                onVisibleChanged: control._uiLog("splitButton visibleChanged", control._uiGeometry(_splitButton))
+                onClicked:
+                {
+                    control._uiLog("splitButton clicked", "split=" + (currentTab && currentTab.count === 2) + " " + control._uiGeometry(_splitButton))
+                    currentTab && currentTab.count === 2 ? currentTab.pop() : control.openSplit("")
+                }
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered

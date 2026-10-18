@@ -43,7 +43,6 @@ DB::DB(QObject *parent) : QObject(parent)
     this->name = QUuid::createUuid().toString();
     if (!FMH::fileExists(QUrl::fromLocalFile(DB_Path))) {
         this->openDB(this->name);
-        qInfo() << "Database not found, creating it at" << DB_Path;
         this->prepareCollectionDB();
     } else
         this->openDB(this->name);
@@ -334,7 +333,6 @@ void DB::migrateSchema()
                 runQuery(QStringLiteral(
                     "INSERT OR IGNORE INTO HISTORY_VISITS(url, visit_time) "
                     "SELECT url, COALESCE(adddate, datetime('now')) FROM HISTORY"));
-                qInfo() << "DB: migrated legacy HISTORY rows to HISTORY_URLS + HISTORY_VISITS";
             }
         }
     }

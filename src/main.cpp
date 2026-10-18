@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QLoggingCategory>
 #include <QQmlApplicationEngine>
 #include <QCommandLineParser>
 #include <QQmlContext>
@@ -36,6 +37,8 @@
 
 int main(int argc, char *argv[])
 {
+    QLoggingCategory::setFilterRules(QStringLiteral("qt.qml.propertyCache.append.warning=false\n"));
+
     // Alpha channel for window transparency — must precede QApplication.
     QSurfaceFormat format;
     format.setAlphaBufferSize(8);
@@ -81,11 +84,6 @@ int main(int argc, char *argv[])
                                             "VaapiVideoEncoder,"
                                             "AcceleratedVideoDecodeLinuxGL "
                          "--num-raster-threads=" + QByteArray::number(rasterThreads);
-    } else if (isWaylandSession) {
-        qInfo() << "Fiery: skipping aggressive WebEngine GPU flags on Wayland."
-                << "Set FIERY_FORCE_GPU_FLAGS=1 to restore them.";
-    } else if (userDisabledGpu) {
-        qInfo() << "Fiery: respecting GPU-disabling flags from QTWEBENGINE_CHROMIUM_FLAGS.";
     }
 
     // DNS-over-HTTPS: must be read from settings before engine init.
@@ -145,7 +143,6 @@ int main(int argc, char *argv[])
                 qWarning() << "Widevine CDM path contains spaces — cannot load:" << cdmSo;
             } else {
                 chromiumFlags += " --widevine-path=" + cdmSo.toLocal8Bit();
-                qInfo() << "Widevine CDM:" << cdmSo;
             }
         }
     }

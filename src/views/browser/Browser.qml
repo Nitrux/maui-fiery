@@ -11,7 +11,26 @@ import org.maui.fiery as Fiery
 Maui.SplitViewItem
 {
     id: control
+    readonly property bool _uiDebug: true
+
+    function _uiLog(event, details)
+    {
+        if (_uiDebug)
+            console.log("[Fiery UI][Browser]", event, details === undefined ? "" : details)
+    }
+
+    function _uiGeometry(item)
+    {
+        if (!item)
+            return "null"
+
+        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
+                + ",visible=" + item.visible
+    }
+
     property alias url : _webView.url
+    onWidthChanged: _uiLog("widthChanged", _uiGeometry(control))
+    onHeightChanged: _uiLog("heightChanged", _uiGeometry(control))
     property alias webView : _webView
     property WebEngineProfile browserProfile: root.profile
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
@@ -25,6 +44,16 @@ Maui.SplitViewItem
 
     property bool _webFullScreen: false
     property string _hoveredUrl: ""
+
+    Connections
+    {
+        target: _webView
+
+        function onWidthChanged() { control._uiLog("webView widthChanged", control._uiGeometry(_webView)) }
+        function onHeightChanged() { control._uiLog("webView heightChanged", control._uiGeometry(_webView)) }
+        function onVisibleChanged() { control._uiLog("webView visibleChanged", control._uiGeometry(_webView)) }
+        function onLifecycleStateChanged() { control._uiLog("webView lifecycleStateChanged", "state=" + _webView.lifecycleState + " " + control._uiGeometry(_webView)) }
+    }
     property var _pendingFileRequest: null
     readonly property var _hostWindow: control.Window.window
 
@@ -1337,6 +1366,7 @@ Maui.SplitViewItem
 
     onVisibleChanged:
     {
+        _uiLog("visibleChanged", _uiGeometry(control) + " webView=" + _uiGeometry(_webView))
         if (visible)
         {
             // Cancel any pending sleep countdown and clear the sleeping flag.
