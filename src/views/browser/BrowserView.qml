@@ -909,7 +909,7 @@ Maui.Page
                 spacing: 2
                 readonly property color navigationHoverColor: Maui.ColorUtils.scaleColor(
                     Qt.darker(control.headBar.Maui.Theme.hoverColor, 1.38),
-                    { saturation: -44.8 })
+                    { saturation: -50 })
                 Maui.Theme.hoverColor: navigationHoverColor
 
                 ToolButton
