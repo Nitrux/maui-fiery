@@ -1084,7 +1084,7 @@ Maui.Page
                      Maui.Style.iconSize + Maui.Style.defaultPadding * 2)
         tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
         tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
-        tabBar.bottomMargin: Maui.Handy.isMobile ? control._headerFootprint : 0
+        tabBar.bottomMargin: (Maui.Handy.isMobile ? control._headerFootprint : 0) + 6
         onWidthChanged: control._uiLog("public TabView widthChanged", control._uiGeometry(_browserListView))
         onHeightChanged: control._uiLog("public TabView heightChanged", control._uiGeometry(_browserListView))
         onVisibleChanged: control._uiLog("public TabView visibleChanged", control._uiGeometry(_browserListView))
@@ -1231,7 +1231,7 @@ Maui.Page
                          Maui.Style.iconSize + Maui.Style.defaultPadding * 2)
             tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
             tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
-            tabBar.bottomMargin: Maui.Handy.isMobile ? control._headerFootprint : 0
+            tabBar.bottomMargin: (Maui.Handy.isMobile ? control._headerFootprint : 0) + 6
             onWidthChanged: control._uiLog("private TabView widthChanged", control._uiGeometry(_privateTabView))
             onHeightChanged: control._uiLog("private TabView heightChanged", control._uiGeometry(_privateTabView))
             onVisibleChanged: control._uiLog("private TabView visibleChanged", control._uiGeometry(_privateTabView))
