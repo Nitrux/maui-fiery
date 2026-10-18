@@ -277,40 +277,33 @@ Maui.Page
             MenuSeparator {}
 
             MenuItem
+            {
+                enabled: false
+                opacity: 1
+                hoverEnabled: false
+                flat: true
+                background: null
+                contentItem: ColumnLayout
                 {
-                    height: visible ? implicitHeight : -Maui.Style.defaultSpacing
-                    visible: !_surf.certificateAvailable || _surf.certificateError.length > 0
-                    enabled: false
-                    opacity: 1
-                    contentItem: ColumnLayout
-                    {
-                        Label
-                        {
-                            Layout.fillWidth: true
-                            text: _surf.certificateLoading
-                                  ? i18n("Retrieving certificate information…")
-                                  : _surf.certificateError.length > 0
-                                    ? i18n("Certificate warning: %1", _surf.certificateError)
-                                    : _surf.certificateAvailable
-                                      ? i18n("Certificate data")
-                                      : i18n("No certificate information is available.")
-                            color: Maui.Theme.textColor
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                }
+                    spacing: Maui.Style.space.small
 
-                MenuItem
-                {
-                    height: visible ? implicitHeight : -Maui.Style.defaultSpacing
-                    visible: _surf.certificateAvailable
-                    enabled: false
-                    opacity: 1
-                    hoverEnabled: false
-                    flat: true
-                    background: null
-                    contentItem: Rectangle
+                    Label
                     {
+                        Layout.fillWidth: true
+                        visible: _surf.certificateLoading || _surf.certificateError.length > 0 || !_surf.certificateAvailable
+                        text: _surf.certificateLoading
+                              ? i18n("Retrieving certificate information…")
+                              : _surf.certificateError.length > 0
+                                ? i18n("Certificate warning: %1", _surf.certificateError)
+                                : i18n("No certificate information is available.")
+                        color: Maui.Theme.textColor
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle
+                    {
+                        Layout.fillWidth: true
+                        visible: _surf.certificateAvailable
                         color: Maui.Theme.alternateBackgroundColor
                         radius: Maui.Style.radiusV
                         border.width: 1
@@ -371,6 +364,7 @@ Maui.Page
                         }
                     }
                 }
+            }
 
             MenuItem
             {
@@ -400,7 +394,10 @@ Maui.Page
 
         function onOpened()
         {
-            if (control.currentBrowser && control.currentSiteAvailable)
+            if (control.currentBrowser && control.currentSiteAvailable
+                    && !_surf.certificateLoading
+                    && !_surf.certificateAvailable
+                    && _surf.certificateError.length === 0)
                 _surf.inspectCertificate(control.currentBrowser.url)
         }
     }
