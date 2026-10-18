@@ -96,7 +96,7 @@ msgstr "번역"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "모두 선택"
 
 #: src/views/browser/ActionsMenu.qml:79

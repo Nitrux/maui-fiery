@@ -59,7 +59,7 @@ Maui.TabButton
      */
     property color color : tabInfo.color ? tabInfo.color : "transparent"
 
-    width: control.tabView.mobile ? ListView.view.width : Math.max(160, Math.min(260, implicitWidth))
+    width: control.tabView.mobile ? control.tabView.width : Math.max(160, Math.min(260, implicitWidth))
 
     checked: control.mindex === control.tabView.currentIndex
     text: tabInfo.title

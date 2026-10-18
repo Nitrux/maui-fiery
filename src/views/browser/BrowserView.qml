@@ -20,6 +20,23 @@ Maui.Page
 
     property var currentTab: activeView.currentItem
     readonly property WebEngineView currentBrowser: currentTab && currentTab.currentItem ? currentTab.currentItem.webView : null
+    readonly property string currentPageUrl: currentBrowser ? currentBrowser.url.toString() : ""
+    readonly property bool currentSiteAvailable: {
+        const url = currentPageUrl.toLowerCase()
+        return url.startsWith("http://") || url.startsWith("https://")
+    }
+    readonly property bool currentSiteHttps: currentPageUrl.toLowerCase().startsWith("https://")
+    readonly property bool currentSiteSecure: currentSiteHttps && _surf.certificateValid
+    readonly property string currentSiteName: {
+        const separator = currentPageUrl.indexOf("://")
+        const withoutScheme = separator >= 0 ? currentPageUrl.slice(separator + 3) : currentPageUrl
+        const authority = withoutScheme.split("/")[0].split("?")[0].split("#")[0]
+        return authority.split("@").pop().split(":")[0]
+    }
+    readonly property string currentSiteDomain: {
+        const siteName = currentSiteName
+        return siteName.toLowerCase().startsWith("www.") ? siteName.slice(4) : siteName
+    }
     readonly property var listView: activeView
     property int count: activeView.count
     readonly property var model: activeView.contentModel
@@ -32,6 +49,12 @@ Maui.Page
             control.currentBrowser.findText("")
     }
     onCurrentTabChanged: _schedulePopupGeometryRefresh()
+    onCurrentBrowserChanged:
+    {
+        _syncAddressField()
+        if (currentBrowser && currentSiteAvailable)
+            _surf.inspectCertificate(currentBrowser.url)
+    }
     onPrivateModeChanged: _schedulePopupGeometryRefresh()
 
     function _schedulePopupGeometryRefresh()
@@ -69,12 +92,435 @@ Maui.Page
     }
 
 
-    headBar.visible: !root.isWide
-    altHeader: true
+    function _syncAddressField()
+    {
+        if (!_addressBar || !_addressEntry || _addressEntry.activeFocus)
+            return
+
+        const displayUrl = currentBrowser ? _surf.safeDisplayUrl(currentBrowser.url.toString()) : ""
+        _addressBar.displayText = displayUrl
+        _addressEntry.text = displayUrl
+    }
+
+    function _beginAddressEditing()
+    {
+        if (!_addressBar || !root.isWide)
+            return
+
+        _addressBar.editing = true
+        Qt.callLater(function()
+        {
+            if (!_addressBar.editing)
+                return
+
+            _addressEntry.forceActiveFocus()
+            _addressEntry.selectAll()
+        })
+    }
+
+    function _finishAddressEditing()
+    {
+        if (!_addressBar)
+            return
+
+        _addressBar.editing = false
+        _syncAddressField()
+    }
+
+    Connections
+    {
+        target: control.currentBrowser
+
+        function onUrlChanged()
+        {
+            control._syncAddressField()
+            if (control.currentBrowser && control.currentSiteAvailable)
+                _surf.inspectCertificate(control.currentBrowser.url)
+        }
+    }
+
+    headBar.visible: root.visibility !== Window.FullScreen && !activeView.overviewMode
+    altHeader: !root.isWide
+    headBar.forceCenterMiddleContent: false
+
+    headBar.middleContent: Item
+    {
+        id: _addressBar
+        visible: root.isWide
+        Layout.fillWidth: true
+
+        property bool editing: false
+        property string displayText: ""
+
+        implicitWidth: Math.max(_addressDisplay.implicitWidth, _addressEntry.implicitWidth)
+        implicitHeight: Math.max(_addressDisplay.implicitHeight, _addressEntry.implicitHeight)
+
+        onVisibleChanged:
+        {
+            if (!visible)
+                control._finishAddressEditing()
+        }
+
+        Item
+        {
+            id: _addressDisplay
+            anchors.fill: parent
+            visible: !_addressBar.editing
+            implicitWidth: _addressEntry.implicitWidth
+            implicitHeight: _addressEntry.implicitHeight
+
+            Rectangle
+            {
+                anchors.fill: parent
+                color: _addressDisplayMouse.containsMouse ? Maui.Theme.hoverColor : Maui.Theme.alternateBackgroundColor
+                radius: Maui.Style.radiusV
+                border.color: Qt.rgba(Maui.Theme.textColor.r, Maui.Theme.textColor.g, Maui.Theme.textColor.b, 0.15)
+                border.width: 1
+            }
+
+            Label
+            {
+                anchors.fill: parent
+                anchors.leftMargin: Maui.Style.space.medium
+                anchors.rightMargin: _siteControlsButton.implicitWidth + Maui.Style.space.small
+                text: _addressBar.displayText.length > 0 ? _addressBar.displayText : i18n("Search or enter URL")
+                color: Maui.Theme.textColor
+                font: Maui.Style.defaultFont
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+                maximumLineCount: 1
+            }
+
+            TapHandler
+            {
+                id: _addressDisplayTapHandler
+                onTapped: control._beginAddressEditing()
+            }
+
+            HoverHandler
+            {
+                id: _addressDisplayMouse
+            }
+        }
+
+        Maui.SearchField
+        {
+            id: _addressEntry
+            anchors.fill: parent
+            anchors.rightMargin: _siteControlsButton.implicitWidth + Maui.Style.space.small
+            visible: _addressBar.editing
+            placeholderText: i18n("Search or enter URL")
+            activeFocusOnPress: true
+            inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
+
+            onActiveFocusChanged:
+            {
+                if (!activeFocus)
+                    control._finishAddressEditing()
+            }
+
+            onAccepted:
+            {
+                if (text.length > 0)
+                    control.openUrl(text)
+
+                control._finishAddressEditing()
+            }
+
+            Keys.onEscapePressed: (event) =>
+            {
+                control._finishAddressEditing()
+                event.accepted = true
+            }
+        }
+
+        Component.onCompleted: control._syncAddressField()
+
+        Maui.ToolButtonMenu
+        {
+            id: _siteControlsButton
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            icon.name: "dialog-information"
+            enabled: control.currentSiteAvailable
+
+            ToolTip.visible: hovered
+            ToolTip.text: i18n("Site controls")
+
+            MenuItem
+            {
+                text: control.currentSiteName
+                contentItem: RowLayout
+                {
+                    spacing: Maui.Style.space.small
+
+                    Maui.Icon
+                    {
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.preferredWidth: Maui.Style.iconSize
+                        Layout.preferredHeight: Maui.Style.iconSize
+                        source: control.currentSiteSecure ? "lock" : "unlock"
+                        color: control.currentSiteHttps && _surf.certificateError.length > 0
+                            ? Maui.Theme.negativeBackgroundColor
+                            : Maui.Theme.positiveBackgroundColor
+                    }
+
+                    Label
+                    {
+                        Layout.fillWidth: true
+                        text: control.currentSiteName
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+
+            MenuSeparator {}
+
+            MenuItem
+                {
+                    height: visible ? implicitHeight : -Maui.Style.defaultSpacing
+                    visible: !_surf.certificateAvailable || _surf.certificateError.length > 0
+                    enabled: false
+                    opacity: 1
+                    contentItem: ColumnLayout
+                    {
+                        Label
+                        {
+                            Layout.fillWidth: true
+                            text: _surf.certificateLoading
+                                  ? i18n("Retrieving certificate information…")
+                                  : _surf.certificateError.length > 0
+                                    ? i18n("Certificate warning: %1", _surf.certificateError)
+                                    : _surf.certificateAvailable
+                                      ? i18n("Certificate data")
+                                      : i18n("No certificate information is available.")
+                            color: Maui.Theme.textColor
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
+                MenuItem
+                {
+                    height: visible ? implicitHeight : -Maui.Style.defaultSpacing
+                    visible: _surf.certificateAvailable
+                    enabled: false
+                    opacity: 1
+                    hoverEnabled: false
+                    flat: true
+                    background: null
+                    contentItem: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                        border.width: 1
+                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        implicitHeight: _certificateDetails.implicitHeight + Maui.Style.space.small * 2
+
+                        ColumnLayout
+                        {
+                            id: _certificateDetails
+                            anchors.fill: parent
+                            anchors.topMargin: Maui.Style.space.small
+                            anchors.leftMargin: Maui.Style.space.small
+                            anchors.rightMargin: Maui.Style.space.small
+                            anchors.bottomMargin: Maui.Style.space.small
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("Subject: %1", _surf.certificateSubject)
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("Issuer: %1", _surf.certificateIssuer)
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("Valid from: %1", _surf.certificateEffectiveDate)
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("Valid until: %1", _surf.certificateExpiryDate)
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("Serial number: %1", _surf.certificateSerialNumber)
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            Label
+                            {
+                                Layout.fillWidth: true
+                                text: i18n("SHA-256 fingerprint: %1", _surf.certificateFingerprint)
+                                wrapMode: Text.WrapAnywhere
+                            }
+                        }
+                    }
+                }
+
+            MenuItem
+            {
+                text: i18n("Clear cookies and site data")
+                icon.name: "edit-clear"
+                onTriggered:
+                {
+                    _clearSiteDataDialog.targetBrowser = control.currentBrowser
+                    _clearSiteDataDialog.open()
+                }
+            }
+
+            MenuSeparator {}
+
+            MenuItem
+            {
+                text: i18n("Site settings")
+                icon.name: "configure"
+                onTriggered: _siteSettingsDialog.openForCurrentSite()
+            }
+        }
+    }
+
+    Connections
+    {
+        target: _siteControlsButton.menu
+
+        function onOpened()
+        {
+            if (control.currentBrowser && control.currentSiteAvailable)
+                _surf.inspectCertificate(control.currentBrowser.url)
+        }
+    }
+
+    Maui.SettingsDialog
+    {
+        id: _siteSettingsDialog
+        Maui.Controls.title: i18n("Site settings")
+
+        property url siteOrigin: ""
+        property string siteName: ""
+        property var siteProfile: null
+        property int permissionRevision: 0
+
+        readonly property var permissionDefinitions: [
+            { type: WebEnginePermission.Notifications, label: i18n("Notifications"), description: i18n("Allow this site to send notifications.") },
+            { type: WebEnginePermission.Geolocation, label: i18n("Location"), description: i18n("Allow this site to access your location.") },
+            { type: WebEnginePermission.ClipboardReadWrite, label: i18n("Clipboard"), description: i18n("Allow this site to read and write the clipboard.") },
+            { type: WebEnginePermission.LocalFontsAccess, label: i18n("Local fonts"), description: i18n("Allow this site to use fonts installed on this device.") }
+        ]
+
+        function openForCurrentSite()
+        {
+            if (!control.currentBrowser || !control.currentSiteAvailable)
+                return
+
+            siteOrigin = control.currentBrowser.url
+            siteName = control.currentSiteDomain
+            siteProfile = control.currentBrowser.profile
+            permissionRevision++
+            open()
+        }
+
+        function permission(permissionType)
+        {
+            if (!siteProfile || siteOrigin.toString().length === 0)
+                return null
+
+            return siteProfile.queryPermission(siteOrigin, permissionType)
+        }
+
+        onClosed:
+        {
+            siteProfile = null
+            siteOrigin = ""
+            siteName = ""
+        }
+
+        Maui.SectionGroup
+        {
+            title: i18n("Permissions for this site.")
+            description: _siteSettingsDialog.siteName
+
+            Repeater
+            {
+                model: _siteSettingsDialog.permissionDefinitions
+
+                delegate: Maui.FlexSectionItem
+                {
+                    required property var modelData
+
+                    label1.text: modelData.label
+                    label2.text: modelData.description
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        enabled: _siteSettingsDialog.siteProfile !== null
+                        checked:
+                        {
+                            _siteSettingsDialog.permissionRevision
+                            const sitePermission = _siteSettingsDialog.permission(modelData.type)
+                            return sitePermission && sitePermission.isValid
+                                   && sitePermission.state === WebEnginePermission.Granted
+                        }
+                        onToggled:
+                        {
+                            const sitePermission = _siteSettingsDialog.permission(modelData.type)
+                            if (!sitePermission || !sitePermission.isValid)
+                                return
+
+                            if (checked)
+                                sitePermission.grant()
+                            else
+                                sitePermission.deny()
+
+                            _siteSettingsDialog.permissionRevision++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Maui.InfoDialog
+    {
+        id: _clearSiteDataDialog
+        property var targetBrowser: null
+        title: i18n("Clear Site Data")
+        message: targetBrowser ? i18n("Clear cookies and site data for %1?", targetBrowser.url.toString()) : ""
+        standardButtons: Dialog.Cancel | Dialog.Ok
+
+        onAccepted:
+        {
+            if (!targetBrowser)
+                return
+
+            _surf.clearSiteCookies(targetBrowser.profile, targetBrowser.url)
+            targetBrowser.runJavaScript("(function(){try{localStorage.clear();sessionStorage.clear()}catch(e){}})()")
+            targetBrowser.reload()
+            targetBrowser = null
+        }
+
+        onRejected: targetBrowser = null
+    }
+
     headBar.rightContent: [
         ToolSeparator
         {
-            visible: !root.isWide
             bottomPadding: 10
             topPadding: 10
         },
@@ -82,14 +528,13 @@ Maui.Page
         Loader
         {
             asynchronous: true
-            active: !root.isWide
+            active: true
             visible: active
             sourceComponent: _browserActionButtonsComponent
         },
 
         ToolSeparator
         {
-            visible: !root.isWide
             bottomPadding: 10
             topPadding: 10
         },
@@ -97,24 +542,25 @@ Maui.Page
         Loader
         {
             asynchronous: true
-            active: !root.isWide
+            active: true
             visible: active
             sourceComponent: _overflowMenuComponent
-        }
+        },
+
+        Maui.WindowControls {}
     ]
 
     headBar.leftContent: [
         Loader
         {
             asynchronous: true
-            active: !root.isWide
+            active: true
             visible: active
             sourceComponent: _navigationControlsComponent
         },
 
         ToolSeparator
         {
-            visible: !root.isWide
             bottomPadding: 10
             topPadding: 10
         }
@@ -292,7 +738,17 @@ Maui.Page
     Shortcut
     {
         sequence: "Ctrl+L"
-        onActivated: _navigationPopup.open()
+        onActivated:
+        {
+            if (root.isWide)
+            {
+                _beginAddressEditing()
+            }
+            else
+            {
+                _navigationPopup.open()
+            }
+        }
     }
 
     // ── Page interaction ──────────────────────────────────────────────────────
@@ -587,56 +1043,51 @@ Maui.Page
         }
 
         tabBar.showNewTabButton: false
-        tabBar.visible: root.visibility !== Window.FullScreen
+        tabBar.visible: root.visibility !== Window.FullScreen && !_browserListView.overviewMode
         altTabBar: Maui.Handy.isMobile
+        tabBar.leftContent: [
+            ToolButton
+            {
+                text: activeView.count
+                visible: activeView.count > 1
+                display: ToolButton.TextOnly
+                onClicked: activeView.openOverview()
+                font.bold: true
+                font.pointSize: Maui.Style.fontSizes.small
+
+                background: Rectangle
+                {
+                    color: Maui.Theme.alternateBackgroundColor
+                    radius: Maui.Style.radiusV
+                }
+            },
+
+            ToolSeparator
+            {
+                visible: activeView.count > 1
+                bottomPadding: 10
+                topPadding: 10
+            }
+        ]
+
         tabBar.rightContent: [
             ToolSeparator
             {
-                visible: root.isWide
+                visible: activeView.count > 1
                 bottomPadding: 10
                 topPadding: 10
             },
 
-            Loader
+            ToolButton
             {
-                asynchronous: true
-                active: root.isWide
-                visible: active
-                sourceComponent: _browserActionButtonsComponent
-            },
+                icon.name: "list-add"
+                display: ToolButton.IconOnly
+                onClicked: openTab("")
 
-            ToolSeparator
-            {
-                visible: root.isWide
-                bottomPadding: 10
-                topPadding: 10
-            },
-
-            Loader
-            {
-                asynchronous: true
-                active: root.isWide
-                visible: active
-                sourceComponent: _overflowMenuComponent
-            },
-
-            Maui.WindowControls {}
-        ]
-
-        tabBar.leftContent: [
-            Loader
-            {
-                asynchronous: true
-                active: root.isWide
-                visible: active
-                sourceComponent: _navigationControlsComponent
-            },
-
-            ToolSeparator
-            {
-                visible: root.isWide && activeView.count > 1
-                bottomPadding: 10
-                topPadding: 10
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: i18n("New tab")
             }
         ]
     }
@@ -700,56 +1151,51 @@ Maui.Page
             }
 
             tabBar.showNewTabButton: false
-            tabBar.visible: root.visibility !== Window.FullScreen
+            tabBar.visible: root.visibility !== Window.FullScreen && !_privateTabView.overviewMode
             altTabBar: Maui.Handy.isMobile
+            tabBar.leftContent: [
+                ToolButton
+                {
+                    text: activeView.count
+                    visible: activeView.count > 1
+                    display: ToolButton.TextOnly
+                    onClicked: activeView.openOverview()
+                    font.bold: true
+                    font.pointSize: Maui.Style.fontSizes.small
+
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                    }
+                },
+
+                ToolSeparator
+                {
+                    visible: activeView.count > 1
+                    bottomPadding: 10
+                    topPadding: 10
+                }
+            ]
+
             tabBar.rightContent: [
                 ToolSeparator
                 {
-                    visible: root.isWide
+                    visible: activeView.count > 1
                     bottomPadding: 10
                     topPadding: 10
                 },
 
-                Loader
+                ToolButton
                 {
-                    asynchronous: true
-                    active: root.isWide
-                    visible: active
-                    sourceComponent: _browserActionButtonsComponent
-                },
+                    icon.name: "list-add"
+                    display: ToolButton.IconOnly
+                    onClicked: openTab("")
 
-                ToolSeparator
-                {
-                    visible: root.isWide
-                    bottomPadding: 10
-                    topPadding: 10
-                },
-
-                Loader
-                {
-                    asynchronous: true
-                    active: root.isWide
-                    visible: active
-                    sourceComponent: _overflowMenuComponent
-                },
-
-                Maui.WindowControls {}
-            ]
-
-            tabBar.leftContent: [
-                Loader
-                {
-                    asynchronous: true
-                    active: root.isWide
-                    visible: active
-                    sourceComponent: _navigationControlsComponent
-                },
-
-                ToolSeparator
-                {
-                    visible: root.isWide && activeView.count > 1
-                    bottomPadding: 10
-                    topPadding: 10
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: i18n("New tab")
                 }
             ]
         }
@@ -900,129 +1346,27 @@ Maui.Page
                 bottomPadding: 10
             }
 
-            Row
+            Maui.ToolActions
             {
-                id: _navigationActions
-                Maui.Theme.colorSet: Maui.Theme.Button
-                Maui.Theme.inherit: false
+                autoExclusive: false
+                checkable: false
+                display: ToolButton.IconOnly
 
-                spacing: 2
-
-                // These controls intentionally remain ToolButtons instead of Maui.ToolActions.
-                // In Fiery's TabBar, using ToolActions for this group caused the contents to
-                // // reload during tab-overview transitions, changing the bar height and
-                // // stretching the separators into the web view. This custom styling path preserves
-                // // the ToolActions appearance without re-entering that faulty path.
-
-                // Build the base from the head bar hover color, then rotate only its hue.
-                // navigationHoverHueAdjustment is in degrees; Qt.hsva() receives normalized
-                // HSV values and reuses saturation, value, and alpha unchanged.
-                readonly property color navigationHoverColor: Maui.ColorUtils.scaleColor(
-                    Qt.darker(control.headBar.Maui.Theme.hoverColor, 1.33),
-                    { saturation: -52 })
-                property real navigationHoverHueAdjustment: -8
-                readonly property color adjustedNavigationHoverColor: Qt.hsva(
-                    ((navigationHoverColor.hsvHue + navigationHoverHueAdjustment / 360) % 1 + 1) % 1,
-                    navigationHoverColor.hsvSaturation,
-                    navigationHoverColor.hsvValue,
-                    navigationHoverColor.a)
-                Maui.Theme.hoverColor: adjustedNavigationHoverColor
-
-                ToolButton
+                Action
                 {
-                    id: _backButton
-                    enabled: currentBrowser !== null && currentBrowser.canGoBack
+                    text: i18n("Previous")
                     icon.name: "go-previous"
-                    display: ToolButton.IconOnly
-                    font.pointSize: Maui.Style.fontSizes.small
-                    onClicked: currentBrowser.goBack()
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: i18n("Previous")
-
-                    background: Maui.ShadowedRectangle
-                    {
-                        color: _backButton.checked || _backButton.down
-                               ? _backButton.Maui.Theme.highlightColor
-                               : (_backButton.hovered ? _navigationActions.Maui.Theme.hoverColor : _backButton.Maui.Theme.backgroundColor)
-
-                        corners
-                        {
-                            topLeftRadius: Maui.Style.radiusV
-                            topRightRadius: 0
-                            bottomLeftRadius: Maui.Style.radiusV
-                            bottomRightRadius: 0
-                        }
-
-                        Behavior on color
-                        {
-                            Maui.ColorTransition {}
-                        }
-                    }
+                    enabled: currentBrowser !== null && currentBrowser.canGoBack
+                    onTriggered: currentBrowser.goBack()
                 }
 
-                ToolButton
+                Action
                 {
-                    id: _forwardButton
-                    enabled: currentBrowser !== null && currentBrowser.canGoForward
+                    text: i18n("Next")
                     icon.name: "go-next"
-                    display: ToolButton.IconOnly
-                    font.pointSize: Maui.Style.fontSizes.small
-                    onClicked: currentBrowser.goForward()
-                    ToolTip.delay: 1000
-                    ToolTip.timeout: 5000
-                    ToolTip.visible: hovered
-                    ToolTip.text: i18n("Next")
-
-                    background: Maui.ShadowedRectangle
-                    {
-                        color: _forwardButton.checked || _forwardButton.down
-                               ? _forwardButton.Maui.Theme.highlightColor
-                               : (_forwardButton.hovered ? _navigationActions.Maui.Theme.hoverColor : _forwardButton.Maui.Theme.backgroundColor)
-
-                        corners
-                        {
-                            topLeftRadius: 0
-                            topRightRadius: Maui.Style.radiusV
-                            bottomLeftRadius: 0
-                            bottomRightRadius: Maui.Style.radiusV
-                        }
-
-                        Behavior on color
-                        {
-                            Maui.ColorTransition {}
-                        }
-                    }
+                    enabled: currentBrowser !== null && currentBrowser.canGoForward
+                    onTriggered: currentBrowser.goForward()
                 }
-            }
-
-            ToolSeparator
-            {
-                orientation: Qt.Vertical
-                height: Maui.Style.rowHeightAlt
-                anchors.verticalCenter: parent.verticalCenter
-                topPadding: 10
-                bottomPadding: 10
-            }
-
-            ToolButton
-            {
-                text: activeView.count
-                visible: activeView.count > 1
-                onClicked: activeView.openOverview()
-                font.bold: true
-                font.pointSize: Maui.Style.fontSizes.small
-                display: ToolButton.TextOnly
-                background: Rectangle
-                {
-                    color: Maui.Theme.alternateBackgroundColor
-                    radius: Maui.Style.radiusV
-                }
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: i18n("Tab Overview")
             }
         }
     }
@@ -1129,16 +1473,6 @@ Maui.Page
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
                 ToolTip.text: i18n("Reload Page")
-            }
-
-            ToolButton
-            {
-                icon.name: "list-add"
-                onClicked: control.openTab("")
-                ToolTip.delay: 1000
-                ToolTip.timeout: 5000
-                ToolTip.visible: hovered
-                ToolTip.text: i18n("New Tab")
             }
 
             ToolButton

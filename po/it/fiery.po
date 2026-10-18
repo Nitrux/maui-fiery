@@ -96,7 +96,7 @@ msgstr "Traduci"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Seleziona tutto"
 
 #: src/views/browser/ActionsMenu.qml:79

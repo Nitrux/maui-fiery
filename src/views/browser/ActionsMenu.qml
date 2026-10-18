@@ -16,6 +16,18 @@ Maui.ContextualMenu
     property bool isAudio: request && request.mediaType === ContextMenuRequest.MediaTypeAudio
     property bool isImage: request && request.mediaType === ContextMenuRequest.MediaTypeImage
     property bool isVideo: request && request.mediaType === ContextMenuRequest.MediaTypeVideo
+    property bool hasSelectedText: request && request.selectedText.length > 0
+    property bool isContentEditable: request && request.isContentEditable
+    property bool canSaveMedia: request && !!(request.mediaFlags & ContextMenuRequest.MediaCanSave)
+    property bool canToggleMediaControls: request && !!(request.mediaFlags & ContextMenuRequest.MediaCanToggleControls)
+    property bool interactiveMedia: (isAudio || isVideo)
+                                  && !isValidUrl
+                                  && !(request.mediaFlags & ContextMenuRequest.MediaInError)
+                                  && (canSaveMedia || canToggleMediaControls)
+    property bool hasEditActions: isContentEditable && (!!(request.editFlags & ContextMenuRequest.CanUndo) || !!(request.editFlags & ContextMenuRequest.CanRedo) || !!(request.editFlags & ContextMenuRequest.CanCut) || !!(request.editFlags & ContextMenuRequest.CanCopy) || !!(request.editFlags & ContextMenuRequest.CanPaste) || !!(request.editFlags & ContextMenuRequest.CanSelectAll))
+    property bool hasTextActions: hasEditActions || (hasSelectedText && !!(request.editFlags & ContextMenuRequest.CanCopy))
+    readonly property bool hasContextActions: hasEditActions || hasSelectedText || isValidUrl || isImage || interactiveMedia
+    readonly property bool hasActions: webView !== null || hasContextActions
     // WebEngineView has no isFullScreen property; the fullscreen state is tracked
     // on the Browser wrapper item and passed in here explicitly.
     property bool webFullScreen: false
@@ -30,22 +42,78 @@ Maui.ContextualMenu
 
     MenuItem
     {
+        text: i18n("Back")
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.webView !== null
+        enabled: control.webView && control.webView.canGoBack
+        onTriggered: control.webView.triggerWebAction(WebEngineView.Back)
+    }
+
+    MenuItem
+    {
+        text: i18n("Forward")
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.webView !== null
+        enabled: control.webView && control.webView.canGoForward
+        onTriggered: control.webView.triggerWebAction(WebEngineView.Forward)
+    }
+
+    MenuItem
+    {
+        text: i18n("Reload")
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.webView !== null
+        onTriggered: control.webView.triggerWebAction(WebEngineView.Reload)
+    }
+
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.hasContextActions
+    }
+
+    MenuItem
+    {
+        text: i18n("Undo")
+        height: visible ? implicitHeight : -control.spacing
+        visible: isContentEditable && !!(request.editFlags & ContextMenuRequest.CanUndo)
+        onTriggered: webView.triggerWebAction(WebEngineView.Undo)
+    }
+
+    MenuItem
+    {
+        text: i18n("Redo")
+        height: visible ? implicitHeight : -control.spacing
+        visible: isContentEditable && !!(request.editFlags & ContextMenuRequest.CanRedo)
+        onTriggered: webView.triggerWebAction(WebEngineView.Redo)
+    }
+
+    MenuItem
+    {
+        text: i18n("Cut")
+        height: visible ? implicitHeight : -control.spacing
+        visible: isContentEditable && !!(request.editFlags & ContextMenuRequest.CanCut)
+        onTriggered: webView.triggerWebAction(WebEngineView.Cut)
+    }
+
+    MenuItem
+    {
         text: i18n("Paste")
-        height: visible? implicitHeight : 00 - control.spacing
-        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanPaste)
+        height: visible ? implicitHeight : -control.spacing
+        visible: isContentEditable && !!(request.editFlags & ContextMenuRequest.CanPaste)
         onTriggered:
         {
             //            control.close()
-            _webView.triggerWebAction(WebEngineView.Paste);
+            webView.triggerWebAction(WebEngineView.Paste);
             //            pasteAction.trigger()
         }
     }
 
     MenuItem
     {
-        text: i18n("Select All")
-        height: visible? implicitHeight : 00 - control.spacing
-        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanSelectAll)
+        text: i18n("Select all")
+        height: visible ? implicitHeight : -control.spacing
+        visible: isContentEditable && !!(request.editFlags & ContextMenuRequest.CanSelectAll)
         onTriggered:
         {
             webView.triggerWebAction(WebEngineView.SelectAll);
@@ -55,19 +123,22 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        text: i18n("Copy Text")
-        height: visible? implicitHeight : 00 - control.spacing
-        visible:  !!request && !!(request.editFlags & ContextMenuRequest.CanCopy)
-        onTriggered:
-        {
-            Maui.Handy.copyTextToClipboard(control.request.selectedText)
-        }
+        text: i18n("Copy")
+        height: visible ? implicitHeight : -control.spacing
+        visible: hasSelectedText && !!(request.editFlags & ContextMenuRequest.CanCopy)
+        onTriggered: webView.triggerWebAction(WebEngineView.Copy)
+    }
+
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.hasTextActions && control.isValidUrl
     }
 
     MenuItem
     {
         text: i18n("Copy Link")
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isValidUrl
         onTriggered:
         {
@@ -78,7 +149,7 @@ Maui.ContextualMenu
     MenuItem
     {
         text: i18n("Open Link")
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isValidUrl
         onTriggered:
         {
@@ -89,7 +160,7 @@ Maui.ContextualMenu
     MenuItem
     {
         text: i18n("Open Link in New Tab")
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isValidUrl
         onTriggered:
         {
@@ -100,7 +171,7 @@ Maui.ContextualMenu
     MenuItem
     {
         text: i18n("Open Link in Split View")
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isValidUrl
         onTriggered:
         {
@@ -111,7 +182,7 @@ Maui.ContextualMenu
     MenuItem
     {
         text: i18n("Open Link in New Window")
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isValidUrl
         onTriggered:
         {
@@ -120,12 +191,18 @@ Maui.ContextualMenu
     }
 
 
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.isValidUrl && control.hasSelectedText
+    }
+
     MenuItem
     {
         property string fullText: control.request ? control.request.selectedText || control.request.linkText : ""
         property string elidedText: fullText.length > 25 ? fullText.slice(0, 25) + "..." : fullText
-        height: visible? implicitHeight : 00 - control.spacing
-        visible: control.request && fullText
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.hasSelectedText
         text:  i18n('Search for "%1"', elidedText)
         onTriggered:
         {
@@ -133,28 +210,24 @@ Maui.ContextualMenu
         }
     }
 
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: (control.hasSelectedText || control.isValidUrl)
+                  && (control.isImage || control.interactiveMedia)
+    }
+
     MenuItem
     {
-        height: visible? implicitHeight : 0 - control.spacing
-        visible: control.isVideo
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.interactiveMedia && control.isVideo && control.canSaveMedia
         text: i18n("Save Video")
         onTriggered: webView.triggerWebAction(WebEngineView.DownloadMediaToDisk)
     }
 
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
-        visible: (control.isAudio || control.isVideo) && control.request.mediaUrl !== url
-        text: control.isVideo ? i18n("Open Video") : i18n("Open Audio")
-        onTriggered:
-        {
-            openTab(control.request.mediaUrl)
-        }
-    }
-
-    MenuItem
-    {
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isImage
         text: i18n("Save Image")
         onTriggered: webView.triggerWebAction(WebEngineView.DownloadImageToDisk)
@@ -162,7 +235,7 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isImage
         text: i18n("Copy Image")
         onTriggered: webView.triggerWebAction(WebEngineView.CopyImageToClipboard)
@@ -170,7 +243,7 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
+        height: visible ? implicitHeight : -control.spacing
         visible: control.isImage && control.request.mediaUrl !== url
         text: i18n("Open Image")
         onTriggered:
@@ -181,8 +254,8 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
-        visible: control.isAudio || control.isVideo
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.interactiveMedia
         text: control.request && control.request.mediaFlags & ContextMenuRequest.MediaPaused
               ? i18n("Play")
               : i18n("Pause")
@@ -191,18 +264,25 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
-        visible: control.request && control.request.mediaFlags & ContextMenuRequest.MediaHasAudio
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.interactiveMedia
+                 && !!(control.request.mediaFlags & ContextMenuRequest.MediaHasAudio)
         text:  control.request && control.request.mediaFlags & ContextMenuRequest.MediaMuted
                ? i18n("Unmute")
                : i18n("Mute")
         onTriggered: webView.triggerWebAction(WebEngineView.ToggleMediaMute)
     }
 
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: webView.settings.javascriptEnabled && control.interactiveMedia
+    }
+
     MenuItem
     {
-        height: visible? implicitHeight : 00 - control.spacing
-        visible: webView.settings.javascriptEnabled && (control.isAudio || control.isVideo)
+        height: visible ? implicitHeight : -control.spacing
+        visible: webView.settings.javascriptEnabled && control.interactiveMedia
         contentItem: RowLayout
         {
             Label
@@ -234,17 +314,23 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 0 - control.spacing
-        visible: control.isAudio || control.isVideo
+        height: visible ? implicitHeight : -control.spacing
+        visible: control.interactiveMedia
+                 && !!(control.request.mediaFlags & ContextMenuRequest.MediaLoop)
         text: i18n("Loop")
-        checked: control.request && control.request.mediaFlags & ContextMenuRequest.MediaLoop
         onTriggered: webView.triggerWebAction(WebEngineView.ToggleMediaLoop)
+    }
+
+    MenuSeparator
+    {
+        height: visible ? implicitHeight : -control.spacing
+        visible: webView.settings.javascriptEnabled && control.interactiveMedia && control.isVideo
     }
 
     MenuItem
     {
-        height: visible? implicitHeight : 0 - control.spacing
-        visible: webView.settings.javascriptEnabled && control.isVideo
+        height: visible ? implicitHeight : -control.spacing
+        visible: webView.settings.javascriptEnabled && control.interactiveMedia && control.isVideo
         text: control.webFullScreen ? i18n("Exit fullscreen") : i18n("Fullscreen")
         onTriggered: {
             const js = control.webFullScreen
@@ -259,8 +345,10 @@ Maui.ContextualMenu
 
     MenuItem
     {
-        height: visible? implicitHeight : 0 - control.spacing
-        visible: webView.settings.javascriptEnabled && (control.isAudio || control.isVideo)
+        height: visible ? implicitHeight : -control.spacing
+        visible: webView.settings.javascriptEnabled
+                 && control.interactiveMedia
+                 && control.canToggleMediaControls
         text: control.request && control.request.mediaFlags & ContextMenuRequest.MediaControls
               ? i18n("Hide controls")
               : i18n("Show controls")

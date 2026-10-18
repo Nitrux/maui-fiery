@@ -96,7 +96,7 @@ msgstr "Vertalen"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Alles selecteren"
 
 #: src/views/browser/ActionsMenu.qml:79

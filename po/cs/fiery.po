@@ -96,7 +96,7 @@ msgstr "Přeložit"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Vybrat vše"
 
 #: src/views/browser/ActionsMenu.qml:79

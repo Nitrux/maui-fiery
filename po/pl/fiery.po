@@ -96,7 +96,7 @@ msgstr "Przetłumacz"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Zaznacz wszystko"
 
 #: src/views/browser/ActionsMenu.qml:79

@@ -485,6 +485,9 @@ Maui.SplitViewItem
             request.accepted = true
             _menu.request = request
 
+            if (!_menu.hasActions)
+                return
+
             // Tag the element under the pointer now so JS actions target the
             // correct element at trigger time, not a page-injected replacement.
             const elemId = 'fiery-ctx-' + Date.now()
@@ -1127,37 +1130,53 @@ Maui.SplitViewItem
             }
         }
 
-        onFeaturePermissionRequested: (securityOrigin, feature) =>
+        onPermissionRequested: (permission) =>
         {
-            var granted = false
-            switch (feature)
+            if (!permission.isValid)
+                return
+
+            if (permission.state !== WebEnginePermission.Ask)
             {
-                case WebEngineView.Notifications:
+                if (permission.state === WebEnginePermission.Granted)
+                    permission.grant()
+                else if (permission.state === WebEnginePermission.Denied)
+                    permission.deny()
+                return
+            }
+
+            var granted = false
+            switch (permission.permissionType)
+            {
+                case WebEnginePermission.Notifications:
                     granted = appSettings.allowNotifications
                     break
-                case WebEngineView.Geolocation:
+                case WebEnginePermission.Geolocation:
                     granted = appSettings.allowGeolocation
                     break
-                case WebEngineView.MediaAudioCapture:
+                case WebEnginePermission.MediaAudioCapture:
                     granted = appSettings.allowMicrophone
                     break
-                case WebEngineView.MediaVideoCapture:
+                case WebEnginePermission.MediaVideoCapture:
                     granted = appSettings.allowCamera
                     break
-                case WebEngineView.MediaAudioVideoCapture:
+                case WebEnginePermission.MediaAudioVideoCapture:
                     granted = appSettings.allowMicrophone && appSettings.allowCamera
                     break
-                case WebEngineView.DesktopVideoCapture:
-                case WebEngineView.DesktopAudioVideoCapture:
+                case WebEnginePermission.DesktopVideoCapture:
+                case WebEnginePermission.DesktopAudioVideoCapture:
                     granted = appSettings.allowDesktopCapture
                     break
-                case WebEngineView.MouseLock:
+                case WebEnginePermission.MouseLock:
                     granted = appSettings.allowMouseLock
                     break
                 default:
                     break
             }
-            _webView.grantFeaturePermission(securityOrigin, feature, granted)
+
+            if (granted)
+                permission.grant()
+            else
+                permission.deny()
         }
 
         onNavigationRequested:

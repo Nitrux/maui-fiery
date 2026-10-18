@@ -98,7 +98,7 @@ msgstr "Traduïx"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Selecciona-ho tot"
 
 #: src/views/browser/ActionsMenu.qml:79

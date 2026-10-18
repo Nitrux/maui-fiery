@@ -97,7 +97,7 @@ msgstr "ترجم"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "حدّد الكلّ"
 
 #: src/views/browser/ActionsMenu.qml:79

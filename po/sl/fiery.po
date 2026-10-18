@@ -97,7 +97,7 @@ msgstr "Prevedi"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Izberi vse"
 
 #: src/views/browser/ActionsMenu.qml:79

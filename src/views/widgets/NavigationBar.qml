@@ -130,7 +130,7 @@ BrowserTabViewButton
     // causing all tabs to render on top of each other ("joined").
     width: control._pinned
         ? (control.height + Maui.Style.space.medium)
-        : (control.tabView.mobile ? ListView.view.width : Math.max(160, Math.min(260, implicitWidth)))
+        : (control.tabView.mobile ? control.tabView.width : Math.max(160, Math.min(260, implicitWidth)))
 
     background: Rectangle
     {
@@ -149,10 +149,10 @@ BrowserTabViewButton
     }
 
     onClicked:
-    {        if (control.mindex === control.tabView.currentIndex)
-            openEditMode()
-        else
-            control.tabView.setCurrentIndex(control.mindex)    }
+    {
+        if (control.mindex !== control.tabView.currentIndex)
+            control.tabView.setCurrentIndex(control.mindex)
+    }
 
     onRightClicked: _tabMenu.show()
     onCloseClicked: control.tabView.closeTabClicked(control.mindex)
@@ -223,22 +223,8 @@ BrowserTabViewButton
         }
     }
 
-    // Per-tab context menu.  Defined here so we have full control over each
-    // item's visibility — the TabView's menuActions machinery only supports
-    // Action objects which have no visible property.
-    readonly property var _tabMenuActions:
-    {
-        const actions = [_detachTabAction, _pinTabAction]
-        if (control.mindex > 0)
-            actions.push(_moveTabLeftAction)
-        if (control.mindex >= 0 && control.mindex < (control.tabView.count - 1))
-            actions.push(_moveTabRightAction)
-        if (control._audible)
-            actions.push(_audioTabAction)
-        if (control._pinned)
-            actions.push(_closeTabAction)
-        return actions
-    }
+    // Per-tab context menu. Keep its groups explicit so unavailable actions
+    // do not leave misleading entries or orphaned separators.
 
     Action
     {
@@ -302,13 +288,54 @@ BrowserTabViewButton
     {
         id: _tabMenu
 
-        Repeater
+        MenuItem
         {
-            model: control._tabMenuActions
-            delegate: MenuItem
-            {
-                action: modelData
-            }
+            action: _detachTabAction
+        }
+
+        MenuItem
+        {
+            action: _pinTabAction
+        }
+
+        MenuSeparator
+        {
+            visible: control.mindex > 0 || control.mindex < control.tabView.count - 1
+            height: visible ? implicitHeight : -control.spacing
+        }
+
+        MenuItem
+        {
+            action: _moveTabLeftAction
+            visible: control.mindex > 0
+            height: visible ? implicitHeight : -control.spacing
+        }
+
+        MenuItem
+        {
+            action: _moveTabRightAction
+            visible: control.mindex >= 0 && control.mindex < control.tabView.count - 1
+            height: visible ? implicitHeight : -control.spacing
+        }
+
+        MenuSeparator
+        {
+            visible: control._audible || control._pinned
+            height: visible ? implicitHeight : -control.spacing
+        }
+
+        MenuItem
+        {
+            action: _audioTabAction
+            visible: control._audible
+            height: visible ? implicitHeight : -control.spacing
+        }
+
+        MenuItem
+        {
+            action: _closeTabAction
+            visible: control._pinned
+            height: visible ? implicitHeight : -control.spacing
         }
     }
 

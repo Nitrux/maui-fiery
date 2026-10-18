@@ -1,7 +1,16 @@
 #include "surf.h"
 
 #include <KFormat>
+#include <QAbstractSocket>
+#include <QCryptographicHash>
 #include <QGuiApplication>
+#include <QNetworkCookie>
+#include <QQuickWebEngineProfile>
+#include <QSslCertificate>
+#include <QSslError>
+#include <QSslSocket>
+#include <QTimer>
+#include <QWebEngineCookieStore>
 
 surf::surf(QObject *parent) : QObject(parent)
 {
@@ -133,6 +142,185 @@ bool surf::isDangerousFile(const QString &path)
         if (lower.endsWith(ext))
             return true;
     return false;
+}
+
+bool surf::certificateLoading() const
+{
+    return m_certificateLoading;
+}
+
+bool surf::certificateAvailable() const
+{
+    return m_certificateAvailable;
+}
+
+bool surf::certificateValid() const
+{
+    return m_certificateAvailable && m_certificateError.isEmpty();
+}
+
+QString surf::certificateSubject() const
+{
+    return m_certificateSubject;
+}
+
+QString surf::certificateIssuer() const
+{
+    return m_certificateIssuer;
+}
+
+QString surf::certificateSerialNumber() const
+{
+    return m_certificateSerialNumber;
+}
+
+QString surf::certificateEffectiveDate() const
+{
+    return m_certificateEffectiveDate;
+}
+
+QString surf::certificateExpiryDate() const
+{
+    return m_certificateExpiryDate;
+}
+
+QString surf::certificateFingerprint() const
+{
+    return m_certificateFingerprint;
+}
+
+QString surf::certificateError() const
+{
+    return m_certificateError;
+}
+
+void surf::publishCertificate(const QSslCertificate &certificate, const QString &error)
+{
+    m_certificateLoading = false;
+    m_certificateAvailable = !certificate.isNull();
+    m_certificateError = error;
+
+    if (certificate.isNull()) {
+        m_certificateSubject.clear();
+        m_certificateIssuer.clear();
+        m_certificateSerialNumber.clear();
+        m_certificateEffectiveDate.clear();
+        m_certificateExpiryDate.clear();
+        m_certificateFingerprint.clear();
+    } else {
+        m_certificateSubject = certificate.subjectInfo(QSslCertificate::CommonName).value(0);
+        if (m_certificateSubject.isEmpty())
+            m_certificateSubject = certificate.subjectInfo(QSslCertificate::Organization).value(0);
+        m_certificateIssuer = certificate.issuerInfo(QSslCertificate::CommonName).value(0);
+        if (m_certificateIssuer.isEmpty())
+            m_certificateIssuer = certificate.issuerInfo(QSslCertificate::Organization).value(0);
+        m_certificateSerialNumber = QString::fromLatin1(certificate.serialNumber());
+        m_certificateEffectiveDate = certificate.effectiveDate().toString(Qt::ISODate);
+        m_certificateExpiryDate = certificate.expiryDate().toString(Qt::ISODate);
+        m_certificateFingerprint = QString::fromLatin1(certificate.digest(QCryptographicHash::Sha256).toHex().toUpper());
+    }
+
+    Q_EMIT certificateChanged();
+}
+
+void surf::inspectCertificate(const QUrl &url)
+{
+    if (m_certificateSocket) {
+        m_certificateSocket->abort();
+        m_certificateSocket->deleteLater();
+        m_certificateSocket.clear();
+    }
+
+    m_certificateLoading = false;
+    m_certificateAvailable = false;
+    m_certificateSubject.clear();
+    m_certificateIssuer.clear();
+    m_certificateSerialNumber.clear();
+    m_certificateEffectiveDate.clear();
+    m_certificateExpiryDate.clear();
+    m_certificateFingerprint.clear();
+    m_certificateError.clear();
+
+    if (url.scheme().compare(QStringLiteral("https"), Qt::CaseInsensitive) != 0) {
+        m_certificateError = QStringLiteral("The current page does not use HTTPS.");
+        Q_EMIT certificateChanged();
+        return;
+    }
+
+    m_certificateLoading = true;
+    Q_EMIT certificateChanged();
+
+    auto *socket = new QSslSocket(this);
+    socket->setPeerVerifyMode(QSslSocket::VerifyPeer);
+    m_certificateSocket = socket;
+
+    connect(socket, &QSslSocket::encrypted, this, [this, socket]() {
+        if (m_certificateSocket != socket)
+            return;
+
+        publishCertificate(socket->peerCertificate());
+        m_certificateSocket.clear();
+        socket->deleteLater();
+    });
+
+    connect(socket, &QSslSocket::sslErrors, this, [this, socket](const QList<QSslError> &errors) {
+        if (m_certificateSocket != socket)
+            return;
+
+        const QString error = errors.isEmpty()
+                                  ? QStringLiteral("The TLS certificate could not be verified.")
+                                  : errors.first().errorString();
+        publishCertificate(socket->peerCertificate(), error);
+        m_certificateSocket.clear();
+        socket->abort();
+        socket->deleteLater();
+    });
+
+    connect(socket, &QSslSocket::errorOccurred, this, [this, socket](QAbstractSocket::SocketError) {
+        if (m_certificateSocket != socket)
+            return;
+
+        const QString error = socket->errorString().isEmpty()
+                                   ? QStringLiteral("The TLS connection could not be verified.")
+                                   : socket->errorString();
+        publishCertificate(socket->peerCertificate(), error);
+        m_certificateSocket.clear();
+        socket->deleteLater();
+    });
+
+    socket->connectToHostEncrypted(url.host(), url.port(443), url.host());
+}
+
+void surf::clearSiteCookies(QQuickWebEngineProfile *profile, const QUrl &origin)
+{
+    if (!profile || origin.host().isEmpty())
+        return;
+
+    auto *store = profile->cookieStore();
+    if (!store)
+        return;
+
+    QObject::disconnect(m_cookieConnection);
+
+    const QString host = origin.host().toLower();
+    m_cookieConnection = connect(store, &QWebEngineCookieStore::cookieAdded, this,
+                                  [this, store, host, origin](const QNetworkCookie &cookie) {
+        QString domain = cookie.domain().toLower();
+        while (domain.startsWith(QLatin1Char(46)))
+            domain.remove(0, 1);
+        if (domain.isEmpty())
+            domain = host;
+
+        if (!domain.isEmpty() && (host == domain || host.endsWith(QLatin1Char(46) + domain)))
+            store->deleteCookie(cookie, origin);
+    });
+
+    store->loadAllCookies();
+
+    QTimer::singleShot(1000, this, [this]() {
+        QObject::disconnect(m_cookieConnection);
+        m_cookieConnection = QMetaObject::Connection();
+    });
 }
 
 QString surf::formatBytes(qint64 bytes)

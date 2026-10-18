@@ -95,9 +95,9 @@ msgid "Translate"
 msgstr ""
 
 #: src/views/browser/ActionsMenu.qml:67
-#, kde-format
-msgid "Select All"
-msgstr ""
+#, fuzzy, kde-format
+msgid "Select all"
+msgstr "全选"
 
 #: src/views/browser/ActionsMenu.qml:79
 #, kde-format

@@ -96,7 +96,7 @@ msgstr "Översätt"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Markera alla"
 
 #: src/views/browser/ActionsMenu.qml:79

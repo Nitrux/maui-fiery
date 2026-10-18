@@ -95,7 +95,7 @@ msgstr "Käännä"
 
 #: src/views/browser/ActionsMenu.qml:67
 #, kde-format
-msgid "Select All"
+msgid "Select all"
 msgstr "Valitse kaikki"
 
 #: src/views/browser/ActionsMenu.qml:79
