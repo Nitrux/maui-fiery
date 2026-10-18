@@ -91,29 +91,6 @@ Maui.Page
         onTriggered: control._popupGeometryNudge = 0
     }
 
-    Timer
-    {
-        id: _overviewChromeRestoreTimer
-        interval: Maui.Style.units.longDuration
-        repeat: false
-        onTriggered:
-        {
-            if (!activeView.overviewMode)
-                _overviewChromeHidden = false
-        }
-    }
-
-    Connections
-    {
-        target: control.activeView
-
-        function onOverviewModeChanged()
-        {
-            if (!control.activeView.overviewMode)
-                _overviewChromeRestoreTimer.restart()
-        }
-    }
-
 
     function _syncAddressField()
     {
@@ -162,7 +139,7 @@ Maui.Page
         }
     }
 
-    headBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
+    headBar.visible: root.visibility !== Window.FullScreen
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
 
@@ -1064,7 +1041,7 @@ Maui.Page
         }
 
         tabBar.showNewTabButton: false
-        tabBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
+        tabBar.visible: root.visibility !== Window.FullScreen
         altTabBar: Maui.Handy.isMobile
         tabBar.leftContent: [
             ToolButton
@@ -1072,7 +1049,7 @@ Maui.Page
                 text: activeView.count
                 visible: activeView.count > 1
                 display: ToolButton.TextOnly
-                onClicked: control._openOverview()
+                onClicked: activeView.openOverview()
                 font.bold: true
                 font.pointSize: Maui.Style.fontSizes.small
 
@@ -1173,7 +1150,7 @@ Maui.Page
             }
 
             tabBar.showNewTabButton: false
-            tabBar.visible: root.visibility !== Window.FullScreen && !_overviewChromeHidden
+            tabBar.visible: root.visibility !== Window.FullScreen
             altTabBar: Maui.Handy.isMobile
             tabBar.leftContent: [
                 ToolButton
@@ -1181,7 +1158,7 @@ Maui.Page
                     text: activeView.count
                     visible: activeView.count > 1
                     display: ToolButton.TextOnly
-                    onClicked: control._openOverview()
+                    onClicked: activeView.openOverview()
                     font.bold: true
                     font.pointSize: Maui.Style.fontSizes.small
 
