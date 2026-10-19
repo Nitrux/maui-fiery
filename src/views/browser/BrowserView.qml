@@ -168,8 +168,6 @@ Maui.Page
 
     floatingHeader: true
     headBar.visible: root.visibility !== Window.FullScreen
-    headBar.opacity: activeView.overviewMode ? 0 : 1
-    headBar.enabled: !activeView.overviewMode
     headBar.preferredHeight: Maui.Style.rowHeightAlt
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
@@ -1099,7 +1097,7 @@ Maui.Page
         onCurrentIndexChanged:
         {
             _schedulePopupGeometryRefresh()
-            control._uiLog("public TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count + ", overview=" + overviewMode)
+            control._uiLog("public TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count)
         }
         onCloseTabClicked: (index) =>
         {
@@ -1143,31 +1141,6 @@ Maui.Page
         tabBar.showNewTabButton: false
         tabBar.visible: root.visibility !== Window.FullScreen
         altTabBar: Maui.Handy.isMobile
-        tabBar.leftContent: [
-            ToolButton
-            {
-                text: activeView.count
-                visible: activeView.count > 1
-                display: ToolButton.TextOnly
-                onClicked: activeView.openOverview()
-                font.bold: true
-                font.pointSize: Maui.Style.fontSizes.small
-
-                background: Rectangle
-                {
-                    color: Maui.Theme.alternateBackgroundColor
-                    radius: Maui.Style.radiusV
-                }
-            },
-
-            ToolSeparator
-            {
-                visible: activeView.count > 1
-                height: Maui.Style.space.medium
-                topPadding: 0
-                bottomPadding: 0
-            }
-        ]
 
         tabBar.rightContent: [
             ToolSeparator
@@ -1246,7 +1219,7 @@ Maui.Page
             onCurrentIndexChanged:
             {
                 _schedulePopupGeometryRefresh()
-                control._uiLog("private TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count + ", overview=" + overviewMode)
+                control._uiLog("private TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count)
             }
             onCloseTabClicked: (index) =>
             {
@@ -1287,31 +1260,7 @@ Maui.Page
             tabBar.showNewTabButton: false
             tabBar.visible: root.visibility !== Window.FullScreen
             altTabBar: Maui.Handy.isMobile
-            tabBar.leftContent: [
-                ToolButton
-                {
-                    text: activeView.count
-                    visible: activeView.count > 1
-                    display: ToolButton.TextOnly
-                    onClicked: activeView.openOverview()
-                    font.bold: true
-                    font.pointSize: Maui.Style.fontSizes.small
-
-                    background: Rectangle
-                    {
-                        color: Maui.Theme.alternateBackgroundColor
-                        radius: Maui.Style.radiusV
-                    }
-                },
-
-                ToolSeparator
-                {
-                    visible: activeView.count > 1
-                    height: Maui.Style.space.medium
-                    topPadding: 0
-                    bottomPadding: 0
-                }
-            ]
+            tabBar.leftContent: []
 
             tabBar.rightContent: [
                 ToolSeparator
@@ -1531,7 +1480,7 @@ Maui.Page
                     text: i18n("Previous")
                     icon.name: "go-previous"
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
-                    onEnabledChanged: control._uiLog("backButton enabledChanged", "enabled=" + enabled + " canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false))
+                    onEnabledChanged: function(enabled) { control._uiLog("backButton enabledChanged", "enabled=" + enabled + " canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false)) }
                     onTriggered:
                     {
                         control._uiLog("backButton triggered", "canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false))
@@ -1544,7 +1493,7 @@ Maui.Page
                     text: i18n("Next")
                     icon.name: "go-next"
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
-                    onEnabledChanged: control._uiLog("forwardButton enabledChanged", "enabled=" + enabled + " canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false))
+                    onEnabledChanged: function(enabled) { control._uiLog("forwardButton enabledChanged", "enabled=" + enabled + " canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false)) }
                     onTriggered:
                     {
                         control._uiLog("forwardButton triggered", "canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false))

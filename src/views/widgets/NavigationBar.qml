@@ -151,7 +151,7 @@ BrowserTabViewButton
     onClicked:
     {
         if (fieryUiDiagnostics)
-            console.log("[Fiery UI][NavigationBar]", "clicked", "index=" + control.mindex + ", current=" + control.tabView.currentIndex + ", overview=" + control.tabView.overviewMode + ", tabView=" + control.tabView.width + "x" + control.tabView.height)
+            console.log("[Fiery UI][NavigationBar]", "clicked", "index=" + control.mindex + ", current=" + control.tabView.currentIndex + ", tabView=" + control.tabView.width + "x" + control.tabView.height)
         if (control.mindex !== control.tabView.currentIndex)
             control.tabView.setCurrentIndex(control.mindex)
     }
