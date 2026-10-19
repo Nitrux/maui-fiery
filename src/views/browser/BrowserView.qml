@@ -1141,6 +1141,30 @@ Maui.Page
         tabBar.showNewTabButton: false
         tabBar.visible: root.visibility !== Window.FullScreen
         altTabBar: Maui.Handy.isMobile
+        tabBar.leftContent: [
+            ToolButton
+            {
+                text: activeView.count
+                visible: activeView.count > 1
+                display: ToolButton.TextOnly
+                font.bold: true
+                font.pointSize: Maui.Style.fontSizes.small
+
+                background: Rectangle
+                {
+                    color: Maui.Theme.alternateBackgroundColor
+                    radius: Maui.Style.radiusV
+                }
+            },
+
+            ToolSeparator
+            {
+                visible: activeView.count > 1
+                height: Maui.Style.space.medium
+                topPadding: 0
+                bottomPadding: 0
+            }
+        ]
 
         tabBar.rightContent: [
             ToolSeparator
@@ -1260,7 +1284,30 @@ Maui.Page
             tabBar.showNewTabButton: false
             tabBar.visible: root.visibility !== Window.FullScreen
             altTabBar: Maui.Handy.isMobile
-            tabBar.leftContent: []
+            tabBar.leftContent: [
+                ToolButton
+                {
+                    text: activeView.count
+                    visible: activeView.count > 1
+                    display: ToolButton.TextOnly
+                    font.bold: true
+                    font.pointSize: Maui.Style.fontSizes.small
+
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                    }
+                },
+
+                ToolSeparator
+                {
+                    visible: activeView.count > 1
+                    height: Maui.Style.space.medium
+                    topPadding: 0
+                    bottomPadding: 0
+                }
+            ]
 
             tabBar.rightContent: [
                 ToolSeparator
