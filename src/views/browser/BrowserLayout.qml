@@ -7,6 +7,25 @@ import org.mauikit.controls as Maui
 Item
 {
     id: control
+    readonly property bool _uiDebug: fieryUiDiagnostics
+
+    function _uiLog(event, details)
+    {
+        if (_uiDebug)
+            console.log("[Fiery UI][BrowserLayout]", event, details === undefined ? "" : details)
+    }
+
+    function _splitGeometry()
+    {
+        var panes = []
+        for (var i = 0; i < _splitView.count; ++i)
+        {
+            const item = _splitView.contentModel.get(i)
+            if (item)
+                panes.push(i + ":visible=" + item.visible + ",x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height)
+        }
+        return "count=" + _splitView.count + ",current=" + _splitView.currentIndex + ",fullScreenItem=" + (_webFullScreenItem ? _webFullScreenItem.splitIndex : -1) + ",panes=[" + panes.join(";") + "]"
+    }
 
     Maui.Controls.title: title
     Maui.Controls.toolTipText: currentItem.url
@@ -42,6 +61,44 @@ Item
     readonly property url faviconSource: currentItem ? currentItem.faviconSource : ""
     property url previewSource: currentItem ? currentItem.previewSource : ""
 
+    property var _webFullScreenItem: null
+
+    function enterWebFullScreen(item)
+    {
+        _uiLog("enterWebFullScreen requested", "item=" + (item ? item.splitIndex : -1) + " " + _splitGeometry())
+        if (!item || _splitView.count < 2)
+            return
+
+        _webFullScreenItem = item
+        _splitView.currentIndex = item.splitIndex
+
+        for (var i = 0; i < _splitView.count; ++i)
+        {
+            const splitItem = _splitView.contentModel.get(i)
+            if (splitItem)
+                splitItem.visible = splitItem === item
+        }
+
+        _uiLog("enterWebFullScreen applied", _splitGeometry())
+    }
+
+    function exitWebFullScreen(item)
+    {
+        _uiLog("exitWebFullScreen requested", "item=" + (item ? item.splitIndex : -1) + " " + _splitGeometry())
+        if (_webFullScreenItem && item && item !== _webFullScreenItem)
+            return
+
+        for (var i = 0; i < _splitView.count; ++i)
+        {
+            const splitItem = _splitView.contentModel.get(i)
+            if (splitItem)
+                splitItem.visible = true
+        }
+
+        _webFullScreenItem = null
+        _uiLog("exitWebFullScreen applied", _splitGeometry())
+    }
+
     function capturePreview()
     {
         if (currentItem && typeof currentItem.capturePreview === "function")
@@ -71,7 +128,7 @@ Item
 
         anchors.fill: parent
         anchors.bottomMargin: control.popupGeometryNudge
-        orientation: Qt.Horizontal
+        orientation: root.isWide ? Qt.Horizontal : Qt.Vertical
         background: null
 
         Component.onCompleted: split(control.url)
@@ -83,7 +140,7 @@ Item
         Browser
         {
             overviewMode: control.overviewMode
-            splitView: _splitView
+            splitView: control
         }
     }
 

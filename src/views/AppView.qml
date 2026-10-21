@@ -17,25 +17,6 @@ Maui.SideBarView
 {
     id: _sideBarView
 
-    readonly property bool _uiDebug: fieryUiDiagnostics
-
-    function _uiLog(event, details)
-    {
-        if (_uiDebug)
-            console.log("[Fiery UI][AppView]", event, details === undefined ? "" : details)
-    }
-
-    function _uiGeometry(item)
-    {
-        if (!item)
-            return "null"
-
-        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
-                + ",visible=" + item.visible
-    }
-
-    onWidthChanged: _uiLog("widthChanged", _uiGeometry(_sideBarView))
-    onHeightChanged: _uiLog("heightChanged", _uiGeometry(_sideBarView))
     background: null
 
     readonly property alias currentBrowser : _browserView.currentBrowser
@@ -48,26 +29,6 @@ Maui.SideBarView
     sideBar.floats: true
     sideBar.resizeable: false
     sideBar.preferredWidth: Maui.Style.units.gridUnit * 25
-
-    Connections
-    {
-        target: _sideBarView.sideBar
-
-        function onVisibleChanged()
-        {
-            _sideBarView._uiLog("sideBar visibleChanged", _sideBarView._uiGeometry(_sideBarView.sideBar))
-        }
-
-        function onWidthChanged()
-        {
-            _sideBarView._uiLog("sideBar widthChanged", _sideBarView._uiGeometry(_sideBarView.sideBar))
-        }
-
-        function onXChanged()
-        {
-            _sideBarView._uiLog("sideBar xChanged", _sideBarView._uiGeometry(_sideBarView.sideBar))
-        }
-    }
 
     sideBarContent: Maui.Page
     {

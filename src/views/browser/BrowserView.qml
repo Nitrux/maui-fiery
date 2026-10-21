@@ -20,6 +20,8 @@ Maui.Page
 
     property var currentTab: activeView.currentItem
     readonly property WebEngineView currentBrowser: currentTab && currentTab.currentItem ? currentTab.currentItem.webView : null
+    readonly property bool webFullScreen: currentTab && currentTab.currentItem ? currentTab.currentItem._webFullScreen : false
+    onWebFullScreenChanged: _uiLog("webFullScreenChanged", "activeIndex=" + (currentTab ? currentTab.activeSplitIndex : -1) + ", state=" + webFullScreen + ",window=" + root.visibility)
     readonly property string currentPageUrl: currentBrowser ? currentBrowser.url.toString() : ""
     readonly property bool currentSiteAvailable: {
         const url = currentPageUrl.toLowerCase()
@@ -63,13 +65,21 @@ Maui.Page
                 + ",visible=" + item.visible
     }
 
-    function _uiTabGeometry(item, tabBar)
+    function _responsiveGeometry(item)
     {
-        if (!item || !tabBar)
-            return "item=" + control._uiGeometry(item) + ",tabBar=null"
+        if (!item)
+            return "null"
 
-        const position = item.mapToItem(tabBar, 0, 0)
-        return control._uiGeometry(item) + ",tabBarX=" + position.x + ",tabBarY=" + position.y + ",tabBarW=" + tabBar.width + ",tabBarH=" + tabBar.height
+        const parent = item.parent
+        const footPosition = control.footBar ? item.mapToItem(control.footBar, 0, 0) : Qt.point(item.x, item.y)
+        const parentHeight = parent ? parent.height : 0
+        const bottomGap = parent ? parentHeight - item.y - item.height : 0
+        return control._uiGeometry(item)
+                + ",parentH=" + parentHeight
+                + ",topGap=" + item.y
+                + ",bottomGap=" + bottomGap
+                + ",footBarY=" + footPosition.y
+                + ",footBarH=" + (control.footBar ? control.footBar.height : 0)
     }
     // Closed-tabs stack is now persisted in RECENTLY_CLOSED via Fiery.DBActions.
     onSearchFieldVisibleChanged:
@@ -79,7 +89,6 @@ Maui.Page
     }
     onCurrentTabChanged:
     {
-        _uiLog("currentTabChanged", "index=" + activeView.currentIndex + ", count=" + activeView.count)
         _schedulePopupGeometryRefresh()
     }
     onCurrentBrowserChanged:
@@ -130,22 +139,19 @@ Maui.Page
 
     function _syncAddressField()
     {
-        _uiLog("syncAddressField requested", "hasBar=" + !!_addressBar + " hasEntry=" + !!_addressEntry + " activeFocus=" + (_addressEntry ? _addressEntry.activeFocus : false) + " currentUrl=" + currentPageUrl)
         if (!_addressBar || !_addressEntry || _addressEntry.activeFocus)
         {
-            _uiLog("syncAddressField skipped", !_addressBar || !_addressEntry ? "address controls unavailable" : "address entry has focus")
             return
         }
 
         const displayUrl = currentBrowser ? _surf.safeDisplayUrl(currentBrowser.url.toString()) : ""
         _addressBar.displayText = displayUrl
         _addressEntry.text = displayUrl
-        _uiLog("syncAddressField applied", "textLength=" + displayUrl.length)
     }
 
     function _beginAddressEditing()
     {
-        if (!_addressBar || !root.isWide)
+        if (!_addressBar)
             return
 
         _addressBar.editing = true
@@ -174,7 +180,6 @@ Maui.Page
 
         function onUrlChanged()
         {
-            control._uiLog("currentBrowser urlChanged", "url=" + control.currentBrowser.url + " overview=" + control.activeView.overviewMode)
             control._syncAddressField()
             if (control.currentBrowser && control.currentSiteAvailable)
                 _surf.inspectCertificate(control.currentBrowser.url)
@@ -218,7 +223,7 @@ Maui.Page
     }
 
     floatingHeader: true
-    headBar.visible: root.visibility !== Window.FullScreen
+    headBar.visible: root.visibility !== Window.FullScreen && !control.webFullScreen
     headBar.background: Rectangle
     {
         radius: control.headerMargins > 0 ? Maui.Style.radiusV : 0
@@ -262,12 +267,12 @@ Maui.Page
     function _syncOverviewHeadBar()
     {
         const inOverview = activeView.overviewMode
-        headBar.visible = root.visibility !== Window.FullScreen
         headBar.enabled = !inOverview
         headBar.opacity = inOverview ? 0 : 1
-        _uiLog("headBar overview state", "overview=" + inOverview + " opacity=" + headBar.opacity + " visible=" + headBar.visible + " enabled=" + headBar.enabled)
     }
-    headBar.preferredHeight: Maui.Style.rowHeightAlt
+    headBar.preferredHeight: root.isWide ? Maui.Style.rowHeightAlt : Maui.Style.rowHeight
+    headBar.topPadding: root.isWide ? Maui.Style.defaultPadding : Maui.Style.space.small
+    headBar.bottomPadding: root.isWide ? Maui.Style.defaultPadding : Maui.Style.space.small
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
 
@@ -277,84 +282,31 @@ Maui.Page
 
         function onOverviewModeChanged()
         {
-            control._uiLog("overviewModeChanged", "overview=" + control.activeView.overviewMode + " index=" + control.activeView.currentIndex + " count=" + control.activeView.count)
-
             control._syncOverviewHeadBar()
-        }
-    }
-
-    Connections
-    {
-        target: control.headBar
-
-        function onVisibleChanged()
-        {
-            control._uiLog("headBar visibleChanged", control._uiGeometry(control.headBar))
-        }
-
-        function onWidthChanged()
-        {
-            control._uiLog("headBar widthChanged", control._uiGeometry(control.headBar))
-        }
-
-        function onHeightChanged()
-        {
-            control._uiLog("headBar heightChanged", control._uiGeometry(control.headBar))
-        }
-
-        function onImplicitHeightChanged()
-        {
-            control._uiLog("headBar implicitHeightChanged", control._uiGeometry(control.headBar))
-        }
-
-        function onOpacityChanged()
-        {
-            control._uiLog("headBar opacityChanged", "opacity=" + opacity + " overview=" + control.activeView.overviewMode)
-        }
-
-        function onEnabledChanged()
-        {
-            control._uiLog("headBar enabledChanged", "enabled=" + enabled + " overview=" + control.activeView.overviewMode)
         }
     }
 
     headBar.middleContent: Item
     {
         id: _addressBar
-        visible: root.isWide
+        visible: true
         Layout.fillWidth: true
 
         property bool editing: false
         property string displayText: ""
 
-        onWidthChanged: control._uiLog("addressBar widthChanged", control._uiGeometry(_addressBar))
-        onHeightChanged: control._uiLog("addressBar heightChanged", control._uiGeometry(_addressBar))
-        onXChanged: control._uiLog("addressBar xChanged", control._uiGeometry(_addressBar))
-        onYChanged: control._uiLog("addressBar yChanged", control._uiGeometry(_addressBar))
-        onEditingChanged: control._uiLog("addressBar editingChanged", "editing=" + editing + " " + control._uiGeometry(_addressBar))
-        onDisplayTextChanged: control._uiLog("addressBar displayTextChanged", "length=" + displayText.length)
-        Component.onCompleted:
-        {
-            control._uiLog("addressBar completed", control._uiGeometry(_addressBar) + " editing=" + editing)
-            control._syncAddressField()
-        }
+        Component.onCompleted: control._syncAddressField()
 
         implicitWidth: Math.max(_addressDisplay.implicitWidth, _addressEntry.implicitWidth)
         implicitHeight: Math.max(_addressDisplay.implicitHeight, _addressEntry.implicitHeight)
 
-        onVisibleChanged:
-        {
-            control._uiLog("addressBar visibleChanged", control._uiGeometry(_addressBar) + " editing=" + editing)
-            if (!visible)
-                control._finishAddressEditing()
-        }
+        onVisibleChanged: if (!visible) control._finishAddressEditing()
 
         Item
         {
             id: _addressDisplay
             anchors.fill: parent
             visible: !_addressBar.editing
-            onVisibleChanged: control._uiLog("addressDisplay visibleChanged", control._uiGeometry(_addressDisplay))
             implicitWidth: _addressEntry.implicitWidth
             implicitHeight: _addressEntry.implicitHeight
 
@@ -385,7 +337,6 @@ Maui.Page
                 id: _addressDisplayTapHandler
                 onTapped:
                 {
-                    control._uiLog("addressDisplay tapped", control._uiGeometry(_addressDisplay))
                     control._beginAddressEditing()
                 }
             }
@@ -406,24 +357,14 @@ Maui.Page
             activeFocusOnPress: true
             inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoAutoUppercase
 
-            onWidthChanged: control._uiLog("addressEntry widthChanged", control._uiGeometry(_addressEntry))
-            onHeightChanged: control._uiLog("addressEntry heightChanged", control._uiGeometry(_addressEntry))
-            onXChanged: control._uiLog("addressEntry xChanged", control._uiGeometry(_addressEntry))
-            onYChanged: control._uiLog("addressEntry yChanged", control._uiGeometry(_addressEntry))
-            onVisibleChanged: control._uiLog("addressEntry visibleChanged", control._uiGeometry(_addressEntry))
-
             onActiveFocusChanged:
             {
-                control._uiLog("addressEntry focusChanged", "activeFocus=" + activeFocus + " textLength=" + text.length + " " + control._uiGeometry(_addressEntry))
                 if (!activeFocus)
                     control._finishAddressEditing()
             }
 
-            onTextChanged: control._uiLog("addressEntry textChanged", "length=" + text.length)
-
             onAccepted:
             {
-                control._uiLog("addressEntry accepted", "length=" + text.length)
                 if (text.length > 0)
                     control.openUrl(text)
 
@@ -444,12 +385,6 @@ Maui.Page
             anchors.verticalCenter: parent.verticalCenter
             icon.name: "dialog-information"
             enabled: control.currentSiteAvailable
-            onWidthChanged: control._uiLog("siteControlsButton widthChanged", control._uiGeometry(_siteControlsButton))
-            onHeightChanged: control._uiLog("siteControlsButton heightChanged", control._uiGeometry(_siteControlsButton))
-            onVisibleChanged: control._uiLog("siteControlsButton visibleChanged", control._uiGeometry(_siteControlsButton))
-            onEnabledChanged: control._uiLog("siteControlsButton enabledChanged", "enabled=" + enabled + " " + control._uiGeometry(_siteControlsButton))
-            Component.onCompleted: control._uiLog("siteControlsButton completed", control._uiGeometry(_siteControlsButton))
-
             ToolTip.visible: hovered
             ToolTip.text: i18n("Site controls")
 
@@ -734,6 +669,10 @@ Maui.Page
             asynchronous: true
             active: true
             visible: active
+            Layout.minimumHeight: Maui.Style.rowHeight
+            Layout.maximumHeight: Maui.Style.rowHeight
+            Layout.alignment: Qt.AlignVCenter
+            Layout.preferredHeight: Maui.Style.rowHeight
             sourceComponent: _browserActionButtonsComponent
         },
 
@@ -759,13 +698,14 @@ Maui.Page
         Loader
         {
             asynchronous: true
-            active: true
+            active: root.isWide
             visible: active
             sourceComponent: _navigationControlsComponent
         },
 
         ToolSeparator
         {
+            visible: root.isWide
             height: Maui.Style.space.medium
             topPadding: 0
             bottomPadding: 0
@@ -1201,7 +1141,6 @@ Maui.Page
         visible: !privateMode
         background: null
         tabBarMargins: Maui.Style.contentMargins
-        overviewDebug: fieryUiDiagnostics
         readonly property real tabBarContentHeight:
             Math.max(tabBar.count > 0 && tabBar.itemAt(0) ? tabBar.itemAt(0).implicitHeight : 0,
                      Maui.Style.rowHeightAlt,
@@ -1210,10 +1149,6 @@ Maui.Page
         tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
         tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
         tabBar.bottomMargin: (Maui.Handy.isMobile ? control._headerFootprint : 0) + 6
-        onWidthChanged: control._uiLog("public TabView widthChanged", control._uiGeometry(_browserListView))
-        onHeightChanged: control._uiLog("public TabView heightChanged", control._uiGeometry(_browserListView))
-        onVisibleChanged: control._uiLog("public TabView visibleChanged", control._uiGeometry(_browserListView))
-        Component.onCompleted: control._uiLog("public TabView completed", control._uiGeometry(_browserListView) + " tabBar=" + control._uiGeometry(_browserListView.tabBar))
         holder.visible: count === 0
         holder.emoji: "internet-web-browser"
         holder.title: i18n("Start Browsing")
@@ -1221,10 +1156,10 @@ Maui.Page
         holder.emojiSize: Maui.Style.iconSizes.big
 
         onNewTabClicked: openTab("")
+        onCountChanged: control._scheduleSessionPersistence()
         onCurrentIndexChanged:
         {
             _schedulePopupGeometryRefresh()
-            control._uiLog("public TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count)
         }
         onCloseTabClicked: (index) =>
         {
@@ -1268,7 +1203,7 @@ Maui.Page
         tabBar.showNewTabButton: false
         tabBar.topPadding: 4
         tabBar.bottomPadding: 4
-        tabBar.visible: root.visibility !== Window.FullScreen
+        tabBar.visible: root.visibility !== Window.FullScreen && root.isWide
         altTabBar: Maui.Handy.isMobile
         tabBar.background: Rectangle
         {
@@ -1280,7 +1215,7 @@ Maui.Page
             ToolButton
             {
                 id: _publicOverviewButton
-                visible: activeView.count > 1
+                visible: root.isWide && activeView.count > 1
                 Layout.alignment: Qt.AlignVCenter
                 Layout.preferredHeight: Maui.Style.rowHeight
                 Layout.maximumHeight: Maui.Style.rowHeight
@@ -1288,15 +1223,6 @@ Maui.Page
                 Layout.bottomMargin: 0
                 display: ToolButton.IconOnly
                 onClicked: activeView.openOverview()
-                onXChanged: control._uiLog("public overview button xChanged", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                onYChanged: control._uiLog("public overview button yChanged", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                onWidthChanged: control._uiLog("public overview button widthChanged", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                onHeightChanged: control._uiLog("public overview button heightChanged", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                onImplicitHeightChanged: control._uiLog("public overview button implicitHeightChanged", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                Component.onCompleted: {
-                    control._uiLog("public overview button completed", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar))
-                    Qt.callLater(function() { control._uiLog("public overview button deferred", control._uiTabGeometry(_publicOverviewButton, _browserListView.tabBar)) })
-                }
                 leftPadding: 6
                 rightPadding: 6
                 topPadding: 0
@@ -1305,12 +1231,6 @@ Maui.Page
                 contentItem: RowLayout
                 {
                     id: _publicOverviewContent
-                    onWidthChanged: control._uiLog("public overview content widthChanged", control._uiGeometry(_publicOverviewContent))
-                    onHeightChanged: control._uiLog("public overview content heightChanged", control._uiGeometry(_publicOverviewContent))
-                    Component.onCompleted: {
-                        control._uiLog("public overview content completed", control._uiTabGeometry(_publicOverviewContent, _browserListView.tabBar))
-                        Qt.callLater(function() { control._uiLog("public overview content deferred", control._uiTabGeometry(_publicOverviewContent, _browserListView.tabBar)) })
-                    }
 
                     spacing: Maui.Style.space.small
 
@@ -1335,12 +1255,6 @@ Maui.Page
                         Layout.alignment: Qt.AlignVCenter
                         implicitWidth: _publicBadgeRow.implicitWidth
                         id: _publicBadgeContainer
-                        onWidthChanged: control._uiLog("public badge container widthChanged", control._uiGeometry(_publicBadgeContainer))
-                        onHeightChanged: control._uiLog("public badge container heightChanged", control._uiGeometry(_publicBadgeContainer))
-                        Component.onCompleted: {
-                            control._uiLog("public badge container completed", control._uiTabGeometry(_publicBadgeContainer, _browserListView.tabBar))
-                            Qt.callLater(function() { control._uiLog("public badge container deferred", control._uiTabGeometry(_publicBadgeContainer, _browserListView.tabBar)) })
-                        }
                         Layout.minimumWidth: implicitWidth
                         Layout.preferredWidth: implicitWidth
                         height: Maui.Style.rowHeight
@@ -1409,25 +1323,6 @@ Maui.Page
         ]
     }
 
-    Connections
-    {
-        target: _browserListView.tabBar
-
-        function logPublicTabBar(event)
-        {
-            control._uiLog("public TabBar " + event, control._uiGeometry(_browserListView.tabBar) + " topMargin=" + _browserListView.tabBar.topMargin)
-        }
-
-        function onXChanged() { logPublicTabBar("xChanged") }
-        function onYChanged() { logPublicTabBar("yChanged") }
-        function onWidthChanged() { logPublicTabBar("widthChanged") }
-        function onHeightChanged() { logPublicTabBar("heightChanged") }
-        function onImplicitHeightChanged() { logPublicTabBar("implicitHeightChanged") }
-        function onVisibleChanged() { logPublicTabBar("visibleChanged") }
-        function onPositionChanged() { logPublicTabBar("positionChanged") }
-        function onTopMarginChanged() { logPublicTabBar("topMarginChanged") }
-    }
-
     Item
     {
         id: _privateModeView
@@ -1442,7 +1337,6 @@ Maui.Page
             visible: true
             background: null
             tabBarMargins: Maui.Style.contentMargins
-            overviewDebug: fieryUiDiagnostics
             readonly property real tabBarContentHeight:
                 Math.max(tabBar.count > 0 && tabBar.itemAt(0) ? tabBar.itemAt(0).implicitHeight : 0,
                          Maui.Style.rowHeightAlt,
@@ -1451,10 +1345,6 @@ Maui.Page
             tabBar.implicitHeight: tabBarContentHeight + tabBar.topPadding + tabBar.bottomPadding
             tabBar.topMargin: Maui.Handy.isMobile ? 0 : control._headerFootprint
             tabBar.bottomMargin: (Maui.Handy.isMobile ? control._headerFootprint : 0) + 6
-            onWidthChanged: control._uiLog("private TabView widthChanged", control._uiGeometry(_privateTabView))
-            onHeightChanged: control._uiLog("private TabView heightChanged", control._uiGeometry(_privateTabView))
-            onVisibleChanged: control._uiLog("private TabView visibleChanged", control._uiGeometry(_privateTabView))
-            Component.onCompleted: control._uiLog("private TabView completed", control._uiGeometry(_privateTabView) + " tabBar=" + control._uiGeometry(_privateTabView.tabBar))
             holder.visible: count === 0
             holder.emoji: "internet-web-browser"
             holder.title: i18n("Start Browsing")
@@ -1465,7 +1355,6 @@ Maui.Page
             onCurrentIndexChanged:
             {
                 _schedulePopupGeometryRefresh()
-                control._uiLog("private TabView currentIndexChanged", "index=" + currentIndex + ", count=" + count)
             }
             onCloseTabClicked: (index) =>
             {
@@ -1506,7 +1395,7 @@ Maui.Page
             tabBar.showNewTabButton: false
             tabBar.topPadding: 4
             tabBar.bottomPadding: 4
-            tabBar.visible: root.visibility !== Window.FullScreen
+            tabBar.visible: root.visibility !== Window.FullScreen && root.isWide
             altTabBar: Maui.Handy.isMobile
             tabBar.background: Rectangle
             {
@@ -1518,7 +1407,7 @@ Maui.Page
                 ToolButton
                 {
                     id: _privateOverviewButton
-                    visible: activeView.count > 1
+                    visible: root.isWide && activeView.count > 1
                     Layout.alignment: Qt.AlignVCenter
                     Layout.preferredHeight: Maui.Style.rowHeight
                     Layout.maximumHeight: Maui.Style.rowHeight
@@ -1526,15 +1415,6 @@ Maui.Page
                     Layout.bottomMargin: 0
                     display: ToolButton.IconOnly
                     onClicked: activeView.openOverview()
-                    onXChanged: control._uiLog("private overview button xChanged", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                    onYChanged: control._uiLog("private overview button yChanged", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                    onWidthChanged: control._uiLog("private overview button widthChanged", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                    onHeightChanged: control._uiLog("private overview button heightChanged", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                    onImplicitHeightChanged: control._uiLog("private overview button implicitHeightChanged", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                    Component.onCompleted: {
-                        control._uiLog("private overview button completed", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar))
-                        Qt.callLater(function() { control._uiLog("private overview button deferred", control._uiTabGeometry(_privateOverviewButton, _privateTabView.tabBar)) })
-                    }
                     leftPadding: 6
                     rightPadding: 6
                     topPadding: 0
@@ -1543,12 +1423,6 @@ Maui.Page
                     contentItem: RowLayout
                     {
                         id: _privateOverviewContent
-                        onWidthChanged: control._uiLog("private overview content widthChanged", control._uiGeometry(_privateOverviewContent))
-                        onHeightChanged: control._uiLog("private overview content heightChanged", control._uiGeometry(_privateOverviewContent))
-                        Component.onCompleted: {
-                            control._uiLog("private overview content completed", control._uiTabGeometry(_privateOverviewContent, _privateTabView.tabBar))
-                            Qt.callLater(function() { control._uiLog("private overview content deferred", control._uiTabGeometry(_privateOverviewContent, _privateTabView.tabBar)) })
-                        }
 
                         spacing: Maui.Style.space.small
 
@@ -1573,12 +1447,6 @@ Maui.Page
                             Layout.alignment: Qt.AlignVCenter
                             implicitWidth: _privateBadgeRow.implicitWidth
                             id: _privateBadgeContainer
-                            onWidthChanged: control._uiLog("private badge container widthChanged", control._uiGeometry(_privateBadgeContainer))
-                            onHeightChanged: control._uiLog("private badge container heightChanged", control._uiGeometry(_privateBadgeContainer))
-                            Component.onCompleted: {
-                                control._uiLog("private badge container completed", control._uiTabGeometry(_privateBadgeContainer, _privateTabView.tabBar))
-                                Qt.callLater(function() { control._uiLog("private badge container deferred", control._uiTabGeometry(_privateBadgeContainer, _privateTabView.tabBar)) })
-                            }
                             Layout.minimumWidth: implicitWidth
                             Layout.preferredWidth: implicitWidth
                             height: Maui.Style.rowHeight
@@ -1646,25 +1514,6 @@ Maui.Page
                 }
             ]
         }
-    }
-
-    Connections
-    {
-        target: _privateTabView.tabBar
-
-        function logPrivateTabBar(event)
-        {
-            control._uiLog("private TabBar " + event, control._uiGeometry(_privateTabView.tabBar) + " topMargin=" + _privateTabView.tabBar.topMargin)
-        }
-
-        function onXChanged() { logPrivateTabBar("xChanged") }
-        function onYChanged() { logPrivateTabBar("yChanged") }
-        function onWidthChanged() { logPrivateTabBar("widthChanged") }
-        function onHeightChanged() { logPrivateTabBar("heightChanged") }
-        function onImplicitHeightChanged() { logPrivateTabBar("implicitHeightChanged") }
-        function onVisibleChanged() { logPrivateTabBar("visibleChanged") }
-        function onPositionChanged() { logPrivateTabBar("positionChanged") }
-        function onTopMarginChanged() { logPrivateTabBar("topMarginChanged") }
     }
 
     // Full-width loading indicator at the edge of the tab bar, like Chrome on mobile.
@@ -1797,21 +1646,13 @@ Maui.Page
             id: _navigationControlsRow
             spacing: control.headBar.spacing
 
-            onWidthChanged: control._uiLog("navigationControls widthChanged", control._uiGeometry(_navigationControlsRow))
-            onHeightChanged: control._uiLog("navigationControls heightChanged", control._uiGeometry(_navigationControlsRow))
-            Component.onCompleted: control._uiLog("navigationControls completed", control._uiGeometry(_navigationControlsRow))
 
             ToolButton
             {
                 id: _sidebarButton
                 icon.name: _sideBarView.sideBar.visible ? "sidebar-collapse" : "sidebar-expand"
-                onWidthChanged: control._uiLog("sidebarButton widthChanged", control._uiGeometry(_sidebarButton))
-                onHeightChanged: control._uiLog("sidebarButton heightChanged", control._uiGeometry(_sidebarButton))
-                onVisibleChanged: control._uiLog("sidebarButton visibleChanged", control._uiGeometry(_sidebarButton))
-                onEnabledChanged: control._uiLog("sidebarButton enabledChanged", "enabled=" + enabled + " " + control._uiGeometry(_sidebarButton))
                 onClicked:
                 {
-                    control._uiLog("sidebarButton clicked", "checked=" + checked + " " + control._uiGeometry(_sidebarButton))
                     _sideBarView.sideBar.toggle()
                 }
                 checked: _sideBarView.sideBar.visible
@@ -1833,10 +1674,6 @@ Maui.Page
             Maui.ToolActions
             {
                 id: _navigationActions
-                onWidthChanged: control._uiLog("navigationActions widthChanged", control._uiGeometry(_navigationActions))
-                onHeightChanged: control._uiLog("navigationActions heightChanged", control._uiGeometry(_navigationActions))
-                onVisibleChanged: control._uiLog("navigationActions visibleChanged", control._uiGeometry(_navigationActions))
-                Component.onCompleted: control._uiLog("navigationActions completed", control._uiGeometry(_navigationActions))
                 autoExclusive: false
                 checkable: false
                 display: ToolButton.IconOnly
@@ -1846,10 +1683,8 @@ Maui.Page
                     text: i18n("Previous")
                     icon.name: "go-previous"
                     enabled: currentBrowser !== null && currentBrowser.canGoBack
-                    onEnabledChanged: function(enabled) { control._uiLog("backButton enabledChanged", "enabled=" + enabled + " canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false)) }
                     onTriggered:
                     {
-                        control._uiLog("backButton triggered", "canGoBack=" + (currentBrowser ? currentBrowser.canGoBack : false))
                         currentBrowser.goBack()
                     }
                 }
@@ -1859,10 +1694,8 @@ Maui.Page
                     text: i18n("Next")
                     icon.name: "go-next"
                     enabled: currentBrowser !== null && currentBrowser.canGoForward
-                    onEnabledChanged: function(enabled) { control._uiLog("forwardButton enabledChanged", "enabled=" + enabled + " canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false)) }
                     onTriggered:
                     {
-                        control._uiLog("forwardButton triggered", "canGoForward=" + (currentBrowser ? currentBrowser.canGoForward : false))
                         currentBrowser.goForward()
                     }
                 }
@@ -1962,23 +1795,85 @@ Maui.Page
 
         Row
         {
+            Layout.alignment: Qt.AlignVCenter
             id: _browserActionsRow
             spacing: control.headBar.spacing
 
-            onWidthChanged: control._uiLog("browserActions widthChanged", control._uiGeometry(_browserActionsRow))
-            onHeightChanged: control._uiLog("browserActions heightChanged", control._uiGeometry(_browserActionsRow))
-            Component.onCompleted: control._uiLog("browserActions completed", control._uiGeometry(_browserActionsRow))
+            function logResponsiveActions(event)
+            {
+                if (!root.isWide)
+                    control._uiLog("responsiveActions " + event, "row=" + control._responsiveGeometry(_browserActionsRow) + ",button=" + control._responsiveGeometry(_responsiveOverviewButton))
+            }
+
+            onYChanged: logResponsiveActions("rowYChanged")
+            onHeightChanged: logResponsiveActions("rowHeightChanged")
+            onVisibleChanged: logResponsiveActions("rowVisibleChanged")
+            Component.onCompleted: logResponsiveActions("completed")
+
+            ToolButton
+            {
+                id: _responsiveOverviewButton
+                visible: !root.isWide && activeView.count > 1
+                display: ToolButton.IconOnly
+                Layout.alignment: Qt.AlignVCenter
+                height: Maui.Style.rowHeight
+                leftPadding: Maui.Style.space.small
+                rightPadding: Maui.Style.space.small
+                topPadding: 0
+                bottomPadding: 0
+                onClicked: activeView.openOverview()
+                onXChanged: logResponsiveActions("buttonXChanged")
+                onYChanged: logResponsiveActions("buttonYChanged")
+                onWidthChanged: logResponsiveActions("buttonWidthChanged")
+                onHeightChanged: logResponsiveActions("buttonHeightChanged")
+                onImplicitHeightChanged: logResponsiveActions("buttonImplicitHeightChanged")
+                onVisibleChanged: logResponsiveActions("buttonVisibleChanged")
+                Component.onCompleted: logResponsiveActions("buttonCompleted")
+
+                contentItem: RowLayout
+                {
+                    spacing: Maui.Style.space.small
+
+                    Maui.Icon
+                    {
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.preferredWidth: Maui.Style.iconSizes.small
+                        Layout.preferredHeight: Maui.Style.iconSizes.small
+                        source: "view-grid"
+                        color: Maui.Theme.textColor
+                    }
+
+                    ToolButton
+                    {
+                        Layout.alignment: Qt.AlignVCenter
+                        text: activeView.count
+                        display: ToolButton.TextOnly
+                        font.bold: true
+                        font.pointSize: Maui.Style.fontSizes.small
+                        ToolTip.visible: false
+                        onClicked: {}
+
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                        }
+                    }
+                }
+
+                ToolTip.delay: 1000
+                ToolTip.timeout: 5000
+                ToolTip.visible: hovered
+                ToolTip.text: i18n("Show tabs")
+            }
 
             ToolButton
             {
                 id: _reloadButton
+                visible: root.isWide
                 icon.name: "view-refresh"
-                onWidthChanged: control._uiLog("reloadButton widthChanged", control._uiGeometry(_reloadButton))
-                onHeightChanged: control._uiLog("reloadButton heightChanged", control._uiGeometry(_reloadButton))
-                onVisibleChanged: control._uiLog("reloadButton visibleChanged", control._uiGeometry(_reloadButton))
                 onClicked:
                 {
-                    control._uiLog("reloadButton clicked", control._uiGeometry(_reloadButton))
                     currentBrowser.reload()
                 }
                 ToolTip.delay: 1000
@@ -1990,15 +1885,12 @@ Maui.Page
             ToolButton
             {
                 id: _splitButton
+                visible: root.isWide
                 icon.name: currentTab && currentTab.count === 2
                             ? (currentTab.activeSplitIndex === 0 ? "view-right-close" : "view-split-right-left")
                             : "view-split-left-right"
-                onWidthChanged: control._uiLog("splitButton widthChanged", control._uiGeometry(_splitButton))
-                onHeightChanged: control._uiLog("splitButton heightChanged", control._uiGeometry(_splitButton))
-                onVisibleChanged: control._uiLog("splitButton visibleChanged", control._uiGeometry(_splitButton))
                 onClicked:
                 {
-                    control._uiLog("splitButton clicked", "split=" + (currentTab && currentTab.count === 2) + " " + control._uiGeometry(_splitButton))
                     currentTab && currentTab.count === 2 ? currentTab.pop() : control.openSplit("")
                 }
                 ToolTip.delay: 1000
@@ -2184,6 +2076,28 @@ Maui.Page
         var inactiveIndex = currentTab.activeSplitIndex === 0 ? 1 : 0
         currentTab.currentIndex = inactiveIndex
         openUrl(path)
+    }
+
+    Timer
+    {
+        id: _sessionPersistenceTimer
+        interval: 0
+        repeat: false
+        onTriggered: control._persistSessionUrls()
+    }
+
+    function _scheduleSessionPersistence()
+    {
+        if (!appSettings.clearSessionOnExit)
+            _sessionPersistenceTimer.restart()
+    }
+
+    function _persistSessionUrls()
+    {
+        if (appSettings.clearSessionOnExit)
+            return
+
+        appSettings.sessionUrlsJson = root.encodeSessionUrlsJson(control.collectSessionUrls(!appSettings.restoreSession))
     }
 
     function collectSessionUrls(onlyPinned)

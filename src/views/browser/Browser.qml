@@ -28,19 +28,41 @@ Maui.SplitViewItem
                 + ",visible=" + item.visible
     }
 
+    function _fullscreenGeometry()
+    {
+        const window = Window.window
+        const split = control.splitView
+        var panes = []
+        if (split && split.model)
+        {
+            for (var i = 0; i < split.count; ++i)
+            {
+                const item = split.model.get(i)
+                if (item)
+                    panes.push(i + ":visible=" + item.visible + ",x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height)
+            }
+        }
+        return "toggle=" + control._webFullScreen
+                + ",browser=" + control._uiGeometry(control)
+                + ",web=" + control._uiGeometry(_webView)
+                + ",window=" + (window ? window.visibility : "null")
+                + ",splitCurrent=" + (split ? split.currentIndex : -1)
+                + ",panes=[" + panes.join(";") + "]"
+    }
+
     property alias url : _webView.url
-    onWidthChanged: _uiLog("widthChanged", _uiGeometry(control))
-    onHeightChanged: _uiLog("heightChanged", _uiGeometry(control))
     property alias webView : _webView
     property WebEngineProfile browserProfile: root.profile
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
     readonly property string iconName: _webView.icon
     readonly property url faviconSource: _webView.icon
     property url previewSource: ""
+    property var previewResult: null
     property bool overviewMode: false
     property bool _returningFromOverview: false
     property var splitView: null
     property int splitIndex: -1
+    padding: 0
     onOverviewModeChanged:
     {
         if (overviewMode)
@@ -54,22 +76,21 @@ Maui.SplitViewItem
             _sleepTimer.restart()
         }
     }
-    onPreviewSourceChanged: _uiLog("previewSourceChanged", "source=" + previewSource)
 
     function capturePreview()
     {
-        control._uiLog("capturePreview requested", "visible=" + control.visible + " webVisible=" + _webView.visible + " size=" + _webView.width + "x" + _webView.height + " lifecycle=" + _webView.lifecycleState + " url=" + _webView.url)
         if (!control.visible || !_webView.visible || _webView.width <= 0 || _webView.height <= 0)
         {
-            control._uiLog("capturePreview skipped", "visibility or size guard failed")
             return
         }
 
         _webView.grabToImage(function(result)
         {
-            control._uiLog("capturePreview completed", "result=" + (result ? "present" : "null") + " imageUrl=" + (result ? result.url : ""))
             if (result && result.url)
+            {
+                control.previewResult = result
                 control.previewSource = result.url
+            }
         })
     }
 
@@ -85,11 +106,6 @@ Maui.SplitViewItem
     Connections
     {
         target: _webView
-
-        function onWidthChanged() { control._uiLog("webView widthChanged", control._uiGeometry(_webView)) }
-        function onHeightChanged() { control._uiLog("webView heightChanged", control._uiGeometry(_webView)) }
-        function onVisibleChanged() { control._uiLog("webView visibleChanged", control._uiGeometry(_webView)) }
-        function onLifecycleStateChanged() { control._uiLog("webView lifecycleStateChanged", "state=" + _webView.lifecycleState + " " + control._uiGeometry(_webView)) }
         function onActiveFocusChanged()
         {
             if (_webView.activeFocus && control.splitView && control.splitIndex >= 0)
@@ -1065,7 +1081,6 @@ Maui.SplitViewItem
 
         onLoadingChanged: function(loadingInfo)
         {
-            control._uiLog("loadingChanged", "status=" + loadingInfo.status + " url=" + _webView.url + " visible=" + control.visible + " lifecycle=" + _webView.lifecycleState)
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
             {
                 control._loadFailed = false
@@ -1192,20 +1207,26 @@ Maui.SplitViewItem
 
         onFullScreenRequested: function(request)
         {
+            control._uiLog("fullScreenRequested", "toggleOn=" + request.toggleOn + " " + control._fullscreenGeometry())
             request.accept()
             control._webFullScreen = request.toggleOn
             if (request.toggleOn)
             {
+                if (control.splitView && control.splitView.count > 1)
+                    control.splitView.enterWebFullScreen(control)
                 Window.window.showFullScreen()
                 _fullscreenOverlay.visible = true
                 _fullscreenOverlayTimer.restart()
             }
             else
             {
+                if (control.splitView && typeof control.splitView.exitWebFullScreen === "function")
+                    control.splitView.exitWebFullScreen(control)
                 Window.window.showNormal()
                 _fullscreenOverlayTimer.stop()
                 _fullscreenOverlay.visible = false
             }
+            control._uiLog("fullScreenApplied", control._fullscreenGeometry())
         }
 
         onPermissionRequested: (permission) =>
@@ -1424,12 +1445,10 @@ Maui.SplitViewItem
 
     onVisibleChanged:
     {
-        _uiLog("visibleChanged", _uiGeometry(control) + " webView=" + _uiGeometry(_webView))
         if (visible)
         {
             const returningFromOverview = _returningFromOverview
             _returningFromOverview = false
-            _uiLog("visible activation", "returningFromOverview=" + returningFromOverview)
             // Cancel any pending sleep countdown and clear the sleeping flag.
             _sleepTimer.stop()
             _isSleeping = false
