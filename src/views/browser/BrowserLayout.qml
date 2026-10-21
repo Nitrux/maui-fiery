@@ -7,33 +7,15 @@ import org.mauikit.controls as Maui
 Item
 {
     id: control
-    readonly property bool _uiDebug: fieryUiDiagnostics
-
-    function _uiLog(event, details)
-    {
-        if (_uiDebug)
-            console.log("[Fiery UI][BrowserLayout]", event, details === undefined ? "" : details)
-    }
-
-    function _splitGeometry()
-    {
-        var panes = []
-        for (var i = 0; i < _splitView.count; ++i)
-        {
-            const item = _splitView.contentModel.get(i)
-            if (item)
-                panes.push(i + ":visible=" + item.visible + ",x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height)
-        }
-        return "count=" + _splitView.count + ",current=" + _splitView.currentIndex + ",fullScreenItem=" + (_webFullScreenItem ? _webFullScreenItem.splitIndex : -1) + ",panes=[" + panes.join(";") + "]"
-    }
-
     Maui.Controls.title: title
     Maui.Controls.toolTipText: currentItem.url
+    Maui.Controls.iconName: faviconSource
     Maui.Controls.color: browserProfile.offTheRecord ? Maui.Theme.visitedLinkColor : ""
 
     property url url
     property bool pinned: false
     property WebEngineProfile browserProfile: root.profile
+    property bool faviconRenderingEnabled: true
     property int popupGeometryNudge: 0
     property bool overviewMode: false
 
@@ -65,7 +47,6 @@ Item
 
     function enterWebFullScreen(item)
     {
-        _uiLog("enterWebFullScreen requested", "item=" + (item ? item.splitIndex : -1) + " " + _splitGeometry())
         if (!item || _splitView.count < 2)
             return
 
@@ -78,13 +59,10 @@ Item
             if (splitItem)
                 splitItem.visible = splitItem === item
         }
-
-        _uiLog("enterWebFullScreen applied", _splitGeometry())
     }
 
     function exitWebFullScreen(item)
     {
-        _uiLog("exitWebFullScreen requested", "item=" + (item ? item.splitIndex : -1) + " " + _splitGeometry())
         if (_webFullScreenItem && item && item !== _webFullScreenItem)
             return
 
@@ -96,7 +74,6 @@ Item
         }
 
         _webFullScreenItem = null
-        _uiLog("exitWebFullScreen applied", _splitGeometry())
     }
 
     function capturePreview()
@@ -141,6 +118,8 @@ Item
         {
             overviewMode: control.overviewMode
             splitView: control
+            browserProfile: control.browserProfile
+            faviconRenderingEnabled: control.faviconRenderingEnabled
         }
     }
 
@@ -161,7 +140,7 @@ Item
             return
         }
 
-        _splitView.addSplit(_browserComponent, {'url': path, 'browserProfile': control.browserProfile})
+        _splitView.addSplit(_browserComponent, {'url': path})
         _syncSplitIndices()
     }
 

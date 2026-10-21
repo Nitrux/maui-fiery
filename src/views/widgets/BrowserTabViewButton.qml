@@ -80,7 +80,9 @@ Maui.TabButton
     checked: control.mindex === control.tabView.currentIndex
     text: tabInfo.title
 
-    icon.name: tabInfo.iconName
+    // Cached favicons are image sources; leaving name empty prevents Maui.Icon
+    // from taking precedence over icon.source in IconLabel.
+    icon.name: ""
 
     Maui.Controls.badgeText: tabInfo.badgeText || ""
     Maui.Controls.status: typeof tabInfo.status !== "undefined" ? tabInfo.status : Maui.Controls.Normal

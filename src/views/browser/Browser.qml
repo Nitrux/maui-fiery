@@ -11,51 +11,64 @@ import org.maui.fiery as Fiery
 Maui.SplitViewItem
 {
     id: control
-    readonly property bool _uiDebug: fieryUiDiagnostics
-
-    function _uiLog(event, details)
-    {
-        if (_uiDebug)
-            console.log("[Fiery UI][Browser]", event, details === undefined ? "" : details)
-    }
-
-    function _uiGeometry(item)
-    {
-        if (!item)
-            return "null"
-
-        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
-                + ",visible=" + item.visible
-    }
-
-    function _fullscreenGeometry()
-    {
-        const window = Window.window
-        const split = control.splitView
-        var panes = []
-        if (split && split.model)
-        {
-            for (var i = 0; i < split.count; ++i)
-            {
-                const item = split.model.get(i)
-                if (item)
-                    panes.push(i + ":visible=" + item.visible + ",x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height)
-            }
-        }
-        return "toggle=" + control._webFullScreen
-                + ",browser=" + control._uiGeometry(control)
-                + ",web=" + control._uiGeometry(_webView)
-                + ",window=" + (window ? window.visibility : "null")
-                + ",splitCurrent=" + (split ? split.currentIndex : -1)
-                + ",panes=[" + panes.join(";") + "]"
-    }
-
     property alias url : _webView.url
     property alias webView : _webView
     property WebEngineProfile browserProfile: root.profile
+    property bool faviconRenderingEnabled: true
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
-    readonly property string iconName: _webView.icon
-    readonly property url faviconSource: _webView.icon
+    readonly property string iconName: _faviconSource
+    readonly property url faviconSource: _faviconSource
+    property url _faviconSource: ""
+    property url _faviconCandidate: ""
+    property url _faviconPageUrl: ""
+    property var _faviconResult: null
+
+    function _faviconFilePath(source, offTheRecord)
+    {
+        const root = offTheRecord ? fieryFaviconTempPath : fieryFaviconCachePath
+        return root.length > 0
+                ? root + "/fiery-" + (offTheRecord ? "private-" : "")
+                  + "favicon-" + Qt.md5(String(source)) + ".png"
+                : ""
+    }
+    function _faviconSourceUrl(path)
+    {
+        return path.length > 0 ? "file://" + path : ""
+    }
+    function _requestFavicon()
+    {
+        if (!faviconRenderingEnabled
+                || _webView.lifecycleState === WebEngineView.LifecycleState.Discarded)
+        {
+            return
+        }
+
+        const pageUrl = _webView.url.toString()
+        if (!pageUrl || pageUrl === "about:blank")
+            return
+
+        _faviconCandidate = ""
+        _faviconSource = ""
+        _faviconPageUrl = pageUrl
+
+        _webView.runJavaScript(
+            "(function(){"
+            + "var links=document.querySelectorAll('link[rel~=' + JSON.stringify('icon') + '],link[rel=' + JSON.stringify('shortcut icon') + '],link[rel=' + JSON.stringify('apple-touch-icon') + ']');"
+            + "for(var i=0;i<links.length;i++){if(links[i].href)return links[i].href;}"
+            + "try{return new URL('/favicon.ico',document.baseURI).href;}catch(e){return '';}"
+            + "})()",
+            function(result)
+            {
+                if (!faviconRenderingEnabled
+                        || _webView.lifecycleState === WebEngineView.LifecycleState.Discarded
+                        || _webView.url.toString() !== pageUrl
+                        || String(_faviconPageUrl) !== pageUrl)
+                    return
+
+                if (typeof result === "string" && result.length > 0)
+                    _faviconCandidate = result
+            })
+    }
     property url previewSource: ""
     property var previewResult: null
     property bool overviewMode: false
@@ -544,6 +557,53 @@ Maui.SplitViewItem
                        Maui.Theme.backgroundColor.g,
                        Maui.Theme.backgroundColor.b, 1.0)
         visible: control._loadFailed && appSettings.errorPageEnabled
+    }
+
+    Image
+    {
+        id: _faviconImage
+
+        width: Maui.Style.iconSizes.medium
+        height: Maui.Style.iconSizes.medium
+        // The WebEngineView is declared after this loader and covers it while it captures.
+        visible: control.faviconRenderingEnabled
+        asynchronous: true
+        cache: !(control.browserProfile && control.browserProfile.offTheRecord)
+        source: control.faviconRenderingEnabled ? control._faviconCandidate : ""
+
+        onStatusChanged:
+        {
+            if (status !== Image.Ready
+                    || !control.faviconRenderingEnabled
+                    || !control._faviconCandidate)
+                return
+
+            const candidate = String(control._faviconCandidate)
+            const pageUrl = String(control._faviconPageUrl)
+            grabToImage(function(result)
+            {
+                if (!result
+                        || !control.faviconRenderingEnabled
+                        || String(control._faviconCandidate) !== candidate
+                        || String(control._faviconPageUrl) !== pageUrl
+                        || String(control.url) !== pageUrl)
+                    return
+
+                control._faviconResult = result
+                const offTheRecord = control.browserProfile && control.browserProfile.offTheRecord
+                const cachePath = control._faviconFilePath(candidate, offTheRecord)
+                const saved = cachePath.length > 0 && result.saveToFile(cachePath)
+                if (saved)
+                {
+                    const faviconSource = control._faviconSourceUrl(cachePath)
+                    control._faviconSource = faviconSource
+                    if (!offTheRecord)
+                    {
+                        Fiery.History.updateIcon(control.url, faviconSource)
+                    }
+                }
+            })
+        }
     }
 
     WebEngineView
@@ -1084,7 +1144,8 @@ Maui.SplitViewItem
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
             {
                 control._loadFailed = false
-                if (!_webView.profile.offTheRecord)
+                const offTheRecord = _webView.profile && _webView.profile.offTheRecord
+                if (!offTheRecord)
                     Fiery.History.appendUrl(control.url, control.title)
                 if (appSettings.showScrollBars)
                     _webView.runJavaScript(_webView._scrollbarScript)
@@ -1123,6 +1184,7 @@ Maui.SplitViewItem
                     control._requestAutofillPromptCheck()
                 }
 
+                control._requestFavicon()
                 Qt.callLater(control.capturePreview)
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
@@ -1134,6 +1196,9 @@ Maui.SplitViewItem
             }
             else if(loadingInfo.status === WebEngineView.LoadStartedStatus)
             {
+                control._faviconCandidate = ""
+                control._faviconSource = ""
+                control._faviconPageUrl = ""
                 control._loadFailed = false
                 control._drmNotified = false
                 control._loadSerial += 1
@@ -1156,11 +1221,7 @@ Maui.SplitViewItem
             }
         }
 
-        onIconChanged:
-        {
-            if (icon && !_webView.profile.offTheRecord)
-                Fiery.History.updateIcon(url, icon)
-        }
+        onIconChanged: control._requestFavicon()
 
         onLinkHovered: (url) =>
         {
@@ -1207,7 +1268,6 @@ Maui.SplitViewItem
 
         onFullScreenRequested: function(request)
         {
-            control._uiLog("fullScreenRequested", "toggleOn=" + request.toggleOn + " " + control._fullscreenGeometry())
             request.accept()
             control._webFullScreen = request.toggleOn
             if (request.toggleOn)
@@ -1226,7 +1286,6 @@ Maui.SplitViewItem
                 _fullscreenOverlayTimer.stop()
                 _fullscreenOverlay.visible = false
             }
-            control._uiLog("fullScreenApplied", control._fullscreenGeometry())
         }
 
         onPermissionRequested: (permission) =>

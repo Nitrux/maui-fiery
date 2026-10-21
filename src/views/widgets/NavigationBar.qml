@@ -29,6 +29,14 @@ BrowserTabViewButton
         return item.browser.webView
     }
 
+    readonly property url faviconSource:
+    {
+        const _pulse = control._modelPulse
+        var item = control.tabView && control.tabView.contentModel
+            ? control.tabView.contentModel.get(control.mindex) : null
+        return item && item.faviconSource ? item.faviconSource : ""
+    }
+
     readonly property bool _pinned:
     {
         const _pulse = control._modelPulse
@@ -161,7 +169,7 @@ BrowserTabViewButton
     // fillWidth label column that shoves the icon to the left even when the
     // label is invisible.  Suppress the icon entirely and render it ourselves
     // via underlayContent so we can anchor it to the true centre.
-    icon.source: control._pinned ? "" : (webView ? webView.icon : "")
+    icon.source: control._pinned ? "" : (control.tabView && control.tabView.visible && control.tabView.faviconRenderingEnabled !== false ? control.faviconSource : "")
     icon.color: "transparent"
 
     // Both pinned-tab overlays live inside underlayContent so their parent is
@@ -175,8 +183,8 @@ BrowserTabViewButton
         // Favicon — shown when pinned and not audible.
         Maui.Icon
         {
-            visible: control._pinned && !control._audible && webView !== null
-            source: webView ? webView.icon : ""
+            visible: control._pinned && !control._audible && webView !== null && control.tabView && control.tabView.visible && control.tabView.faviconRenderingEnabled !== false
+            source: control.tabView && control.tabView.visible && control.tabView.faviconRenderingEnabled !== false ? control.faviconSource : ""
             color: "transparent"
             width: 16
             height: 16

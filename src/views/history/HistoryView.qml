@@ -53,7 +53,10 @@ Maui.Page
 
             label1.text: model.title
             tooltipText: model.url
-            imageSource: model.icon.replace("image://favicon/", "")
+            imageSource: {
+                const source = model.icon ? model.icon.replace("image://favicon/", "") : ""
+                return source.startsWith("http://") || source.startsWith("https://") ? "" : source
+            }
             iconSizeHint: Maui.Style.iconSizes.medium
 
             onClicked:

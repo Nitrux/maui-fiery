@@ -112,7 +112,7 @@ void FieryWebProfile::showNotification(QWebEngineNotification *webNotification)
                                     KNotification::CloseOnTimeout, this);
     notif->setTitle(title);
     notif->setText(webNotification->message());
-    notif->setIconName(QStringLiteral("maui-fiery"));
+    notif->setIconName(QStringLiteral("fiery"));
 
     // Capture the specific notification in the lambda so that clicking "Open" on
     // this KNotification always fires the correct page callback, even when multiple

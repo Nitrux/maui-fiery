@@ -10,6 +10,7 @@
 #include <QSettings>
 #include <QFile>
 #include <QFileInfo>
+#include <QDir>
 #include <QStandardPaths>
 #include <sys/sysinfo.h>
 
@@ -153,7 +154,7 @@ int main(int argc, char *argv[])
     QtWebEngineQuick::initialize();
     QApplication app(argc, argv);
 
-    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("maui-fiery")));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("fiery")));
 
     KLocalizedString::setApplicationDomain("fiery");
     KAboutData about(QStringLiteral("fiery"),
@@ -179,8 +180,19 @@ int main(int argc, char *argv[])
     // matching the convention used by all other MauiKit applications:
     //   config  → ~/.config/Maui/fiery.conf
     //   cache   → ~/.cache/Maui/fiery/
+    app.setApplicationName(QStringLiteral("fiery"));
     app.setOrganizationName(QStringLiteral("Maui"));
-    MauiApp::instance()->setIconName(QStringLiteral("maui-fiery"));
+    const QString cachePath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!cachePath.isEmpty())
+        QDir().mkpath(cachePath);
+    const QString genericCachePath = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
+    const QString faviconCachePath = genericCachePath.isEmpty()
+                                         ? QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+                                         : genericCachePath + QStringLiteral("/Maui/fiery");
+    const QString faviconTempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    if (!faviconCachePath.isEmpty())
+        QDir().mkpath(faviconCachePath);
+    MauiApp::instance()->setIconName(QStringLiteral("fiery"));
 
     HyprlandWorkspace hyprlandWorkspace;
 
@@ -198,6 +210,8 @@ int main(int argc, char *argv[])
     constexpr bool fieryUiDiagnostics = false;
 #endif
     engine.rootContext()->setContextProperty(QStringLiteral("fieryUiDiagnostics"), fieryUiDiagnostics);
+    engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconCachePath"), faviconCachePath);
+    engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconTempPath"), faviconTempPath);
     const QUrl url(QStringLiteral("qrc:/app/maui/fiery/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl)

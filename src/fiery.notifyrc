@@ -1,5 +1,5 @@
 [Global]
-IconName=maui-fiery
+IconName=fiery
 Comment=Fiery Browser
 
 [Event/webNotification]
