@@ -39,6 +39,8 @@ Maui.SplitViewItem
     property url previewSource: ""
     property bool overviewMode: false
     property bool _returningFromOverview: false
+    property var splitView: null
+    property int splitIndex: -1
     onOverviewModeChanged:
     {
         if (overviewMode)
@@ -88,6 +90,11 @@ Maui.SplitViewItem
         function onHeightChanged() { control._uiLog("webView heightChanged", control._uiGeometry(_webView)) }
         function onVisibleChanged() { control._uiLog("webView visibleChanged", control._uiGeometry(_webView)) }
         function onLifecycleStateChanged() { control._uiLog("webView lifecycleStateChanged", "state=" + _webView.lifecycleState + " " + control._uiGeometry(_webView)) }
+        function onActiveFocusChanged()
+        {
+            if (_webView.activeFocus && control.splitView && control.splitIndex >= 0)
+                control.splitView.currentIndex = control.splitIndex
+        }
     }
     property var _pendingFileRequest: null
     readonly property var _hostWindow: control.Window.window

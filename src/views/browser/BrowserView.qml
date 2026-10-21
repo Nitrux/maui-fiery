@@ -1990,7 +1990,9 @@ Maui.Page
             ToolButton
             {
                 id: _splitButton
-                icon.name: currentTab && currentTab.count === 2 ? "view-right-close" : "view-split-left-right"
+                icon.name: currentTab && currentTab.count === 2
+                            ? (currentTab.activeSplitIndex === 0 ? "view-right-close" : "view-split-right-left")
+                            : "view-split-left-right"
                 onWidthChanged: control._uiLog("splitButton widthChanged", control._uiGeometry(_splitButton))
                 onHeightChanged: control._uiLog("splitButton heightChanged", control._uiGeometry(_splitButton))
                 onVisibleChanged: control._uiLog("splitButton visibleChanged", control._uiGeometry(_splitButton))
@@ -2002,7 +2004,9 @@ Maui.Page
                 ToolTip.delay: 1000
                 ToolTip.timeout: 5000
                 ToolTip.visible: hovered
-                ToolTip.text: currentTab && currentTab.count === 2 ? i18n("Close Split View") : i18n("Split View")
+                ToolTip.text: currentTab && currentTab.count === 2
+                              ? (currentTab.activeSplitIndex === 0 ? i18n("Close Right Split") : i18n("Close Left Split"))
+                              : i18n("Split View")
             }
         }
     }
@@ -2177,7 +2181,7 @@ Maui.Page
 
         // Split already open — switch to the inactive pane and navigate there
         // so the URL loads in the other half rather than the one already active.
-        var inactiveIndex = currentTab.currentIndex === 0 ? 1 : 0
+        var inactiveIndex = currentTab.activeSplitIndex === 0 ? 1 : 0
         currentTab.currentIndex = inactiveIndex
         openUrl(path)
     }

@@ -20,6 +20,17 @@ Item
 
     property alias currentIndex : _splitView.currentIndex
     property alias orientation : _splitView.orientation
+    readonly property int activeSplitIndex:
+    {
+        for (var i = 0; i < _splitView.count; ++i)
+        {
+            const item = _splitView.contentModel.get(i)
+            if (item && item.webView && item.webView.activeFocus)
+                return i
+        }
+
+        return Math.max(0, _splitView.currentIndex)
+    }
 
     readonly property alias count : _splitView.count
     readonly property alias currentItem : _splitView.currentItem
@@ -72,6 +83,17 @@ Item
         Browser
         {
             overviewMode: control.overviewMode
+            splitView: _splitView
+        }
+    }
+
+    function _syncSplitIndices()
+    {
+        for (var i = 0; i < _splitView.count; ++i)
+        {
+            const item = _splitView.contentModel.get(i)
+            if (item)
+                item.splitIndex = i
         }
     }
 
@@ -83,6 +105,7 @@ Item
         }
 
         _splitView.addSplit(_browserComponent, {'url': path, 'browserProfile': control.browserProfile})
+        _syncSplitIndices()
     }
 
     function pop()
@@ -92,7 +115,7 @@ Item
             return //can not pop all the browsers, leave at leats 1
         }
 
-        closeSplit(_splitView.currentIndex === 1 ? 0 : 1)
+        closeSplit(control.activeSplitIndex === 1 ? 0 : 1)
     }
 
     function closeSplit(index)
@@ -107,7 +130,25 @@ Item
 
     function destroyItem(index) //destroys a split view without warning
     {
-        _splitView.closeSplit(index)
+        if (_splitView.count === 1 || index < 0 || index >= _splitView.count)
+            return
+
+        const item = _splitView.takeItem(index)
+        if (!item)
+            return
+
+        if (item.webView)
+        {
+            item.webView.audioMuted = true
+            item.webView.stop()
+            item.webView.runJavaScript(
+                "(function(){Array.from(document.querySelectorAll(\"audio,video\")).forEach(function(media){try{media.pause();}catch(e){}});})()")
+            item.webView.lifecycleState = 2 // WebEngineView.Discarded
+        }
+
+        item.destroy()
+        _syncSplitIndices()
+        _splitView.currentIndex = Math.min(_splitView.currentIndex, _splitView.count - 1)
     }
 }
 
