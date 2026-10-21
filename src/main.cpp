@@ -28,6 +28,7 @@
 #include "controllers/passwordmanager.h"
 #include "controllers/dbactions.h"
 #include "controllers/widevineinstaller.h"
+#include "controllers/hyprlandworkspace.h"
 
 #include "fiery_version.h"
 
@@ -181,6 +182,8 @@ int main(int argc, char *argv[])
     app.setOrganizationName(QStringLiteral("Maui"));
     MauiApp::instance()->setIconName(QStringLiteral("maui-fiery"));
 
+    HyprlandWorkspace hyprlandWorkspace;
+
     QCommandLineParser parser;
 
     about.setupCommandLine(&parser);
@@ -220,6 +223,7 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<FieryWebProfile>(FIERY_URI, 1, 0, "FieryWebProfile");
     qmlRegisterType<RequestInterceptor>(FIERY_URI, 1, 0, "RequestInterceptor");
+    qmlRegisterSingletonInstance<HyprlandWorkspace>(FIERY_URI, 1, 0, "HyprlandWorkspace", &hyprlandWorkspace);
     qmlRegisterSingletonType<HistoryModel>(FIERY_URI, 1, 0, "History", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(scriptEngine)
         Q_UNUSED(engine)

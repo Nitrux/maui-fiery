@@ -55,8 +55,7 @@ Maui.TabButton
         (typeof control._sleeping !== "undefined" && control._sleeping) ||
         (typeof control._audible !== "undefined" && control._audible) ? Maui.Style.iconSizes.small : 0)
 
-    implicitHeight: Math.max(Maui.Style.rowHeightAlt,
-                             _contentHeightContract + topPadding + bottomPadding)
+    implicitHeight: Maui.Style.rowHeightAlt
 
     readonly property bool _uiDebug: fieryUiDiagnostics
 

@@ -17,7 +17,8 @@ set(fiery_SRCS
     controllers/fierywebprofile.cpp
     controllers/requestinterceptor.cpp
     controllers/passwordmanager.cpp
-    controllers/widevineinstaller.cpp)
+    controllers/widevineinstaller.cpp
+    controllers/hyprlandworkspace.cpp)
 
 # Download the Steven Black aggregated hosts blocklist at configure time.
 # The file is placed in the build tree to avoid polluting the source tree.

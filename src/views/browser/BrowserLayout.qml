@@ -16,6 +16,7 @@ Item
     property bool pinned: false
     property WebEngineProfile browserProfile: root.profile
     property int popupGeometryNudge: 0
+    property bool overviewMode: false
 
     property alias currentIndex : _splitView.currentIndex
     property alias orientation : _splitView.orientation
@@ -27,6 +28,14 @@ Item
     readonly property var urls : count === 2 ?  [model.get(0).url,  model.get(1).url] : [currentItem.url]
 
     readonly property alias browser : _splitView.currentItem
+    readonly property url faviconSource: currentItem ? currentItem.faviconSource : ""
+    property url previewSource: currentItem ? currentItem.previewSource : ""
+
+    function capturePreview()
+    {
+        if (currentItem && typeof currentItem.capturePreview === "function")
+            currentItem.capturePreview()
+    }
 
     Keys.enabled: true
     Keys.onPressed: (event) =>
@@ -62,7 +71,7 @@ Item
         id: _browserComponent
         Browser
         {
-
+            overviewMode: control.overviewMode
         }
     }
 

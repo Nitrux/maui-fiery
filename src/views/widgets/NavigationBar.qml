@@ -38,7 +38,7 @@ BrowserTabViewButton
 
     readonly property bool _audible:  webView !== null && (webView.recentlyAudible || webView.audioMuted)
     readonly property bool _sleeping: webView !== null && webView.lifecycleState === WebEngineView.LifecycleState.Discarded
-    readonly property real _pinnedTabWidth: control.height + Maui.Style.space.medium
+    readonly property real _pinnedTabWidth: Math.round(control.height + Maui.Style.space.medium)
 
     // Hide close button on pinned tabs, matching browser convention.
     closeButtonVisible: !_pinned
@@ -129,8 +129,8 @@ BrowserTabViewButton
     // width expression failed to restore and the button collapsed to 0px,
     // causing all tabs to render on top of each other ("joined").
     width: control._pinned
-        ? (control.height + Maui.Style.space.medium)
-        : (control.tabView.mobile ? control.tabView.width : Math.max(160, Math.min(260, implicitWidth)))
+        ? Math.round(control.height + Maui.Style.space.medium)
+        : (control.tabView.mobile ? Math.round(control.tabView.width) : Math.round(Math.max(160, Math.min(260, implicitWidth))))
 
     background: Rectangle
     {

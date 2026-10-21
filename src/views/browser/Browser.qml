@@ -35,6 +35,41 @@ Maui.SplitViewItem
     property WebEngineProfile browserProfile: root.profile
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
     readonly property string iconName: _webView.icon
+    readonly property url faviconSource: _webView.icon
+    property url previewSource: ""
+    property bool overviewMode: false
+    property bool _returningFromOverview: false
+    onOverviewModeChanged:
+    {
+        if (overviewMode)
+        {
+            _returningFromOverview = true
+            _sleepTimer.stop()
+            _isSleeping = false
+        }
+        else if (!control.visible && appSettings.tabSleepEnabled && !_webView.recentlyAudible)
+        {
+            _sleepTimer.restart()
+        }
+    }
+    onPreviewSourceChanged: _uiLog("previewSourceChanged", "source=" + previewSource)
+
+    function capturePreview()
+    {
+        control._uiLog("capturePreview requested", "visible=" + control.visible + " webVisible=" + _webView.visible + " size=" + _webView.width + "x" + _webView.height + " lifecycle=" + _webView.lifecycleState + " url=" + _webView.url)
+        if (!control.visible || !_webView.visible || _webView.width <= 0 || _webView.height <= 0)
+        {
+            control._uiLog("capturePreview skipped", "visibility or size guard failed")
+            return
+        }
+
+        _webView.grabToImage(function(result)
+        {
+            control._uiLog("capturePreview completed", "result=" + (result ? "present" : "null") + " imageUrl=" + (result ? result.url : ""))
+            if (result && result.url)
+                control.previewSource = result.url
+        })
+    }
 
     height: ListView.view ? ListView.view.height : 0
     width:  ListView.view ? ListView.view.width : 0
@@ -187,7 +222,7 @@ Maui.SplitViewItem
         onTriggered:
         {
             const u = _webView.url.toString()
-            if (u.length > 0 && u !== "about:blank" && !_webView.loading)
+            if (!control.overviewMode && u.length > 0 && u !== "about:blank" && !_webView.loading)
             {
                 _webView.lifecycleState = 2 // WebEngineView.Discarded — frees GPU+CPU memory
                 control._isSleeping = true
@@ -493,6 +528,10 @@ Maui.SplitViewItem
         id: _webView
 
         anchors.fill: parent
+        visible: {
+            const u = _webView.url.toString()
+            return u.length > 0 && u !== "about:blank"
+        }
 
         profile: control.browserProfile
         zoomFactor: appSettings.zoomFactor
@@ -1019,6 +1058,7 @@ Maui.SplitViewItem
 
         onLoadingChanged: function(loadingInfo)
         {
+            control._uiLog("loadingChanged", "status=" + loadingInfo.status + " url=" + _webView.url + " visible=" + control.visible + " lifecycle=" + _webView.lifecycleState)
             if(loadingInfo.status === WebEngineView.LoadSucceededStatus)
             {
                 control._loadFailed = false
@@ -1060,6 +1100,8 @@ Maui.SplitViewItem
                     control._autofillPromptPending = false
                     control._requestAutofillPromptCheck()
                 }
+
+                Qt.callLater(control.capturePreview)
             }
             else if(loadingInfo.status === WebEngineView.LoadFailedStatus)
             {
@@ -1343,6 +1385,15 @@ Maui.SplitViewItem
         )
     }
 
+    function recoverFromWorkspaceChange()
+    {
+        if (control.visible && _webView.visible)
+        {
+            _kickVizCompositor()
+            _vizRetryTimer.restart()
+        }
+    }
+
     // Delayed retry: the initial kick may fire before Wayland re-enables
     // wl_surface.frame callbacks after a workspace switch, leaving Viz idle
     // again. A second kick ~800 ms later catches that window.
@@ -1369,16 +1420,21 @@ Maui.SplitViewItem
         _uiLog("visibleChanged", _uiGeometry(control) + " webView=" + _uiGeometry(_webView))
         if (visible)
         {
+            const returningFromOverview = _returningFromOverview
+            _returningFromOverview = false
+            _uiLog("visible activation", "returningFromOverview=" + returningFromOverview)
             // Cancel any pending sleep countdown and clear the sleeping flag.
             _sleepTimer.stop()
             _isSleeping = false
             // Restore full rendering when the tab is brought to the foreground.
             _webView.lifecycleState = 0 // WebEngineView.Active
-            if (control._hostWindow && control._hostWindow.active)
+            if (!returningFromOverview && control._hostWindow && control._hostWindow.active)
             {
                 _kickVizCompositor()
                 _vizRetryTimer.restart()
             }
+            if (!returningFromOverview)
+                Qt.callLater(control.capturePreview)
             if (control._autofillPromptPending)
                 Qt.callLater(control._requestAutofillPromptCheck)
         }
@@ -1389,10 +1445,11 @@ Maui.SplitViewItem
             // for background tabs to near-zero.  Pages stay in memory and resume
             // instantly when the tab is selected again.
             // Skip if the tab is playing audio so background media keeps running.
-            _webView.lifecycleState = 1 // WebEngineView.Frozen
+            if (!control.overviewMode)
+                _webView.lifecycleState = 1 // WebEngineView.Frozen
             // Start the sleep countdown: if the tab stays hidden long enough,
             // the timer will discard the page entirely to reclaim more memory.
-            if (appSettings.tabSleepEnabled)
+            if (appSettings.tabSleepEnabled && !control.overviewMode)
                 _sleepTimer.restart()
         }
     }
