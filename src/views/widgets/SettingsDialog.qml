@@ -314,6 +314,25 @@ Maui.SettingsDialog
 
             Maui.SectionGroup
             {
+                title: i18n("Appearance")
+
+                Maui.FlexSectionItem
+                {
+                    label1.text: i18n("Tint Header Bar")
+                    label2.text: i18n("Use the current page favicon to tint the browser header bar.")
+
+                    Switch
+                    {
+                        Layout.fillHeight: true
+                        checkable: true
+                        checked: appSettings.headBarTintEnabled
+                        onToggled: appSettings.headBarTintEnabled = !appSettings.headBarTintEnabled
+                    }
+                }
+            }
+
+            Maui.SectionGroup
+            {
                 title: i18n("Media Behavior")
 
                 Maui.FlexSectionItem

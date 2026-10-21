@@ -143,6 +143,7 @@ Maui.ApplicationWindow
         property string downloadsPath : StandardPaths.writableLocation(StandardPaths.DownloadLocation)
 
         property bool forceDarkMode: false
+        property bool headBarTintEnabled: true
         property bool restoreSession: true
         property bool clearSessionOnExit: false
         property bool switchToTab: false

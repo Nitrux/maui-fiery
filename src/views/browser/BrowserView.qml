@@ -219,7 +219,7 @@ Maui.Page
     Maui.ImageColors
     {
         id: _faviconColors
-        source: control.Window.window && control.Window.window.visible ? _faviconImage : null
+        source: appSettings.headBarTintEnabled && control.Window.window && control.Window.window.visible ? _faviconImage : null
     }
 
     floatingHeader: true
@@ -228,13 +228,13 @@ Maui.Page
     {
         radius: control.headerMargins > 0 ? Maui.Style.radiusV : 0
         antialiasing: true
-        property color tintedBackground: currentSiteAvailable && _faviconColors.dominant.valid
+        property color tintedBackground: appSettings.headBarTintEnabled && currentSiteAvailable && _faviconColors.dominant.valid
                                          ? Maui.ColorUtils.tintWithAlpha(Maui.Theme.backgroundColor, _faviconColors.dominant, 0.12)
                                          : Maui.Theme.backgroundColor
 
         color: tintedBackground
         border.color: control.headerMargins > 0
-                      ? (currentSiteAvailable && _faviconColors.dominant.valid
+                      ? (appSettings.headBarTintEnabled && currentSiteAvailable && _faviconColors.dominant.valid
                          ? Maui.ColorUtils.linearInterpolation(tintedBackground, Maui.Theme.textColor, 0.12)
                          : Maui.Theme.alternateBackgroundColor)
                       : "transparent"
