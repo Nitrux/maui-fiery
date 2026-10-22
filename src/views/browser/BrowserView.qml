@@ -1825,7 +1825,7 @@ Maui.Page
             ToolButton
             {
                 id: _responsiveOverviewButton
-                visible: !root.isWide && activeView.count > 1
+                visible: !root.isWide && activeView.count > 0
                 display: ToolButton.IconOnly
                 Layout.alignment: Qt.AlignVCenter
                 height: Maui.Style.rowHeight
