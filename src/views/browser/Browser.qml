@@ -14,6 +14,21 @@ Maui.SplitViewItem
     property alias url : _webView.url
     property alias webView : _webView
     property WebEngineProfile browserProfile: root.profile
+
+    Connections
+    {
+        target: _webView
+
+        function onVisibleChanged()
+        {
+            if (!control.visible)
+                return
+
+            if (!_webView.visible && !_webView.recentlyAudible && !_mediaPlaying && !control.overviewMode)
+                _webView.lifecycleState = 1 // WebEngineView.Frozen
+        }
+    }
+    property bool tabSelected: true
     property bool faviconRenderingEnabled: true
     readonly property string title : _webView.title.length ? _webView.title : "Fiery"
     readonly property string iconName: _faviconSource
@@ -73,6 +88,8 @@ Maui.SplitViewItem
     property var previewResult: null
     property bool overviewMode: false
     property bool _returningFromOverview: false
+    property bool _mediaPlaying: false
+    property int _surfaceResyncNudge: 0
     property var splitView: null
     property int splitIndex: -1
     padding: 0
@@ -84,7 +101,7 @@ Maui.SplitViewItem
             _sleepTimer.stop()
             _isSleeping = false
         }
-        else if (!control.visible && appSettings.tabSleepEnabled && !_webView.recentlyAudible)
+        else if (!control.visible && appSettings.tabSleepEnabled && !_webView.recentlyAudible && !_mediaPlaying)
         {
             _sleepTimer.restart()
         }
@@ -611,9 +628,11 @@ Maui.SplitViewItem
         id: _webView
 
         anchors.fill: parent
+        anchors.rightMargin: _surfaceResyncNudge
+        anchors.bottomMargin: _surfaceResyncNudge
         visible: {
             const u = _webView.url.toString()
-            return u.length > 0 && u !== "about:blank"
+            return (tabSelected || _webView.recentlyAudible || _mediaPlaying) && u.length > 0 && u !== "about:blank"
         }
 
         profile: control.browserProfile
@@ -1429,76 +1448,70 @@ Maui.SplitViewItem
         text: i18n("Not Now")
     }
 
-    // Workaround for QtWebEngine GPU surface not repainting after a
-    // Wayland compositor workspace switch (e.g. Hyprland).
-    //
-    // Root cause: when Hyprland hides a workspace it stops sending
-    // wl_surface.frame callbacks.  Chromium's Viz compositor detects the
-    // absence of BeginFrame acknowledgements and goes idle.  When the
-    // workspace is shown again Viz is still idle — it won't produce a new
-    // GPU frame until it receives a BeginFrame, but it won't receive one
-    // until it submits a frame.  Qt Quick therefore composites a stale or
-    // empty texture → black screen.
-    //
-    // The single-RAF approach used previously was fragile: Wayland
-    // re-enables wl_surface.frame callbacks asynchronously, so the one
-    // frame of GPU activity could fire before the compositor was ready to
-    // accept it, leaving Viz idle again.  A multi-frame burst keeps Viz
-    // active long enough for the callback round-trip to complete.
-    //
-    // The same stall can happen when a tab is brought back to the
-    // foreground after being backgrounded long enough for Viz to throttle,
-    // so we also trigger on onVisibleChanged.
-    function _kickVizCompositor()
+    // Ask Qt WebEngine to resynchronize its delegated surface after a workspace change.
+    function _applySurfaceResynchronization()
     {
-        _webView.lifecycleState = 0 // WebEngineView.Active
-        _webView.runJavaScript(
-            "(function(){" +
-            "  var old=document.getElementById('fiery-viz-kick');" +
-            "  if(old)old.remove();" +
-            "  var e=document.createElement('div');" +
-            "  e.id='fiery-viz-kick';" +
-            "  e.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;" +
-                               "transform:translateZ(0);pointer-events:none;" +
-                               "opacity:0.001;z-index:2147483647';" +
-            "  document.documentElement.appendChild(e);" +
-            "  var frames=0;" +
-            "  function tick(){" +
-            "    if(++frames<5&&e.parentNode){e.style.width=(2+frames)+'px';requestAnimationFrame(tick);}" +
-            "    else{e.remove();}" +
-            "  }" +
-            "  requestAnimationFrame(tick);" +
-            "})()"
-        )
+        if (!control.visible || !tabSelected || !_webView.visible)
+            return
+
+        _webView.lifecycleState = 0
+        _surfaceResyncNudge = 1
+        _surfaceResyncRestoreTimer.restart()
     }
 
-    function recoverFromWorkspaceChange()
+    function resynchronizeWebEngineSurface()
     {
-        if (control.visible && _webView.visible)
-        {
-            _kickVizCompositor()
-            _vizRetryTimer.restart()
-        }
+        if (!control.visible || !tabSelected || !_webView.visible)
+            return
+
+        _surfaceResyncTimer.restart()
+        _surfaceResyncRetryTimer.restart()
     }
 
-    // Delayed retry: the initial kick may fire before Wayland re-enables
-    // wl_surface.frame callbacks after a workspace switch, leaving Viz idle
-    // again. A second kick ~800 ms later catches that window.
     Timer
     {
-        id: _vizRetryTimer
-        interval: 800
+        id: _surfaceResyncTimer
+        interval: 120
+        repeat: false
+        onTriggered: control._applySurfaceResynchronization()
+    }
+
+    Timer
+    {
+        id: _surfaceResyncRestoreTimer
+        interval: 120
         repeat: false
         onTriggered:
         {
-            if (control.visible && control._hostWindow && control._hostWindow.active)
-            {
-                _webView.lifecycleState = 0 // WebEngineView.Active
-                _webView.runJavaScript(
-                    "(function(){" +
-                    "  requestAnimationFrame(function(){requestAnimationFrame(function(){});});" +
-                    "})()")
-            }
+            _surfaceResyncNudge = 0
+            _webView.update()
+        }
+    }
+
+    Timer
+    {
+        id: _surfaceResyncRetryTimer
+        interval: 520
+        repeat: false
+        onTriggered: control._applySurfaceResynchronization()
+    }
+
+    Timer
+    {
+        id: _mediaStateTimer
+        interval: 500
+        repeat: true
+        running: _webView.visible
+        onTriggered:
+        {
+            _webView.runJavaScript(
+                "(function(){return Array.from(document.querySelectorAll(\"video,audio\")).some(function(m){return !m.paused&&!m.ended&&m.readyState>=2;});})()",
+                function(result)
+                {
+                    const playing = result === true
+                    if (control._mediaPlaying !== playing)
+                        control._mediaPlaying = playing
+                })
         }
     }
 
@@ -1513,17 +1526,12 @@ Maui.SplitViewItem
             _isSleeping = false
             // Restore full rendering when the tab is brought to the foreground.
             _webView.lifecycleState = 0 // WebEngineView.Active
-            if (!returningFromOverview && control._hostWindow && control._hostWindow.active)
-            {
-                _kickVizCompositor()
-                _vizRetryTimer.restart()
-            }
             if (!returningFromOverview)
                 Qt.callLater(control.capturePreview)
             if (control._autofillPromptPending)
                 Qt.callLater(control._requestAutofillPromptCheck)
         }
-        else if (!_webView.recentlyAudible)
+        else if (!_webView.recentlyAudible && !_mediaPlaying)
         {
             // Freeze the renderer while the tab is hidden: JavaScript timers,
             // animations, and GPU compositing are paused, cutting CPU/GPU load
@@ -1539,35 +1547,7 @@ Maui.SplitViewItem
         }
     }
 
-    // Window.window.active covers focus changes within a workspace.
-    Connections
-    {
-        target: control._hostWindow
-        function onActiveChanged()
-        {
-            if (control._hostWindow && control._hostWindow.active && control.visible)
-            {
-                _kickVizCompositor()
-                _vizRetryTimer.restart()
-            }
-        }
-    }
 
-    // Qt.application.state catches workspace switches on Hyprland/Wayland:
-    // the compositor changes the application state when its workspace is
-    // shown or hidden, even if Window.window.active does not toggle.
-    Connections
-    {
-        target: Qt.application
-        function onStateChanged()
-        {
-            if (Qt.application.state === Qt.ApplicationActive && control.visible)
-            {
-                _kickVizCompositor()
-                _vizRetryTimer.restart()
-            }
-        }
-    }
 
     // Status bar: shows the URL of any link currently under the cursor.
     // Positioned at the bottom-left, overlaying the page content, matching

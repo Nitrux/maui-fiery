@@ -18,6 +18,7 @@ Item
     property bool faviconRenderingEnabled: true
     property int popupGeometryNudge: 0
     property bool overviewMode: false
+    property bool tabSelected: true
 
     property alias currentIndex : _splitView.currentIndex
     property alias orientation : _splitView.orientation
@@ -117,6 +118,7 @@ Item
         Browser
         {
             overviewMode: control.overviewMode
+            tabSelected: control.tabSelected
             splitView: control
             browserProfile: control.browserProfile
             faviconRenderingEnabled: control.faviconRenderingEnabled

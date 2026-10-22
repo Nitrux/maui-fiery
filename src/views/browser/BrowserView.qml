@@ -169,8 +169,8 @@ Maui.Page
         function onWorkspaceChanged()
         {
             const browser = control.currentTab && control.currentTab.currentItem
-            if (browser && typeof browser.recoverFromWorkspaceChange === "function")
-                browser.recoverFromWorkspaceChange()
+            if (browser && typeof browser.resynchronizeWebEngineSurface === "function")
+                browser.resynchronizeWebEngineSurface()
         }
     }
 
@@ -1637,6 +1637,8 @@ Maui.Page
 
         BrowserLayout
         {
+            id: browserLayout
+            tabSelected: control.activeView.currentItem === browserLayout
             faviconRenderingEnabled: control._faviconRenderingEnabled
             popupGeometryNudge: control._popupGeometryNudge
             overviewMode: control.activeView.overviewMode
@@ -1649,6 +1651,8 @@ Maui.Page
 
         BrowserLayout
         {
+            id: privateBrowserLayout
+            tabSelected: control.activeView.currentItem === privateBrowserLayout
             browserProfile: _incognitoProfile
             faviconRenderingEnabled: control._faviconRenderingEnabled
             popupGeometryNudge: control._popupGeometryNudge
