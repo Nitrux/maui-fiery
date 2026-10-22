@@ -46,58 +46,7 @@ Maui.Page
     readonly property real _headerFootprint: root.visibility !== Window.FullScreen
                                            ? headBar.preferredHeight + headBar.topPadding + headBar.bottomPadding + headerMargins * 2
                                            : 0
-    readonly property bool _uiDebug: fieryUiDiagnostics
     property bool _faviconRenderingEnabled: true
-
-    function _uiLog(event, details)
-    {
-        if (_uiDebug)
-            console.log("[Fiery UI][BrowserView]", event, details === undefined ? "" : details)
-    }
-
-    function _uiGeometry(item)
-    {
-        if (!item)
-            return "null"
-
-        return "x=" + item.x + ",y=" + item.y + ",w=" + item.width + ",h=" + item.height
-                + ",iw=" + item.implicitWidth + ",ih=" + item.implicitHeight
-                + ",visible=" + item.visible
-    }
-
-    function _tabBarGeometry(tabView, name, event)
-    {
-        const bar = tabView ? tabView.tabBar : null
-        var tabs = []
-        if (bar)
-        {
-            for (var i = 0; i < tabView.count; ++i)
-            {
-                const tab = typeof bar.itemAtIndex === "function" ? bar.itemAtIndex(i) : null
-                if (tab)
-                {
-                    const point = tab.mapToItem(bar, 0, 0)
-                    tabs.push(i + ":x=" + point.x + ",y=" + point.y + ",w=" + tab.width + ",h=" + tab.height
-                              + ",iw=" + tab.implicitWidth + ",ih=" + tab.implicitHeight)
-                }
-            }
-        }
-        return "event=" + event + ",view=" + name + ",count=" + tabView.count
-                + ",currentIndex=" + tabView.currentIndex + ",barCount=" + (bar ? bar.count : -1)
-                + ",tabView=" + _uiGeometry(tabView) + ",bar=" + _uiGeometry(bar)
-                + ",tabs=[" + tabs.join(";") + "]"
-    }
-
-    function _scheduleTabBarDiagnostics(tabView, name, event)
-    {
-        if (!_uiDebug)
-            return
-
-        Qt.callLater(function()
-        {
-            _uiLog("tabBarGeometry", _tabBarGeometry(tabView, name, event))
-        })
-    }
 
     // Closed-tabs stack is now persisted in RECENTLY_CLOSED via Fiery.DBActions.
     onSearchFieldVisibleChanged:
@@ -990,18 +939,6 @@ Maui.Page
     {
         id: _navigationPopup
 
-        function _logSearch(event, details)
-        {
-            control._uiLog("navigationSearch " + event,
-                            "popup=" + control._uiGeometry(_navigationPopup)
-                            + ",entry=" + control._uiGeometry(_entryField)
-                            + ",text=" + JSON.stringify(_entryField.text)
-                            + ",focus=" + _entryField.activeFocus
-                            + ",historyCount=" + _historyListView.count
-                            + ",historyIndex=" + _historyListView.currentIndex
-                            + (details ? "," + details : ""))
-        }
-
         maxWidth: 500
         hint: 1
         persistent: true
@@ -1015,12 +952,6 @@ Maui.Page
             _entryField.text = currentBrowser ? _surf.safeDisplayUrl(currentBrowser.url.toString()) : ""
             _entryField.forceActiveFocus()
             _entryField.selectAll()
-            _logSearch("opened")
-        }
-
-        onClosed:
-        {
-            _logSearch("closed")
         }
 
         headBar.forceCenterMiddleContent: false
@@ -1033,12 +964,8 @@ Maui.Page
             activeFocusOnPress : true
             inputMethodHints: Qt.ImhUrlCharactersOnly  | Qt.ImhNoAutoUppercase
 
-            onTextChanged: _navigationPopup._logSearch("textChanged")
-            onActiveFocusChanged: _navigationPopup._logSearch("focusChanged")
-
             onAccepted:
             {
-                _navigationPopup._logSearch("accepted")
                 // Fallback for environments where Keys.onPressed does not
                 // intercept Return before TextField emits accepted().
                 if(text.length > 0)
@@ -1061,14 +988,12 @@ Maui.Page
             {
                 // Up/Down: navigate history suggestion list.
                 if (event.key === Qt.Key_Down) {
-                    _navigationPopup._logSearch("keyPressed", "key=Down")
                     if (_historyListView.currentIndex < _historyListView.count - 1)
                         _historyListView.currentIndex++
                     event.accepted = true
                     return
                 }
                 if (event.key === Qt.Key_Up) {
-                    _navigationPopup._logSearch("keyPressed", "key=Up")
                     if (_historyListView.currentIndex > -1)
                         _historyListView.currentIndex--
                     event.accepted = true
@@ -1078,8 +1003,6 @@ Maui.Page
                 const isReturn = event.key === Qt.Key_Return || event.key === Qt.Key_Enter
                 if (!isReturn)
                     return
-
-                _navigationPopup._logSearch("keyPressed", "key=Return,modifiers=" + event.modifiers)
 
                 if (event.modifiers & Qt.ControlModifier)
                 {
@@ -1127,9 +1050,6 @@ Maui.Page
             orientation: ListView.Vertical
             spacing: Maui.Style.space.medium
 
-            onCountChanged: _navigationPopup._logSearch("resultCountChanged")
-            onCurrentIndexChanged: _navigationPopup._logSearch("resultIndexChanged")
-
             flickable.header: ColumnLayout
             {
                 height: implicitHeight
@@ -1156,7 +1076,6 @@ Maui.Page
 
             Keys.onEnterPressed:
             {
-                _navigationPopup._logSearch("historyListEnter")
                 if(_historyListView.currentItem)
                     control.openUrl(_historyListView.currentItem.url)
             }
@@ -1170,40 +1089,6 @@ Maui.Page
                 recursiveFilteringEnabled: true
                 sortCaseSensitivity: Qt.CaseInsensitive
                 filterCaseSensitivity: Qt.CaseInsensitive
-            }
-
-            Connections
-            {
-                target: Fiery.History
-
-                function onPreListChanged()
-                {
-                    control._uiLog("history preListChanged", "private=" + control.privateMode)
-                }
-
-                function onPostListChanged()
-                {
-                    control._uiLog("history postListChanged",
-                                    "private=" + control.privateMode + ",suggestions=" + _historyListView.count)
-                    _historyListView.model.invalidate()
-                    _historyListView.currentIndex = -1
-                }
-            }
-
-            Connections
-            {
-                target: Fiery.DBActions
-
-                function onHistoryCleared()
-                {
-                    control._uiLog("history cleared", "private=" + control.privateMode)
-                }
-
-                function onHistoryUrlInserted()
-                {
-                    control._uiLog("history URL inserted", "private=" + control.privateMode)
-                }
-
             }
 
             delegate: Maui.ListBrowserDelegate
@@ -1300,33 +1185,6 @@ Maui.Page
         tabBar.visible: root.visibility !== Window.FullScreen && root.isWide
         altTabBar: Maui.Handy.isMobile
         overviewSearchActionsVisible: !root.isWide
-        Component.onCompleted: control._scheduleTabBarDiagnostics(_browserListView, "normal", "completed")
-
-        Connections
-        {
-            target: _browserListView
-
-            function onCountChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "countChanged") }
-            function onCurrentIndexChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "currentIndexChanged") }
-            function onWidthChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "widthChanged") }
-            function onHeightChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "heightChanged") }
-            function onVisibleChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "visibleChanged") }
-        }
-
-        Connections
-        {
-            target: _browserListView.tabBar
-
-            function onXChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barXChanged") }
-            function onYChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barYChanged") }
-            function onWidthChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barWidthChanged") }
-            function onHeightChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barHeightChanged") }
-            function onVisibleChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barVisibleChanged") }
-            function onCountChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barCountChanged") }
-            function onImplicitWidthChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barImplicitWidthChanged") }
-            function onImplicitHeightChanged() { control._scheduleTabBarDiagnostics(_browserListView, "normal", "barImplicitHeightChanged") }
-        }
-
         tabBar.background: Rectangle
         {
             radius: _browserListView.tabBarMargins > 0 ? Maui.Style.radiusV : 0
@@ -1532,33 +1390,6 @@ Maui.Page
             tabBar.visible: root.visibility !== Window.FullScreen && root.isWide
             altTabBar: Maui.Handy.isMobile
             overviewSearchActionsVisible: !root.isWide
-            Component.onCompleted: control._scheduleTabBarDiagnostics(_privateTabView, "private", "completed")
-
-            Connections
-            {
-                target: _privateTabView
-
-                function onCountChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "countChanged") }
-                function onCurrentIndexChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "currentIndexChanged") }
-                function onWidthChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "widthChanged") }
-                function onHeightChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "heightChanged") }
-                function onVisibleChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "visibleChanged") }
-            }
-
-            Connections
-            {
-                target: _privateTabView.tabBar
-
-                function onXChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barXChanged") }
-                function onYChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barYChanged") }
-                function onWidthChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barWidthChanged") }
-                function onHeightChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barHeightChanged") }
-                function onVisibleChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barVisibleChanged") }
-                function onCountChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barCountChanged") }
-                function onImplicitWidthChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barImplicitWidthChanged") }
-                function onImplicitHeightChanged() { control._scheduleTabBarDiagnostics(_privateTabView, "private", "barImplicitHeightChanged") }
-            }
-
             tabBar.background: Rectangle
             {
                 radius: _privateTabView.tabBarMargins > 0 ? Maui.Style.radiusV : 0
@@ -2309,16 +2140,10 @@ Maui.Page
     function openUrl(path)
     {
         const pathStr = path.toString().trim()
-        control._uiLog("navigationSearch openUrl",
-                        "path=" + JSON.stringify(pathStr)
-                        + ",currentBrowser=" + (control.currentBrowser !== null)
-                        + ",privateMode=" + control.privateMode)
-
         // Block dangerous pseudo-protocols and data URIs typed into the address bar.
         const lower = pathStr.toLowerCase()
         if (lower.startsWith("javascript:") || lower.startsWith("data:"))
         {
-            control._uiLog("navigationSearch openUrlIgnored", "reason=blockedScheme")
             return
         }
 
@@ -2327,23 +2152,18 @@ Maui.Page
             const engine = appSettings.searchEnginePage.toString()
             if (!_surf.isValidUrl(pathStr) && !engine.toLowerCase().startsWith("https://"))
             {
-                control._uiLog("navigationSearch openUrlIgnored", "reason=invalidSearchEngine")
                 return
             }
 
             const target = _surf.isValidUrl(pathStr)
                     ? (_surf.hasProtocol(pathStr) ? pathStr : "https://" + pathStr)
                     : engine + encodeURIComponent(pathStr)
-            control._uiLog("navigationSearch openTab",
-                            "mode=" + (_surf.isValidUrl(pathStr) ? "url" : "searchEngine")
-                            + ",target=" + JSON.stringify(target))
             openTab(target)
             return
         }
 
         if(_surf.isValidUrl(path))
         {
-            control._uiLog("navigationSearch navigate", "mode=url")
             if(_surf.hasProtocol(path))
                 control.currentBrowser.url = path
             else
@@ -2355,10 +2175,8 @@ Maui.Page
             const engine = appSettings.searchEnginePage.toString()
             if (!engine.toLowerCase().startsWith("https://"))
             {
-                control._uiLog("navigationSearch openUrlIgnored", "reason=invalidSearchEngine")
                 return
             }
-            control._uiLog("navigationSearch navigate", "mode=searchEngine")
             control.currentBrowser.url = engine + encodeURIComponent(pathStr)
         }
 

@@ -34,6 +34,7 @@
 #include "fiery_version.h"
 
 #include <QtWebEngineQuick>
+#include <QtWebEngineCore/qtwebenginecoreglobal.h>
 
 #define FIERY_URI "org.maui.fiery"
 
@@ -173,6 +174,14 @@ int main(int argc, char *argv[])
     about.setDesktopFileName("org.maui.fiery");
     about.setProgramLogo(app.windowIcon());
 
+    const QString webEngineVersion = QStringLiteral("%1 (%2)")
+                                          .arg(QString::fromUtf8(qWebEngineVersion()),
+                                               QString::fromUtf8(qWebEngineChromiumVersion()));
+    about.addComponent(QStringLiteral("Qt WebEngine"),
+                       QString(),
+                       webEngineVersion,
+                       QStringLiteral("https://doc.qt.io/qt-6/qtwebengine-index.html"));
+
     KAboutData::setApplicationData(about);
     // KAboutData::setApplicationData resets the Qt organization name to whatever
     // KAboutData has stored (empty by default). Re-apply it afterwards so that
@@ -204,12 +213,6 @@ int main(int argc, char *argv[])
     about.processCommandLine(&parser);
 
     QQmlApplicationEngine engine;
-#if FIERY_UI_DIAGNOSTICS
-    constexpr bool fieryUiDiagnostics = true;
-#else
-    constexpr bool fieryUiDiagnostics = false;
-#endif
-    engine.rootContext()->setContextProperty(QStringLiteral("fieryUiDiagnostics"), fieryUiDiagnostics);
     engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconCachePath"), faviconCachePath);
     engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconTempPath"), faviconTempPath);
     const QUrl url(QStringLiteral("qrc:/app/maui/fiery/main.qml"));
