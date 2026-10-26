@@ -243,9 +243,12 @@ Maui.Page
         headBar.enabled = !inOverview
         headBar.opacity = inOverview ? 0 : 1
     }
-    headBar.preferredHeight: root.isWide ? Maui.Style.rowHeightAlt : Maui.Style.rowHeight
-    headBar.topPadding: root.isWide ? Maui.Style.defaultPadding : Maui.Style.space.small
-    headBar.bottomPadding: root.isWide ? Maui.Style.defaultPadding : Maui.Style.space.small
+    headBar.preferredHeight: Maui.Style.rowHeightAlt
+    headBar.topPadding: Maui.Style.defaultPadding
+    headBar.bottomPadding: Maui.Style.defaultPadding
+    footBar.preferredHeight: Maui.Style.rowHeightAlt
+    footBar.topPadding: Maui.Style.defaultPadding
+    footBar.bottomPadding: Maui.Style.defaultPadding
     altHeader: !root.isWide
     headBar.forceCenterMiddleContent: false
 
