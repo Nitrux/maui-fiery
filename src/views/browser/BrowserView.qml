@@ -683,6 +683,30 @@ Maui.Page
             height: Maui.Style.space.medium
             topPadding: 0
             bottomPadding: 0
+        },
+
+        ToolButton
+        {
+            id: _homeButton
+            visible: !root.isWide
+            icon.name: "go-home"
+            Layout.alignment: Qt.AlignVCenter
+            Layout.minimumHeight: Maui.Style.rowHeight
+            Layout.maximumHeight: Maui.Style.rowHeight
+            Layout.preferredHeight: Maui.Style.rowHeight
+            onClicked: control.openUrl(appSettings.homePage)
+            ToolTip.delay: 1000
+            ToolTip.timeout: 5000
+            ToolTip.visible: hovered
+            ToolTip.text: i18n("Home")
+        },
+
+        ToolSeparator
+        {
+            visible: !root.isWide
+            height: Maui.Style.space.medium
+            topPadding: 0
+            bottomPadding: 0
         }
     ]
 
