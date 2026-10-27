@@ -22,9 +22,10 @@ Maui.SettingsDialog
         message: i18n("Reset the downloads folder back to the default location?\n%1", displayUrl.length > 0 ? displayUrl : url)
         template.iconSource: "emblem-warning"
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        standardButtons: Dialog.Discard | Dialog.Cancel
+        Component.onCompleted: standardButton(Dialog.Discard).text = i18n("Reset")
 
-        onAccepted:
+        onDiscarded:
         {
             appSettings.downloadsPath = root.normalizeDownloadsPath("")
             confirmationDialog.close()
@@ -975,7 +976,8 @@ Maui.SettingsDialog
                     {
                         id: _clearPasswordsDialog
                         title: i18n("Clear All Passwords?")
-                        standardButtons: Dialog.Ok | Dialog.Cancel
+                        standardButtons: Dialog.Discard | Dialog.Cancel
+                        Component.onCompleted: standardButton(Dialog.Discard).text = i18n("Clear")
                         anchors.centerIn: parent
 
                         Label
@@ -985,7 +987,7 @@ Maui.SettingsDialog
                             text: i18n("This will permanently delete all saved credentials. This cannot be undone.")
                         }
 
-                        onAccepted:
+                        onDiscarded:
                         {
                             var all = Fiery.PasswordManager.entries
                             for (var i = 0; i < all.length; i++)

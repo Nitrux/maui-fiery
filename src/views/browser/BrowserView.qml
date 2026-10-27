@@ -616,9 +616,10 @@ Maui.Page
         property var targetBrowser: null
         title: i18n("Clear Site Data")
         message: targetBrowser ? i18n("Clear cookies and site data for %1?", targetBrowser.url.toString()) : ""
-        standardButtons: Dialog.Cancel | Dialog.Ok
+        standardButtons: Dialog.Discard | Dialog.Cancel
+        Component.onCompleted: standardButton(Dialog.Discard).text = i18n("Clear")
 
-        onAccepted:
+        onDiscarded:
         {
             if (!targetBrowser)
                 return
@@ -966,7 +967,7 @@ Maui.Page
     {
         id: _navigationPopup
 
-        maxWidth: 500
+        maxWidth: Maui.Style.units.gridUnit * 30
         hint: 1
         persistent: true
         headBar.visible: true
