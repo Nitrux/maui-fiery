@@ -8,37 +8,7 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 
-#ifdef signals
-#pragma push_macro("signals")
-#undef signals
-#define FIERY_RESTORE_QT_SIGNALS
-#endif
-extern "C" {
-#include <libsecret/secret.h>
-}
-#ifdef FIERY_RESTORE_QT_SIGNALS
-#pragma pop_macro("signals")
-#undef FIERY_RESTORE_QT_SIGNALS
-#endif
-
-// ── libsecret schema ─────────────────────────────────────────────────────────
-
-static const SecretSchema *fierySchema()
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-    static const SecretSchema s = {
-        "org.maui.fiery.password",
-        SECRET_SCHEMA_NONE,
-        {
-            { "host",     SECRET_SCHEMA_ATTRIBUTE_STRING },
-            { "username", SECRET_SCHEMA_ATTRIBUTE_STRING },
-            { nullptr,    SECRET_SCHEMA_ATTRIBUTE_STRING }
-        }
-    };
-#pragma GCC diagnostic pop
-    return &s;
-}
+#include <MauiKit4/Accounts/mauisecretstore.h>
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -53,6 +23,7 @@ PasswordManager::PasswordManager(QObject *parent)
 {
     openDB();
     prepareDB();
+    MauiSecretStore::instance()->migrateLegacy(QStringLiteral("org.maui.fiery.password"), {QStringLiteral("host"), QStringLiteral("username")}, QStringLiteral("fiery"), QStringLiteral("password"));
 }
 
 PasswordManager::~PasswordManager()
@@ -133,31 +104,25 @@ void PasswordManager::migrateFromPlainText()
         q.finish(); // explicitly release the read cursor
     }
 
-    // Move each password into the system keyring.
+    bool migrationSucceeded = true;
     for (const Row &row : rows) {
         if (row.password.isEmpty())
             continue;
-        // libsecret attribute values are C strings; a null byte would silently
-        // truncate the value and corrupt the keyring entry.
-        if (row.host.contains(QChar(0)) || row.username.contains(QChar(0)))
+        // Secret Service attributes cannot contain control characters.
+        if (row.host.contains(QChar(0)) || row.username.contains(QChar(0))) {
+            migrationSucceeded = false;
             continue;
+        }
 
-        GError *error = nullptr;
-        const QString label = QStringLiteral("Fiery: %1 @ %2").arg(row.username, row.host);
-        secret_password_store_sync(
-            fierySchema(), SECRET_COLLECTION_DEFAULT,
-            label.toUtf8().constData(),
-            row.password.toUtf8().constData(),
-            nullptr, &error,
-            "host",     row.host.toUtf8().constData(),
-            "username", row.username.toUtf8().constData(),
-            nullptr);
-
-        if (error) {
-            qWarning() << "PasswordManager: migration failed for" << row.host << ":" << error->message;
-            g_error_free(error);
+        const bool migrated = MauiSecretStore::instance()->save(QStringLiteral("fiery"), QStringLiteral("password"), QVariantMap{{QStringLiteral("host"), row.host}, {QStringLiteral("username"), row.username}}, row.password, QStringLiteral("Fiery: %1 @ %2").arg(row.username, row.host));
+        if (!migrated) {
+            migrationSucceeded = false;
+            qWarning() << "PasswordManager: migration failed for" << row.host;
         }
     }
+
+    if (!migrationSucceeded)
+        return;
 
     // Recreate the table without the password column.
     // Drop any leftover temp table from a previous failed attempt first.
@@ -185,8 +150,7 @@ void PasswordManager::migrateFromPlainText()
 
 void PasswordManager::save(const QString &host, const QString &username, const QString &password)
 {
-    // libsecret attribute values are null-terminated C strings; reject any
-    // credential where host or username contains a null byte.
+    // Secret Service attributes cannot contain control characters.
     if (host.contains(QChar(0)) || username.contains(QChar(0))) {
         qWarning() << "PasswordManager::save: null byte in host or username, rejecting";
         return;
@@ -204,24 +168,11 @@ void PasswordManager::save(const QString &host, const QString &username, const Q
             qWarning() << "PasswordManager::save (metadata) failed:" << q.lastError().text();
     }
 
-    // Password in the system keyring (encrypted at rest, unlocked by the user's login session).
-    GError *error = nullptr;
-    const QString label = QStringLiteral("Fiery: %1 @ %2").arg(username, host);
-    secret_password_store_sync(
-        fierySchema(), SECRET_COLLECTION_DEFAULT,
-        label.toUtf8().constData(),
-        password.toUtf8().constData(),
-        nullptr, &error,
-        "host",     host.toUtf8().constData(),
-        "username", username.toUtf8().constData(),
-        nullptr);
-
-    if (error) {
-        qWarning() << "PasswordManager::save (keyring) failed:" << error->message;
-        g_error_free(error);
-    } else {
+    const bool stored = MauiSecretStore::instance()->save(QStringLiteral("fiery"), QStringLiteral("password"), QVariantMap{{QStringLiteral("host"), host}, {QStringLiteral("username"), username}}, password, QStringLiteral("Fiery: %1 @ %2").arg(username, host));
+    if (!stored)
+        qWarning() << "PasswordManager: keyring save failed for" << host;
+    else
         Q_EMIT entriesChanged();
-    }
 }
 
 void PasswordManager::remove(const QString &host, const QString &username)
@@ -236,65 +187,19 @@ void PasswordManager::remove(const QString &host, const QString &username)
             qWarning() << "PasswordManager::remove (metadata) failed:" << q.lastError().text();
     }
 
-    // Password from keyring.
-    GError *error = nullptr;
-    secret_password_clear_sync(
-        fierySchema(), nullptr, &error,
-        "host",     host.toUtf8().constData(),
-        "username", username.toUtf8().constData(),
-        nullptr);
-
-    if (error) {
-        qWarning() << "PasswordManager::remove (keyring) failed:" << error->message;
-        g_error_free(error);
-    } else {
+    if (!MauiSecretStore::instance()->remove(QStringLiteral("fiery"), QStringLiteral("password"), QVariantMap{{QStringLiteral("host"), host}, {QStringLiteral("username"), username}}))
+        qWarning() << "PasswordManager: keyring removal failed for" << host;
+    else
         Q_EMIT entriesChanged();
-    }
 }
 
 QVariantList PasswordManager::find(const QString &host) const
 {
     QVariantList result;
-    GError *error = nullptr;
-
-    GHashTable *attrs = secret_attributes_build(
-        fierySchema(),
-        "host", host.toUtf8().constData(),
-        nullptr);
-
-    GList *items = secret_service_search_sync(
-        nullptr, fierySchema(), attrs,
-        static_cast<SecretSearchFlags>(
-            SECRET_SEARCH_ALL | SECRET_SEARCH_UNLOCK | SECRET_SEARCH_LOAD_SECRETS),
-        nullptr, &error);
-
-    g_hash_table_unref(attrs);
-
-    if (error) {
-        qWarning() << "PasswordManager::find failed:" << error->message;
-        g_error_free(error);
-        return result;
+    for (const auto &value : MauiSecretStore::instance()->findAll(QStringLiteral("fiery"), QStringLiteral("password"), QVariantMap{{QStringLiteral("host"), host}})) {
+        const auto stored = value.toMap();
+        result.append(QVariantMap{{QStringLiteral("username"), stored.value(QStringLiteral("username"))}, {QStringLiteral("password"), stored.value(QStringLiteral("secret"))}});
     }
-
-    for (GList *l = items; l; l = l->next) {
-        SecretItem  *item      = SECRET_ITEM(l->data);
-        SecretValue *val       = secret_item_get_secret(item);
-        GHashTable  *itemAttrs = secret_item_get_attributes(item);
-
-        if (itemAttrs) {
-            QVariantMap entry;
-            const char *un = static_cast<const char *>(g_hash_table_lookup(itemAttrs, "username"));
-            entry[QStringLiteral("username")] = QString::fromUtf8(un ? un : "");
-            if (val)
-                entry[QStringLiteral("password")] = QString::fromUtf8(secret_value_get(val, nullptr));
-            result.append(entry);
-            g_hash_table_unref(itemAttrs);
-        }
-
-        if (val) secret_value_unref(val);
-    }
-
-    g_list_free_full(items, g_object_unref);
     return result;
 }
 

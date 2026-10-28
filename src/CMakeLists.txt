@@ -77,9 +77,6 @@ qt_add_qml_module(${PROJECT_NAME} URI app.maui.fiery
     views/home/HomeView.qml
     views/AppView.qml)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1)
-
 target_precompile_headers(${PROJECT_NAME} PRIVATE
     <QObject>
     <QString>
@@ -91,6 +88,7 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     MauiKit4
+    MauiKit4::Accounts
     MauiKit4::FileBrowsing
     Qt6::Widgets
     Qt6::Sql
@@ -102,5 +100,4 @@ target_link_libraries(${PROJECT_NAME}
     KF6::Notifications
 
     Qt::WebEngineCore
-    Qt::WebEngineQuick
-    PkgConfig::libsecret)
+    Qt::WebEngineQuick)

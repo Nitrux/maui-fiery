@@ -87,6 +87,7 @@ find_package(Qt6WebEngineQuick REQUIRED)
 set(QT_NO_PRIVATE_MODULE_WARNING ON CACHE BOOL
     "MauiKit uses Qt's private WaylandClient API" FORCE)
 find_package(MauiKit4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED COMPONENTS FileBrowsing)
+find_package(MauiKitAccounts4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
 
 if(${ECM_SOURCE_UNDER_VERSION_CONTROL})
     execute_process(
