@@ -32,6 +32,7 @@
 #include "controllers/hyprlandworkspace.h"
 
 #include "fiery_version.h"
+#include "portalinhibit.h"
 
 #include <QtWebEngineQuick>
 #include <QtWebEngineCore/qtwebenginecoreglobal.h>
@@ -212,7 +213,9 @@ int main(int argc, char *argv[])
 
     about.processCommandLine(&parser);
 
+    PortalInhibit portalInhibit(8, QStringLiteral("Playing media"), &app);
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("portalInhibit"), &portalInhibit);
     engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconCachePath"), faviconCachePath);
     engine.rootContext()->setContextProperty(QStringLiteral("fieryFaviconTempPath"), faviconTempPath);
     const QUrl url(QStringLiteral("qrc:/app/maui/fiery/main.qml"));

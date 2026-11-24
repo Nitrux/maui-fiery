@@ -7,6 +7,8 @@ remove_definitions(-DQT_NO_CAST_FROM_ASCII -DQT_STRICT_ITERATORS -DQT_NO_CAST_FR
 
 set(fiery_SRCS
     main.cpp
+    portalinhibit.cpp
+    portalinhibit.h
     models/historymodel.cpp
     controllers/downloadsmanager.cpp
     controllers/dbactions.cpp
@@ -94,6 +96,7 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::Sql
     Qt6::Qml
     Qt6::Network
+    Qt6::DBus
     KF6::I18n
     KF6::I18nQml
     KF6::CoreAddons

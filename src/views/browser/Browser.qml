@@ -1501,7 +1501,7 @@ Maui.SplitViewItem
         id: _mediaStateTimer
         interval: 500
         repeat: true
-        running: _webView.visible
+        running: _webView.visible || control._mediaPlaying || _webView.recentlyAudible
         onTriggered:
         {
             _webView.runJavaScript(
@@ -1510,10 +1510,16 @@ Maui.SplitViewItem
                 {
                     const playing = result === true
                     if (control._mediaPlaying !== playing)
+                    {
                         control._mediaPlaying = playing
+                        portalInhibit.setInhibited(control, playing)
+                    }
                 })
         }
     }
+
+    Component.onCompleted: portalInhibit.setInhibited(control, control._mediaPlaying)
+    Component.onDestruction: portalInhibit.setInhibited(control, false)
 
     onVisibleChanged:
     {
