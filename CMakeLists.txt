@@ -38,6 +38,10 @@ set(CMAKE_AUTORCC ON)
 
 project(fiery VERSION ${FIERY_VERSION})
 
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Install path prefix" FORCE)
+endif()
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 if(UNIX)
