@@ -64,7 +64,7 @@ Comment[uk]=Програма для перегляду і керування с�
 Comment[zh_CN]=网页浏览器和管理器
 Comment[zh_TW]=網頁瀏覽器與整理器
 TryExec=fiery
-Exec=env QT_QPA_PLATFORM=xcb fiery %U
+Exec=fiery %U
 Terminal=false
 Type=Application
 Categories=Qt;KDE;Network;WebBrowser;

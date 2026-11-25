@@ -44,6 +44,7 @@ public Q_SLOTS:
     static bool isDangerousFile(const QString &path);
     Q_INVOKABLE static QString formatBytes(qint64 bytes);
     Q_INVOKABLE static bool isX11OnWayland();
+    Q_INVOKABLE static bool isWaylandSession();
     Q_INVOKABLE void inspectCertificate(const QUrl &url);
     Q_INVOKABLE void clearSiteCookies(QQuickWebEngineProfile *profile, const QUrl &origin);
 

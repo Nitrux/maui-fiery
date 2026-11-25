@@ -54,6 +54,8 @@ Maui.Page
         if(!searchFieldVisible && control.currentBrowser)
             control.currentBrowser.findText("")
     }
+    onWidthChanged: _schedulePopupGeometryRefresh()
+    onHeightChanged: _schedulePopupGeometryRefresh()
     onCurrentTabChanged:
     {
         _schedulePopupGeometryRefresh()
@@ -61,6 +63,7 @@ Maui.Page
     onCurrentBrowserChanged:
     {
         _syncAddressField()
+        _schedulePopupGeometryRefresh()
         if (currentBrowser && currentSiteAvailable)
             _surf.inspectCertificate(currentBrowser.url)
     }
@@ -81,9 +84,8 @@ Maui.Page
         if (!control.visible || control.currentBrowser === null)
             return
 
-        // Workaround for detached/mispositioned HTML <select> popups observed
-        // in XWayland-on-Wayland sessions.
-        if (!_surf.isX11OnWayland())
+        // Workaround for detached/mispositioned HTML <select> popups in Wayland sessions.
+        if (!_surf.isWaylandSession())
             return
 
         _popupGeometryNudge = 0

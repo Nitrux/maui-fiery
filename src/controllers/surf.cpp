@@ -342,10 +342,15 @@ bool surf::isX11OnWayland()
 {
     const QString platformName = QGuiApplication::platformName().toLower();
     const bool isX11Platform = platformName.contains(QStringLiteral("xcb"));
+    return isX11Platform && isWaylandSession();
+}
 
+bool surf::isWaylandSession()
+{
+    const QString platformName = QGuiApplication::platformName().toLower();
     const QByteArray sessionType = qgetenv("XDG_SESSION_TYPE").trimmed().toLower();
-    const bool isWaylandSession = qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
-                                  || sessionType == "wayland";
 
-    return isX11Platform && isWaylandSession;
+    return platformName.contains(QStringLiteral("wayland"))
+            || qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
+            || sessionType == "wayland";
 }
