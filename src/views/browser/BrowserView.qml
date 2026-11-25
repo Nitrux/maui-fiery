@@ -987,6 +987,7 @@ Maui.Page
         {
             id: _entryField
             Layout.fillWidth: true
+            Layout.minimumHeight: implicitHeight
             placeholderText: i18n("Search or enter URL")
 
             activeFocusOnPress : true
@@ -1073,6 +1074,7 @@ Maui.Page
 
             Layout.fillWidth: true
             Layout.fillHeight: true
+            autoSelectFirstItem: false
             currentIndex: -1
 
             orientation: ListView.Vertical
@@ -1088,7 +1090,9 @@ Maui.Page
                 {
                     Layout.fillWidth: true
                     label1.text: _entryField.text
+                    label1.Layout.minimumHeight: label1.implicitHeight
                     label2.text: i18n("Search on default search engine")
+                    label2.Layout.minimumHeight: label2.implicitHeight
 
                     iconSource: "edit-find"
                     iconSizeHint: Maui.Style.iconSizes.medium
@@ -1124,7 +1128,9 @@ Maui.Page
                 width: ListView.view.width
                 property string url : model.url
                 label1.text: model.title
+                label1.Layout.fillHeight: false
                 label2.text: model.url
+                label2.Layout.fillHeight: false
                 imageSource: {
                     const source = model.icon ? model.icon.replace("image://favicon/", "") : ""
                     return source.startsWith("http://") || source.startsWith("https://") ? "" : source
