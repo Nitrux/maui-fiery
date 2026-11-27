@@ -521,10 +521,10 @@ Maui.Page
         }
     }
 
-    Maui.SettingsDialog
+    Maui.InfoDialog
     {
         id: _siteSettingsDialog
-        Maui.Controls.title: i18n("Site settings")
+        title: i18n("Site settings")
 
         property url siteOrigin: ""
         property string siteName: ""
