@@ -1928,7 +1928,7 @@ Maui.Page
                 id: _splitButton
                 visible: root.isWide
                 icon.name: currentTab && currentTab.count === 2
-                            ? (currentTab.activeSplitIndex === 0 ? "view-right-close" : "view-split-right-left")
+                            ? (currentTab.activeSplitIndex === 0 ? "view-right-close" : "view-left-close")
                             : "view-split-left-right"
                 onClicked:
                 {
